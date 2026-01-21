@@ -1,0 +1,97 @@
+/* Navbar Styles */
+.navbar {
+    display: flex;
+    align-items: center;
+    height: var(--header-height);
+    width: 100%;
+    background-color: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    /* Higher z-index to stay on top */
+    padding: 0 2rem;
+    justify-content: space-between;
+}
+
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+}
+
+.brand-logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    background: linear-gradient(to right, var(--color-accent-blue), var(--color-accent-green));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.brand-subtitle {
+    display: none;
+    /* Hide subtitle on top nav to save space */
+}
+
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--color-text-secondary);
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.nav-item:hover {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.nav-item.active {
+    background-color: var(--color-accent-blue);
+    color: #ffffff;
+}
+
+.nav-icon {
+    flex-shrink: 0;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.net-worth-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.net-worth-summary .label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.net-worth-summary .value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-accent-green);
+}

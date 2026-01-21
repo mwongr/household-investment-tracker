@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import './styles/shared.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Core Colors */
+  --header-height: 64px;
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-light: #e2e8f0;
+
+  /* Accents */
+  --color-accent-blue: #3b82f6;
+  --color-accent-blue-hover: #2563eb;
+  --color-accent-green: #10b981;
+  --color-accent-red: #ef4444;
+
+  /* Borders */
+  --color-border: #334155;
+
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-backdrop: blur(12px);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-slate-800/40 backdrop-blur-md border border-white/10 rounded-xl shadow-xl;
+  }
+}
+
+/* Hide number input spinners */
+.input-no-spinner::-webkit-inner-spin-button,
+.input-no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-no-spinner {
+  -moz-appearance: textfield;
+}

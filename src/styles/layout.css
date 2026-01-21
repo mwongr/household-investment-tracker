@@ -1,0 +1,28 @@
+/* Layout Styles */
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    /* Changed to column for top nav */
+    min-height: 100vh;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 0;
+    /* REMOVED sidebar offset */
+    margin-top: var(--header-height);
+    /* Added top offset */
+    padding: 3rem 2rem;
+    height: auto;
+    /* Allow content to flow naturally */
+    overflow-y: visible;
+    /* Let the window scroll */
+}
+
+.content-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding-bottom: 2.5rem;
+}

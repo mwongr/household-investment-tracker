@@ -1,0 +1,506 @@
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import type { Member, Institution, Account, Asset, Transaction, NetWorthSnapshot } from '../types';
+
+interface DataContextType {
+    members: Member[];
+    institutions: Institution[];
+    accounts: Account[];
+    assets: Asset[];
+    transactions: Transaction[];
+    netWorthHistory: NetWorthSnapshot[];
+    lastUpdated: Date | null;
+    backupPath: string;
+
+    addMember: (name: string) => void;
+    updateMember: (id: string, name: string) => void;
+    setBackupPath: (path: string) => void;
+    deleteMember: (id: string) => void;
+
+    addInstitution: (name: string) => void;
+    updateInstitution: (id: string, name: string) => void;
+    deleteInstitution: (id: string) => void;
+
+    addAccount: (account: Omit<Account, 'id'>) => void;
+    updateAccount: (id: string, updates: Partial<Account>) => void;
+    deleteAccount: (id: string) => void;
+
+    addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+    updateTransaction: (id: string, transaction: Omit<Transaction, 'id'>) => void;
+    deleteTransaction: (id: string) => void;
+
+    updateAssetCustomBookCost: (assetId: string, customBookCost: number | null) => void;
+
+    getAssetsByAccount: (accountId: string) => Asset[];
+    refreshPrices: (range?: string) => Promise<void>;
+    refreshAsset: (assetId: string, range?: string) => Promise<void>;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+// Initial Mock Data
+const INITIAL_MEMBERS: Member[] = [
+    { id: '1', name: 'John Doe' },
+    { id: '2', name: 'Jane Doe' }
+];
+
+const INITIAL_INSTITUTIONS: Institution[] = [
+    { id: '1', name: 'Questrade' },
+    { id: '2', name: 'Wealthsimple' },
+    { id: '3', name: 'RBC' }
+];
+
+const INITIAL_ACCOUNTS: Account[] = [
+    { id: '1', memberId: '1', institutionId: '1', type: 'TFSA', name: 'John TFSA', cashBalance: 5000 },
+    { id: '2', memberId: '2', institutionId: '2', type: 'RRSP', name: 'Jane RRSP', cashBalance: 10000 }
+];
+
+const STORAGE_KEY = 'wealth-tracker-storage';
+
+export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    // Initialize State from LocalStorage or Mock Data
+    const [members, setMembers] = useState<Member[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved).members : INITIAL_MEMBERS;
+    });
+    const [institutions, setInstitutions] = useState<Institution[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved).institutions : INITIAL_INSTITUTIONS;
+    });
+    const [accounts, setAccounts] = useState<Account[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.accounts) {
+                // Migration: Ensure cashBalance exists (migrating from initialCashBalance)
+                return parsed.accounts.map((acc: any) => ({
+                    ...acc,
+                    cashBalance: acc.cashBalance !== undefined ? acc.cashBalance : (acc.initialCashBalance || 0)
+                }));
+            }
+        }
+        return INITIAL_ACCOUNTS;
+    });
+    const [transactions, setTransactions] = useState<Transaction[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved).transactions : [];
+    });
+
+    // Assets are derived from transactions + initial state
+    const [assets, setAssets] = useState<Asset[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved).assets : [];
+    });
+
+    const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const history = saved && JSON.parse(saved).netWorthHistory ? JSON.parse(saved).netWorthHistory : [];
+        // Filter out any corrupted NaN values
+        return history.filter((h: NetWorthSnapshot) => !isNaN(h.value) && h.value !== null);
+    });
+
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved && JSON.parse(saved).lastUpdated ? new Date(JSON.parse(saved).lastUpdated) : null;
+    });
+
+    const [backupPath, setBackupPath] = useState<string>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).backupPath || '') : '';
+    });
+
+    // Track if we need to auto-refresh after adding new asset
+    const pendingRefreshRef = useRef(false);
+
+    // Save to LocalStorage whenever state changes AND Sync to Server
+    useEffect(() => {
+        const state = {
+            members,
+            institutions,
+            accounts,
+            transactions,
+            assets,
+            netWorthHistory,
+            lastUpdated,
+            backupPath
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+        // Sync to local server for persistence/backup support
+        const timer = setTimeout(() => {
+            fetch('http://localhost:3001/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state)
+            }).catch(e => console.warn('Sync failed (server might be down):', e));
+        }, 2000); // 2 second debounce
+
+        return () => clearTimeout(timer);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath]);
+
+    // Real Market Data Refresh - defined early so it can be used in useEffect
+    const refreshPrices = useCallback(async (range: string = '1mo') => {
+        const uniqueTickers = Array.from(new Set(assets.map(a => a.ticker))).filter(Boolean);
+
+        // We'll update assets in a batch
+        const newAssetDataMap = new Map<string, any>();
+
+        await Promise.all(uniqueTickers.map(async (ticker) => {
+            const asset = assets.find(a => a.ticker === ticker);
+            const seedPrice = asset ? (asset.averageCost > 0 ? asset.averageCost : (asset.currentPrice > 0 ? asset.currentPrice : 100)) : 100;
+
+            try {
+                const response = await fetch(`/api/quote?symbol=${ticker}&seedPrice=${seedPrice}&range=${range}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data) {
+                        newAssetDataMap.set(ticker, data);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch price for", ticker, error);
+            }
+        }));
+
+        setAssets(prev => prev.map(asset => {
+            const marketData = newAssetDataMap.get(asset.ticker);
+            if (!marketData) return asset;
+
+            const currentPrice = marketData.regularMarketPrice || asset.currentPrice;
+            const marketValue = asset.quantity * currentPrice;
+            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+
+            return {
+                ...asset,
+                currentPrice: currentPrice,
+                marketValue: marketValue,
+                profit: marketValue - effectiveBookCost,
+                profitPercent: effectiveBookCost > 0 ? ((marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0,
+                high52Week: marketData.fiftyTwoWeekHigh,
+                low52Week: marketData.fiftyTwoWeekLow,
+                todayChangePercent: marketData.regularMarketChangePercent,
+                sparkline: marketData.sparkline,
+                chartRange: range // store the fetch range context if needed
+            };
+        }));
+
+        setLastUpdated(new Date());
+
+    }, [assets]); // We only update assets here. Snapshotting is handled by useEffect.
+
+    const refreshAsset = useCallback(async (assetId: string, range: string = '1mo') => {
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+
+        const seedPrice = asset.averageCost > 0 ? asset.averageCost : (asset.currentPrice > 0 ? asset.currentPrice : 100);
+
+        try {
+            const response = await fetch(`/api/quote?symbol=${asset.ticker}&seedPrice=${seedPrice}&range=${range}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    setAssets(prev => prev.map(a => {
+                        if (a.id !== assetId) return a;
+
+                        const currentPrice = data.regularMarketPrice || a.currentPrice;
+                        const marketValue = a.quantity * currentPrice;
+                        const effectiveBookCost = a.customBookCost !== undefined && a.customBookCost !== null ? a.customBookCost : a.totalCost;
+
+                        return {
+                            ...a,
+                            currentPrice: currentPrice,
+                            marketValue: marketValue,
+                            profit: marketValue - effectiveBookCost,
+                            profitPercent: effectiveBookCost > 0 ? ((marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0,
+                            high52Week: data.fiftyTwoWeekHigh,
+                            low52Week: data.fiftyTwoWeekLow,
+                            todayChangePercent: data.regularMarketChangePercent,
+                            sparkline: data.sparkline,
+                            chartRange: range
+                        };
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch price for", asset.ticker, error);
+        }
+    }, [assets]);
+
+    // Snapshot Effect separately to avoid complex dep chains? 
+    // No, let's keep it simple. When prices refresh, we save the snapshot.
+    useEffect(() => {
+        // Calculate Total Net Worth
+        const totalAssetValue = assets.reduce((sum, a) => sum + a.marketValue, 0);
+        const totalCash = accounts.reduce((sum, a) => sum + a.cashBalance, 0);
+        const currentNetWorth = totalAssetValue + totalCash;
+
+        if (isNaN(currentNetWorth) || currentNetWorth === 0) return; // Don't save zero/NaN states
+
+        const today = new Date().toISOString().split('T')[0];
+
+        setNetWorthHistory(prev => {
+            const hasToday = prev.find(p => p.date === today);
+            if (hasToday) {
+                // Update today's entry (taking last value of the day)
+                return prev.map(p => p.date === today ? { ...p, value: currentNetWorth } : p);
+            } else {
+                // Add new entry
+                return [...prev, { date: today, value: currentNetWorth }];
+            }
+        });
+    }, [assets, accounts]); // Updates whenever assets (prices/qty) or accounts (cash) change. 
+    // This essentially "Autosaves" the daily value.
+
+
+    // Auto-refresh prices when new assets are added
+    useEffect(() => {
+        if (pendingRefreshRef.current && assets.length > 0) {
+            pendingRefreshRef.current = false;
+            refreshPrices();
+        }
+    }, [assets, refreshPrices]);
+
+    const addMember = (name: string) => {
+        setMembers([...members, { id: uuidv4(), name }]);
+    };
+
+    const updateMember = (id: string, name: string) => {
+        setMembers(members.map(m => m.id === id ? { ...m, name } : m));
+    };
+
+    const deleteMember = (id: string) => {
+        setMembers(members.filter(m => m.id !== id));
+    };
+
+    const addInstitution = (name: string) => {
+        setInstitutions([...institutions, { id: uuidv4(), name }]);
+    };
+
+    const updateInstitution = (id: string, name: string) => {
+        setInstitutions(institutions.map(i => i.id === id ? { ...i, name } : i));
+    };
+
+    const deleteInstitution = (id: string) => {
+        setInstitutions(institutions.filter(i => i.id !== id));
+    };
+
+    const addAccount = (account: Omit<Account, 'id'>) => {
+        setAccounts([...accounts, { ...account, id: uuidv4() }]);
+    };
+
+    const updateAccount = (id: string, updates: Partial<Account>) => {
+        setAccounts(accounts.map(a => a.id === id ? { ...a, ...updates } : a));
+    };
+
+    const deleteAccount = (id: string) => {
+        setAccounts(accounts.filter(a => a.id !== id));
+    };
+
+    const calculateCashImpact = (tx: Partial<Transaction>) => {
+        const amount = tx.amount || 0;
+        switch (tx.type) {
+            case 'Buy': return -amount;
+            case 'Sell': return amount;
+            case 'Deposit': return amount;
+            case 'Withdrawal': return -amount;
+            case 'Dividend': return amount;
+            case 'DRIP': return 0; // Cash in (Div) immediately out (Buy Shares)
+            default: return 0;
+        }
+    };
+
+    const addTransaction = (tx: Omit<Transaction, 'id'>) => {
+        const newTx = { ...tx, id: uuidv4() };
+        const isNewAsset = !assets.some(a => a.accountId === tx.accountId && a.ticker === tx.ticker);
+
+        setTransactions(prev => {
+            const updatedInfo = [...prev, newTx];
+            recalculateAssets(updatedInfo);
+            return updatedInfo;
+        });
+
+        // Update Cash Balance
+        const impact = calculateCashImpact(newTx);
+        if (impact !== 0) {
+            setAccounts(prev => prev.map(a => a.id === tx.accountId ? { ...a, cashBalance: a.cashBalance + impact } : a));
+        }
+
+        // Flag for auto-refresh if this is a new asset
+        if (isNewAsset && tx.ticker) {
+            pendingRefreshRef.current = true;
+        }
+    };
+
+    const updateTransaction = (id: string, tx: Omit<Transaction, 'id'>) => {
+        const oldTx = transactions.find(t => t.id === id);
+        if (!oldTx) return;
+
+        setTransactions(prev => {
+            const updated = prev.map(t => t.id === id ? { ...tx, id } : t);
+            recalculateAssets(updated);
+            return updated;
+        });
+
+        // Update Cash Balance
+        const oldImpact = calculateCashImpact(oldTx);
+        const newImpact = calculateCashImpact(tx);
+
+        if (oldImpact !== newImpact || oldTx.accountId !== tx.accountId) {
+            setAccounts(prev => prev.map(a => {
+                let balance = a.cashBalance;
+                if (a.id === oldTx.accountId) balance -= oldImpact; // Revert
+                if (a.id === tx.accountId) balance += newImpact; // Apply
+                return { ...a, cashBalance: balance };
+            }));
+        }
+    };
+
+    const deleteTransaction = (id: string) => {
+        const txToDelete = transactions.find(t => t.id === id);
+
+        setTransactions(prev => {
+            const updated = prev.filter(t => t.id !== id);
+            recalculateAssets(updated);
+            return updated;
+        });
+
+        if (txToDelete) {
+            const impact = calculateCashImpact(txToDelete);
+            if (impact !== 0) {
+                setAccounts(prev => prev.map(a => a.id === txToDelete.accountId ? { ...a, cashBalance: a.cashBalance - impact } : a));
+            }
+        }
+    };
+
+    // Completely rebuild assets from transactions to ensure consistency on edits/deletes
+    const recalculateAssets = (currentTransactions: Transaction[]) => {
+        const newAssetsMap = new Map<string, Asset>();
+
+        // Sort by date asc
+        const sorted = [...currentTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        for (const tx of sorted) {
+            const key = `${tx.accountId}-${tx.ticker}`;
+            if (!newAssetsMap.has(key)) {
+                // Find existing asset to preserve ID and market data
+                const existingAsset = assets.find(a => a.accountId === tx.accountId && a.ticker === tx.ticker);
+
+                newAssetsMap.set(key, {
+                    id: existingAsset?.id || uuidv4(),
+                    accountId: tx.accountId,
+                    ticker: tx.ticker!,
+                    quantity: 0,
+                    averageCost: 0,
+                    totalCost: 0,
+                    customBookCost: existingAsset?.customBookCost, // Preserve custom book cost
+                    // Preserve existing market data if available
+                    currentPrice: existingAsset?.currentPrice || tx.pricePerShare || 0,
+                    marketValue: 0,
+                    profit: 0,
+                    profitPercent: 0,
+                    todayChangePercent: existingAsset?.todayChangePercent || 0,
+                    high52Week: existingAsset?.high52Week,
+                    low52Week: existingAsset?.low52Week,
+                    sparkline: existingAsset?.sparkline,
+                });
+            }
+
+            const asset = newAssetsMap.get(key)!;
+
+            // No mock data initialization. 
+            // If data is missing, we wait for a real price refresh.
+            if (!asset.high52Week && !asset.low52Week) {
+                // Initialize with undefined/null or leave as is to show "N/A"
+            }
+
+            if (tx.type === 'Buy' || tx.type === 'DRIP') {
+                const totalCostOld = asset.averageCost * asset.quantity;
+                const totalCostNew = totalCostOld + tx.amount;
+                const newQty = asset.quantity + (tx.shares || 0);
+
+                asset.quantity = newQty;
+                asset.totalCost = totalCostNew;
+                asset.averageCost = newQty > 0 ? totalCostNew / newQty : 0;
+
+                // Custom book cost logic removed to prevent double-counting on recalculation
+
+            } else if (tx.type === 'Sell') {
+                const newQty = asset.quantity - (tx.shares || 0);
+                const costOfSharesSold = (tx.shares || 0) * asset.averageCost;
+
+                asset.quantity = newQty;
+                asset.totalCost -= costOfSharesSold;
+
+                // Custom book cost logic removed to prevent double-counting on recalculation
+
+            }
+
+            asset.marketValue = asset.quantity * asset.currentPrice;
+            // Use custom book cost if set, otherwise use calculated totalCost
+            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+            asset.profit = asset.marketValue - effectiveBookCost;
+            asset.profitPercent = effectiveBookCost > 0 ? (asset.profit / effectiveBookCost) * 100 : 0;
+        }
+
+        setAssets(Array.from(newAssetsMap.values()).filter(a => a.quantity > 0.000001));
+    };
+
+    const getAssetsByAccount = (accountId: string) => {
+        return assets.filter(a => a.accountId === accountId);
+    };
+
+    const updateAssetCustomBookCost = (assetId: string, customBookCost: number | null) => {
+        setAssets(prev => prev.map(asset => {
+            if (asset.id === assetId) {
+                const effectiveBookCost = customBookCost !== null && customBookCost !== undefined ? customBookCost : asset.totalCost;
+                return {
+                    ...asset,
+                    customBookCost: customBookCost !== null ? customBookCost : undefined,
+                    profit: asset.marketValue - effectiveBookCost,
+                    profitPercent: effectiveBookCost > 0 ? ((asset.marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0
+                };
+            }
+            return asset;
+        }));
+    };
+
+    return (
+        <DataContext.Provider value={{
+            members,
+            institutions,
+            accounts,
+            assets,
+            transactions,
+            netWorthHistory,
+            addMember,
+            updateMember,
+            deleteMember,
+            addInstitution,
+            updateInstitution,
+            deleteInstitution,
+            addAccount,
+            updateAccount,
+            deleteAccount,
+            addTransaction,
+            updateTransaction,
+            deleteTransaction,
+            updateAssetCustomBookCost,
+            getAssetsByAccount,
+            refreshPrices,
+            refreshAsset,
+            lastUpdated,
+            backupPath,
+            setBackupPath
+        }}>
+            {children}
+        </DataContext.Provider>
+    );
+};
+
+export const useData = () => {
+    const context = useContext(DataContext);
+    if (!context) {
+        throw new Error('useData must be used within a DataProvider');
+    }
+    return context;
+};

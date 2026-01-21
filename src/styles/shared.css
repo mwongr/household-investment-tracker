@@ -1,0 +1,127 @@
+/* Shared Component Styles */
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background-color: var(--color-accent-blue);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--color-accent-blue-hover);
+}
+
+.btn-danger {
+    background-color: rgba(239, 68, 68, 0.1);
+    /* Red with opacity */
+    color: var(--color-accent-red);
+}
+
+.btn-danger:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+}
+
+.btn-secondary {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-text-muted);
+    /* Slightly lighter */
+}
+
+/* Inputs */
+.input {
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    width: 100%;
+    font-size: 0.875rem;
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-accent-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Page Headers */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+/* Cards */
+.card {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+}
+
+/* Tables (Simple) */
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    /* For rounding */
+    border-spacing: 0;
+    text-align: left;
+}
+
+.data-table th {
+    padding: 0.75rem 1rem;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.data-table th:first-child {
+    border-top-left-radius: 0.5rem;
+}
+
+.data-table th:last-child {
+    border-top-right-radius: 0.5rem;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
