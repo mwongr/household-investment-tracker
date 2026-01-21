@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# Household Investment Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A personal finance application designed to track household investments, analyze portfolio performance, and manage assets across multiple family members and institutions. Built with React, TypeScript, Tailwind CSS, and a local Express backend.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+*   **Portfolio Dashboard**: Real-time overview of net worth, daily performance, and asset allocation.
+*   **Multi-Member Support**: Track investments for multiple family members separately or aggregately.
+*   **Asset Management**: detailed tracking for Stocks, ETFs, Mutual Funds, and Cash.
+*   **Live Market Data**: Integrates with Yahoo Finance API for real-time price updates and sparkline charts.
+*   **Reports & Screeners**: Generate PDF reports and discover new investment opportunities.
+*   **Data Privacy**: All data is stored locally on your machine (`server/database.json`).
+*   **Automated Backups**: Configurable flexible backup system to keep your data safe.
 
-## React Compiler
+## 🛠️ Technology Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+*   **Frontend**: React 19, TypeScript, Vite
+*   **Styling**: Tailwind CSS, Lucide Icons
+*   **Backend**: Node.js, Express (Local proxy server for API requests)
+*   **Data Storage**: Local JSON file system
 
-## Expanding the ESLint configuration
+## 📋 Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+*   [Node.js](https://nodejs.org/) (Version 18 or higher recommended)
+*   Windows OS (for the batch script) - *App runs on Mac/Linux via terminal commands.*
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 💿 Installation
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/mwongr/investment-tracker.git
+    cd investment-tracker
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+
+## ▶️ How to Run
+
+### **Option 1: Windows Easy Start (Recommended)**
+Double-click the included `Start App.bat` file in the root directory.
+*   This will launch the local server and the frontend application automatically.
+*   It also handles the automated backup process when you exit.
+
+### **Option 2: Manual Start (Command Line)**
+Open a terminal in the project directory and run:
+```bash
+npm run dev
 ```
+Access the application at `http://localhost:5173`.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 💾 Backup & Data Management
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### **Automated Backups**
+1.  Go to the **Settings** page in the application.
+2.  Enter a local folder path in the **Automated Backup Location** field (e.g., `D:\MyBackups`).
+3.  When you use `Start App.bat` to run the app, closing the terminal window (Ctrl+C) will prompt you to creating a timestamped backup of your data.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### **Manual Import/Export**
+*   **Export**: specific "Export Backup" in Settings to download a JSON snapshot.
+*   **Restore**: Use "Import Backup" to load a previously saved JSON file (either from the automated system or a manual export).
+
+## 🔒 Security Note
+This application runs locally. Your financial data is stored in `server/database.json` and is **not** uploaded to any cloud service by the application itself. Ensure you include `server/database.json` in your `.gitignore` if you fork this repository (already configured by default).
