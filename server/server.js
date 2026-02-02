@@ -84,7 +84,9 @@ app.get('/api/quote', async (req, res) => {
                     currency: result.meta.currency,
                     high: result.meta.fiftyTwoWeekHigh,
                     low: result.meta.fiftyTwoWeekLow,
-                    prevClose: result.meta.chartPreviousClose
+                    low: result.meta.fiftyTwoWeekLow,
+                    prevClose: result.meta.chartPreviousClose,
+                    volume: result.meta.regularMarketVolume
                 };
             }
         }
@@ -108,7 +110,9 @@ app.get('/api/quote', async (req, res) => {
                     currency: result.meta.currency, // Should be same
                     high: result.meta.fiftyTwoWeekHigh, // Should be same
                     low: result.meta.fiftyTwoWeekLow,
-                    prevClose: prevClose
+                    low: result.meta.fiftyTwoWeekLow,
+                    prevClose: prevClose,
+                    volume: result.meta.regularMarketVolume
                 };
                 foundDailyData = true;
             }
@@ -145,6 +149,7 @@ app.get('/api/quote', async (req, res) => {
                 fiftyTwoWeekHigh: priceData.high,
                 fiftyTwoWeekLow: priceData.low,
                 currency: priceData.currency,
+                volume: priceData.volume,
                 sparkline: sparklineData,
                 source: 'chart_api_v8_dual'
             });

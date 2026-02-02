@@ -65,3 +65,16 @@ export type NetWorthSnapshot = {
   date: string; // YYYY-MM-DD
   value: number;
 };
+
+export type WatchlistItem = {
+  id: string; // Ticker symbol can be the ID, or uuid
+  ticker: string;
+  name?: string;
+  price: number;
+  changePercent: number;
+  high52Week: number;
+  low52Week: number;
+  volume: number;
+  avgVolume: number;
+  sparkline?: { price: number; date?: string }[];
+};

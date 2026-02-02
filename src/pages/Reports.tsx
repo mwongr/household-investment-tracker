@@ -19,8 +19,8 @@ const Reports = () => {
         setCurrentPage(1);
     }, [filterType, searchTerm, startDate, endDate, rowsPerPage]);
 
-    // Enrich transactions with readable names
-    const enrichedTransactions = transactions.map(tx => {
+    // Enrich transactions with readable names and preserve original order
+    const enrichedTransactions = transactions.map((tx, index) => {
         const account = accounts.find(a => a.id === tx.accountId);
         const member = members.find(m => m.id === account?.memberId);
         const institution = institutions.find(i => i.id === account?.institutionId);
@@ -29,7 +29,8 @@ const Reports = () => {
             ...tx,
             accountName: account?.name || 'Unknown',
             memberName: member?.name || 'Unknown',
-            institutionName: institution?.name || 'Unknown'
+            institutionName: institution?.name || 'Unknown',
+            _originalIndex: index // Preserve insertion order for stable sorting
         };
     });
 
@@ -48,7 +49,14 @@ const Reports = () => {
         const matchesDate = (!start || txDate >= start) && (!end || txDate <= end);
 
         return matchesType && matchesSearch && matchesDate;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }).sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) {
+            return dateB - dateA; // Sort by Date Descending
+        }
+        return b._originalIndex - a._originalIndex; // Tie-breaker: Newest added first (stable)
+    });
 
     // Pagination Logic
     const totalItems = filteredData.length;

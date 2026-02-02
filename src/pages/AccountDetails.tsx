@@ -658,7 +658,15 @@ const AccountDetails = () => {
                         <tbody className="divide-y divide-slate-700/30">
                             {transactions
                                 .filter(t => t.accountId === account.id)
-                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                .map((t, index) => ({ ...t, _originalIndex: index }))
+                                .sort((a, b) => {
+                                    const dateA = new Date(a.date).getTime();
+                                    const dateB = new Date(b.date).getTime();
+                                    if (dateA !== dateB) {
+                                        return dateB - dateA;
+                                    }
+                                    return b._originalIndex - a._originalIndex;
+                                })
                                 .map(tx => (
                                     <tr key={tx.id} className="hover:bg-slate-800/20 transition-colors">
                                         <td className="px-6 py-4 text-sm text-slate-400 font-mono">{tx.date}</td>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Member, Institution, Account, Asset, Transaction, NetWorthSnapshot } from '../types';
+import type { Member, Institution, Account, Asset, Transaction, NetWorthSnapshot, WatchlistItem } from '../types';
 
 interface DataContextType {
     members: Member[];
@@ -34,6 +34,11 @@ interface DataContextType {
     getAssetsByAccount: (accountId: string) => Asset[];
     refreshPrices: (range?: string) => Promise<void>;
     refreshAsset: (assetId: string, range?: string) => Promise<void>;
+
+    watchlist: WatchlistItem[];
+    addToWatchlist: (ticker: string) => Promise<void>;
+    removeFromWatchlist: (id: string) => void;
+    refreshWatchlist: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -109,6 +114,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? (JSON.parse(saved).backupPath || '') : '';
     });
 
+    const [watchlist, setWatchlist] = useState<WatchlistItem[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).watchlist || []) : [];
+    });
+
     // Track if we need to auto-refresh after adding new asset
     const pendingRefreshRef = useRef(false);
 
@@ -122,7 +132,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             assets,
             netWorthHistory,
             lastUpdated,
-            backupPath
+            backupPath,
+            watchlist
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -134,9 +145,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 body: JSON.stringify(state)
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
-
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath]);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -464,6 +474,118 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
     };
 
+    const addToWatchlist = async (ticker: string) => {
+        const upperTicker = ticker.toUpperCase();
+        if (watchlist.some(w => w.ticker === upperTicker)) return;
+
+        try {
+            // Fetch detailed data for Avg Volume and other metadata
+            const resDetailed = await fetch(`/api/quote-detailed?symbol=${upperTicker}`);
+            if (!resDetailed.ok) throw new Error('Failed to fetch details');
+            const dataDetailed = await resDetailed.json();
+
+            // Fetch chart data for sparkline
+            const resChart = await fetch(`/api/quote?symbol=${upperTicker}`);
+            const dataChart = resChart.ok ? await resChart.json() : {};
+
+            if (dataDetailed.error) throw new Error(dataDetailed.error);
+
+            const newItem: WatchlistItem = {
+                id: uuidv4(),
+                ticker: dataDetailed.symbol || upperTicker,
+                name: dataDetailed.quoteType?.shortName || dataDetailed.price?.shortName || '',
+                price: dataDetailed.price?.regularMarketPrice || dataChart.regularMarketPrice,
+                changePercent: dataDetailed.price?.regularMarketChangePercent || dataChart.regularMarketChangePercent,
+                high52Week: dataDetailed.summaryDetail?.fiftyTwoWeekHigh || dataChart.fiftyTwoWeekHigh,
+                low52Week: dataDetailed.summaryDetail?.fiftyTwoWeekLow || dataChart.fiftyTwoWeekLow,
+                volume: dataDetailed.summaryDetail?.volume || dataDetailed.price?.regularMarketVolume || dataChart.volume,
+                avgVolume: dataDetailed.summaryDetail?.averageDailyVolume10Day || dataDetailed.price?.averageDailyVolume10Day || dataDetailed.summaryDetail?.averageVolume || 0,
+                sparkline: dataChart.sparkline
+            };
+            setWatchlist(prev => [...prev, newItem]);
+        } catch (e) {
+            console.error("Failed to add to watchlist", e);
+            alert("Could not add " + ticker + ". Check symbol or try again.");
+        }
+    };
+
+    const removeFromWatchlist = (id: string) => {
+        setWatchlist(prev => prev.filter(w => w.id !== id));
+    };
+
+    const refreshWatchlist = useCallback(async () => {
+        const uniqueTickers = watchlist.map(w => w.ticker);
+        const newWatchlistDataMap = new Map<string, any>();
+
+        await Promise.all(uniqueTickers.map(async (ticker) => {
+            try {
+                // Check if we need to repair the name
+                const missingName = watchlist.find(w => w.ticker === ticker && !w.name);
+
+                if (missingName) {
+                    // Fetch BOTH detailed (for name) and standard (for chart/price consistency)
+                    const [resDetailed, resQuote] = await Promise.all([
+                        fetch(`/api/quote-detailed?symbol=${ticker}`),
+                        fetch(`/api/quote?symbol=${ticker}`)
+                    ]);
+
+                    const dataDetailed = resDetailed.ok ? await resDetailed.json() : {};
+                    const dataQuote = resQuote.ok ? await resQuote.json() : {};
+
+                    // Merge into a composite object
+                    newWatchlistDataMap.set(ticker, {
+                        ...dataQuote, // has sparkline, regularMarketPrice, etc
+                        fetchedName: dataDetailed.shortName || dataDetailed.symbol, // From detailed
+                        avgVolume: dataDetailed.avgVolume, // From detailed
+                        isRepair: true
+                    });
+                } else {
+                    // Standard update
+                    const response = await fetch(`/api/quote?symbol=${ticker}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && !data.error) {
+                            newWatchlistDataMap.set(ticker, data);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch watchlist price for", ticker, error);
+            }
+        }));
+
+        setWatchlist(prev => prev.map(item => {
+            const data = newWatchlistDataMap.get(item.ticker);
+            if (!data) return item;
+
+            // If it was a repair, we trust the merged data
+            if (data.isRepair) {
+                return {
+                    ...item,
+                    name: data.fetchedName || item.name,
+                    price: data.regularMarketPrice,
+                    changePercent: data.regularMarketChangePercent,
+                    high52Week: data.fiftyTwoWeekHigh,
+                    low52Week: data.fiftyTwoWeekLow,
+                    volume: data.volume,
+                    avgVolume: data.avgVolume || item.avgVolume,
+                    sparkline: data.sparkline
+                };
+            }
+
+            // Standard Update
+            return {
+                ...item,
+                price: data.regularMarketPrice,
+                changePercent: data.regularMarketChangePercent,
+                high52Week: data.fiftyTwoWeekHigh,
+                low52Week: data.fiftyTwoWeekLow,
+                volume: data.volume,
+                sparkline: data.sparkline
+            };
+        }));
+    }, [watchlist]);
+
     return (
         <DataContext.Provider value={{
             members,
@@ -490,7 +612,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             refreshAsset,
             lastUpdated,
             backupPath,
-            setBackupPath
+            setBackupPath,
+            watchlist,
+            addToWatchlist,
+            removeFromWatchlist,
+            refreshWatchlist
         }}>
             {children}
         </DataContext.Provider>
