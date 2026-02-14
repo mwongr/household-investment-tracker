@@ -382,9 +382,18 @@ const AccountDetails = () => {
                                                     />
                                                     <button
                                                         onClick={() => {
-                                                            const value = parseFloat(customBookCostInput[asset.id]);
+                                                            const rawInput = customBookCostInput[asset.id];
+                                                            // Remove commas and dollar signs just in case
+                                                            const cleaned = rawInput ? rawInput.toString().replace(/[,$]/g, '') : '';
+                                                            const value = parseFloat(cleaned);
+
+                                                            console.log(`[UI] Setting Custom Book Cost for ${asset.ticker}: Input='${rawInput}' Parsed=${value}`);
+
                                                             if (!isNaN(value) && value >= 0) {
                                                                 updateAssetCustomBookCost(asset.id, value);
+                                                            } else {
+                                                                console.warn(`[UI] Invalid custom cost input: ${rawInput}`);
+                                                                alert("Please enter a valid number (e.g. 18240.08)");
                                                             }
                                                             setEditingBookCostId(null);
                                                         }}

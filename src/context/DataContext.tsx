@@ -452,7 +452,52 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             asset.profitPercent = effectiveBookCost > 0 ? (asset.profit / effectiveBookCost) * 100 : 0;
         }
 
-        setAssets(Array.from(newAssetsMap.values()).filter(a => a.quantity > 0.000001));
+        // Post-processing: Adjust Custom Book Cost based on quantity changes
+        // This ensures that if a user sets a Custom Book Cost, it dynamically updates when they Sell or Buy more.
+        const processedAssets = Array.from(newAssetsMap.values()).map(asset => {
+            if (asset.quantity <= 0.000001) return asset; // Skip zero/dust
+
+            const existingAsset = assets.find(a => a.id === asset.id);
+
+            // Only adjust if there was a pre-existing Custom Book Cost
+            if (existingAsset?.customBookCost !== undefined && existingAsset.customBookCost !== null) {
+                const existingQty = existingAsset.quantity;
+                const newQty = asset.quantity;
+                const qtyChange = newQty - existingQty;
+
+                let newCustomBookCost = existingAsset.customBookCost;
+
+                if (qtyChange < -0.000001 && existingQty > 0) {
+                    // SELL (or Withdrawal): Reduce Custom Book Cost proportionally based on the USER's implied average
+                    // We use the User's Average because we are removing a portion of *their* defined value.
+                    const userImpliedAvgCost = existingAsset.customBookCost / existingQty;
+                    const costReduction = Math.abs(qtyChange) * userImpliedAvgCost;
+                    newCustomBookCost = Number(newCustomBookCost) - Number(costReduction);
+
+                } else if (qtyChange > 0.000001 || Math.abs(asset.totalCost - existingAsset.totalCost) > 0.01) {
+                    // BUY (or Cost Adjustment): Increase Custom Book Cost by the Transactional Cost of the new/changed leg.
+                    const transactionalCostDelta = asset.totalCost - existingAsset.totalCost;
+                    newCustomBookCost = Number(newCustomBookCost) + Number(transactionalCostDelta);
+                }
+
+                // If no meaningful change, keep existing value (already set in newCustomBookCost init)
+
+                // Update the asset with the calculate custom cost
+                const effectiveBookCost = newCustomBookCost;
+
+                return {
+                    ...asset,
+                    customBookCost: newCustomBookCost,
+                    // Recalculate profit metadata based on new adjusted custom cost
+                    profit: asset.marketValue - effectiveBookCost,
+                    profitPercent: effectiveBookCost > 0 ? ((asset.marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0
+                };
+            }
+
+            return asset;
+        }).filter(a => a.quantity > 0.000001);
+
+        setAssets(processedAssets);
     };
 
     const getAssetsByAccount = (accountId: string) => {
