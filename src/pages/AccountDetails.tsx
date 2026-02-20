@@ -504,68 +504,117 @@ const AccountDetails = () => {
 
                                         {/* Row 3: Simulators */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {/* Sell Simulator */}
                                             <div>
                                                 <h4 className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><Calculator size={12} /> Sell Simulator</h4>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="relative">
-                                                        <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <div className="relative mb-2">
+                                                            <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                            <input
+                                                                type="number"
+                                                                className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                                placeholder="Sell Amount"
+                                                                value={sPrice}
+                                                                onChange={(e) => setSimSellPrice({ ...simSellPrice, [asset.id]: e.target.value })}
+                                                            />
+                                                        </div>
+                                                        {sPrice && (() => {
+                                                            const amountVal = parseFloat(sPrice);
+                                                            if (isNaN(amountVal) || amountVal <= 0) return null;
+                                                            const sharesNum = amountVal / (asset.currentPrice || 1);
+                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+                                                            const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
+                                                            const profit = (asset.currentPrice - impliedAvgCost) * sharesNum;
+                                                            return (
+                                                                <div className="text-[10px] space-y-0.5 px-1">
+                                                                    <p className="text-slate-500">Sells <span className="text-white font-mono">{sharesNum.toFixed(2)}</span> sh</p>
+                                                                    <p className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                        {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div>
                                                         <input
                                                             type="number"
-                                                            className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-24 focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                            placeholder="Price"
-                                                            value={sPrice}
-                                                            onChange={(e) => setSimSellPrice({ ...simSellPrice, [asset.id]: e.target.value })}
+                                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner mb-2"
+                                                            placeholder="Shares"
+                                                            value={simSellShares[asset.id] || ''}
+                                                            onChange={(e) => setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })}
                                                         />
+                                                        {simSellShares[asset.id] && (() => {
+                                                            const sharesVal = parseFloat(simSellShares[asset.id]);
+                                                            if (isNaN(sharesVal) || sharesVal <= 0) return null;
+                                                            const proceeds = sharesVal * asset.currentPrice;
+                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+                                                            const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
+                                                            const profit = (asset.currentPrice - impliedAvgCost) * sharesVal;
+                                                            return (
+                                                                <div className="text-[10px] space-y-0.5 px-1">
+                                                                    <p className="text-slate-500">Proc <span className="text-white font-mono">${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    <p className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                        {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
-                                                    <input
-                                                        type="number"
-                                                        className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-20 focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                        placeholder="Shares"
-                                                        value={simSellShares[asset.id] || ''}
-                                                        onChange={(e) => setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })}
-                                                    />
-                                                    {(sPrice || simSellShares[asset.id]) && (() => {
-                                                        const sellPrice = sPrice ? parseFloat(sPrice) : asset.currentPrice;
-                                                        const sellShares = simSellShares[asset.id] ? parseFloat(simSellShares[asset.id]) : asset.quantity;
-                                                        const profit = (sellPrice - asset.averageCost) * sellShares;
-                                                        return (
-                                                            <span className={`text-xs font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                            </span>
-                                                        );
-                                                    })()}
                                                 </div>
                                             </div>
+
+                                            {/* Buy Simulator */}
                                             <div>
                                                 <h4 className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><RefreshCw size={12} /> Buy Simulator</h4>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="relative">
-                                                        <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <div className="relative mb-2">
+                                                            <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                            <input
+                                                                type="number"
+                                                                className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                                placeholder="Invest Amount"
+                                                                value={bAmount}
+                                                                onChange={(e) => setSimBuyAmount({ ...simBuyAmount, [asset.id]: e.target.value })}
+                                                            />
+                                                        </div>
+                                                        {bAmount && (() => {
+                                                            const investVal = parseFloat(bAmount);
+                                                            if (isNaN(investVal) || investVal <= 0) return null;
+                                                            const sharesNum = investVal / (asset.currentPrice || 1);
+                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+                                                            const newAvg = (effectiveBookCost + investVal) / (asset.quantity + sharesNum);
+                                                            return (
+                                                                <div className="text-[10px] space-y-0.5 px-1">
+                                                                    <p className="text-slate-500">Buys <span className="text-white font-mono">{sharesNum.toFixed(2)}</span> sh</p>
+                                                                    <p className="text-blue-400 font-bold">New Avg: ${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div>
                                                         <input
                                                             type="number"
-                                                            className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-24 focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                            placeholder="Invest"
-                                                            value={bAmount}
-                                                            onChange={(e) => setSimBuyAmount({ ...simBuyAmount, [asset.id]: e.target.value })}
+                                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner mb-2"
+                                                            placeholder="Shares"
+                                                            value={simBuyShares[asset.id] || ''}
+                                                            onChange={(e) => setSimBuyShares({ ...simBuyShares, [asset.id]: e.target.value })}
                                                         />
+                                                        {simBuyShares[asset.id] && (() => {
+                                                            const sharesVal = parseFloat(simBuyShares[asset.id]);
+                                                            if (isNaN(sharesVal) || sharesVal <= 0) return null;
+                                                            const costVal = sharesVal * asset.currentPrice;
+                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+                                                            const newAvg = (effectiveBookCost + costVal) / (asset.quantity + sharesVal);
+                                                            return (
+                                                                <div className="text-[10px] space-y-0.5 px-1">
+                                                                    <p className="text-slate-500">Cost <span className="text-white font-mono">${costVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    <p className="text-blue-400 font-bold">New Avg: ${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
-                                                    <input
-                                                        type="number"
-                                                        className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-20 focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                        placeholder="Shares"
-                                                        value={simBuyShares[asset.id] || ''}
-                                                        onChange={(e) => setSimBuyShares({ ...simBuyShares, [asset.id]: e.target.value })}
-                                                    />
-                                                    {(bAmount || simBuyShares[asset.id]) && (() => {
-                                                        const investAmount = bAmount ? parseFloat(bAmount) : (simBuyShares[asset.id] ? parseFloat(simBuyShares[asset.id]) * asset.currentPrice : 0);
-                                                        const buyShares = simBuyShares[asset.id] ? parseFloat(simBuyShares[asset.id]) : (bAmount && asset.currentPrice > 0 ? parseFloat(bAmount) / asset.currentPrice : 0);
-                                                        const newAvg = (asset.totalCost + investAmount) / (asset.quantity + buyShares);
-                                                        return (
-                                                            <span className="text-xs font-bold text-blue-400">
-                                                                New Avg: ${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                            </span>
-                                                        );
-                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
@@ -647,7 +696,8 @@ const AccountDetails = () => {
                         </div>
                     )}
                 </div>
-            )}
+            )
+            }
 
             {/* Transactions History Implementation */}
             {activeTab === 'transactions' && (
