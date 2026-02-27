@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Users, Wallet, Award, AlertTriangle, ArrowUpDown, Eye, Settings, Pencil, Check, X, RefreshCw } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Users, Wallet, Award, AlertTriangle, ArrowUpDown, Eye, Settings, Pencil, Check, X, RefreshCw, Layers } from 'lucide-react';
 import EventsTable from '../components/EventsTable';
 import '../styles/shared.css';
 
@@ -306,6 +306,75 @@ const Dashboard = () => {
             institutionGroups
         };
     }).filter(m => m.institutionGroups.length > 0 && (m.institutionGroups as any[]).some(g => g.accounts.length > 0)); // Ensure we have data
+
+    // 9. Aggregated Stocks (Combined for all accounts)
+    const aggregatedStocksMap = new Map<string, {
+        ticker: string;
+        totalShares: number;
+        totalInvested: number;
+        totalMarketValue: number;
+        accounts: Set<string>;
+    }>();
+
+    assetsWithAccountInfo.forEach(asset => {
+        const existing = aggregatedStocksMap.get(asset.ticker);
+        if (existing) {
+            existing.totalShares += asset.quantity;
+            existing.totalInvested += (asset.customBookCost || asset.totalCost);
+            existing.totalMarketValue += asset.marketValue;
+            existing.accounts.add(asset.accountName);
+        } else {
+            aggregatedStocksMap.set(asset.ticker, {
+                ticker: asset.ticker,
+                totalShares: asset.quantity,
+                totalInvested: (asset.customBookCost || asset.totalCost),
+                totalMarketValue: asset.marketValue,
+                accounts: new Set([asset.accountName])
+            });
+        }
+    });
+
+    const unsortedAggregatedStocks = Array.from(aggregatedStocksMap.values()).map(stock => {
+        const profit = stock.totalMarketValue - stock.totalInvested;
+        const profitPercent = stock.totalInvested > 0 ? (profit / stock.totalInvested) * 100 : 0;
+        return {
+            ...stock,
+            profit,
+            profitPercent,
+            accountsList: Array.from(stock.accounts).join(', ')
+        };
+    });
+
+    type AggregatedSortField = keyof typeof unsortedAggregatedStocks[0];
+    const [aggregatedSortField, setAggregatedSortField] = useState<AggregatedSortField>('totalInvested');
+    const [aggregatedSortDirection, setAggregatedSortDirection] = useState<SortDirection>('desc');
+
+    const aggregatedStocks = [...unsortedAggregatedStocks].sort((a, b) => {
+        const aVal = a[aggregatedSortField];
+        const bVal = b[aggregatedSortField];
+
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+            return aggregatedSortDirection === 'asc'
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        }
+
+        const numA = (typeof aVal === 'number') ? aVal : 0;
+        const numB = (typeof bVal === 'number') ? bVal : 0;
+
+        return aggregatedSortDirection === 'asc'
+            ? numA - numB
+            : numB - numA;
+    });
+
+    const handleAggregatedSort = (field: AggregatedSortField) => {
+        if (aggregatedSortField === field) {
+            setAggregatedSortDirection(aggregatedSortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setAggregatedSortField(field);
+            setAggregatedSortDirection(field === 'ticker' || field === 'accountsList' ? 'asc' : 'desc');
+        }
+    };
 
     // 6. Portfolio History (Persisted Net Worth)
     // Use stored history from netWorthHistory
@@ -1492,6 +1561,82 @@ const Dashboard = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            </div>
+
+            {/* Aggregated Stocks View */}
+            <div className="mt-12">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <Layers size={24} className="text-purple-500" /> Combined Stocks (All Accounts)
+                </h3>
+                <div className="card overflow-hidden border border-slate-700 p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="text-slate-400 border-b border-slate-700/50 text-xs uppercase whitespace-nowrap bg-slate-800/20">
+                                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('ticker')}>
+                                        <div className="flex items-center gap-1">
+                                            Ticker
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'ticker' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('totalShares')}>
+                                        <div className="flex items-center justify-end gap-1">
+                                            Total Shares
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'totalShares' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('totalInvested')}>
+                                        <div className="flex items-center justify-end gap-1">
+                                            Total Invested
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'totalInvested' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('totalMarketValue')}>
+                                        <div className="flex items-center justify-end gap-1">
+                                            Market Value
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'totalMarketValue' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('profit')}>
+                                        <div className="flex items-center justify-end gap-1">
+                                            Total P/L $
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'profit' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('profitPercent')}>
+                                        <div className="flex items-center justify-end gap-1">
+                                            Total P/L %
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'profitPercent' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('accountsList')}>
+                                        <div className="flex items-center gap-1">
+                                            Accounts
+                                            <ArrowUpDown size={12} className={aggregatedSortField === 'accountsList' ? 'text-blue-400' : ''} />
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800 text-sm">
+                                {aggregatedStocks.map((stock) => (
+                                    <tr key={stock.ticker} className="hover:bg-slate-800/50 transition-colors">
+                                        <td className="px-4 py-3 text-white font-bold">{stock.ticker}</td>
+                                        <td className="px-4 py-3 text-right text-slate-300 tabular-nums">{stock.totalShares.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
+                                        <td className="px-4 py-3 text-right text-slate-300 font-medium tabular-nums">${stock.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        <td className="px-4 py-3 text-right text-white font-bold tabular-nums">${stock.totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        <td className={`px-4 py-3 text-right font-bold tabular-nums ${stock.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {stock.profit >= 0 ? '+' : '-'}${Math.abs(stock.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className={`px-4 py-3 text-right font-bold tabular-nums ${stock.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {stock.profitPercent >= 0 ? '+' : ''}{stock.profitPercent.toFixed(2)}%
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-400 text-xs">{stock.accountsList}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div >
