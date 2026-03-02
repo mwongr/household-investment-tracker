@@ -526,12 +526,28 @@ const AccountDetails = () => {
                                                             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
                                                             const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
                                                             const profit = (asset.currentPrice - impliedAvgCost) * sharesNum;
+
+                                                            const newQuantity = asset.quantity - sharesNum;
+                                                            const newBookCost = effectiveBookCost - (sharesNum * impliedAvgCost);
+                                                            const newMarketValue = newQuantity * asset.currentPrice;
+                                                            const newAvg = newQuantity > 0 ? (newBookCost / newQuantity) : impliedAvgCost;
+                                                            const newProfit = newMarketValue - newBookCost;
+                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
+
                                                             return (
                                                                 <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <p className="text-slate-500">Sells <span className="text-white font-mono">{sharesNum.toFixed(2)}</span> sh</p>
-                                                                    <p className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                    </p>
+                                                                    <div className="flex justify-between">
+                                                                        <p className="text-slate-400">Sells: <span className="text-white font-mono">{sharesNum.toFixed(2)} sh</span></p>
+                                                                        <p className={`font-bold font-mono ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })()}
@@ -551,12 +567,28 @@ const AccountDetails = () => {
                                                             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
                                                             const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
                                                             const profit = (asset.currentPrice - impliedAvgCost) * sharesVal;
+
+                                                            const newQuantity = asset.quantity - sharesVal;
+                                                            const newBookCost = effectiveBookCost - (sharesVal * impliedAvgCost);
+                                                            const newMarketValue = newQuantity * asset.currentPrice;
+                                                            const newAvg = newQuantity > 0 ? (newBookCost / newQuantity) : impliedAvgCost;
+                                                            const newProfit = newMarketValue - newBookCost;
+                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
+
                                                             return (
                                                                 <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <p className="text-slate-500">Proc <span className="text-white font-mono">${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    <p className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                    </p>
+                                                                    <div className="flex justify-between">
+                                                                        <p className="text-slate-400">Proc: <span className="text-white font-mono">${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className={`font-bold font-mono ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })()}
@@ -585,10 +617,24 @@ const AccountDetails = () => {
                                                             const sharesNum = investVal / (asset.currentPrice || 1);
                                                             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
                                                             const newAvg = (effectiveBookCost + investVal) / (asset.quantity + sharesNum);
+
+                                                            const newQuantity = asset.quantity + sharesNum;
+                                                            const newBookCost = effectiveBookCost + investVal;
+                                                            const newMarketValue = newQuantity * asset.currentPrice;
+                                                            const newProfit = newMarketValue - newBookCost;
+                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
+
                                                             return (
                                                                 <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <p className="text-slate-500">Buys <span className="text-white font-mono">{sharesNum.toFixed(2)}</span> sh</p>
-                                                                    <p className="text-blue-400 font-bold">New Avg: ${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                                                    <div className="flex justify-between">
+                                                                        <p className="text-slate-400 flex justify-between"><span>Buys:</span> <span className="text-white font-mono ml-1">{sharesNum.toFixed(2)} sh</span></p>
+                                                                    </div>
+                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })()}
@@ -607,10 +653,24 @@ const AccountDetails = () => {
                                                             const costVal = sharesVal * asset.currentPrice;
                                                             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
                                                             const newAvg = (effectiveBookCost + costVal) / (asset.quantity + sharesVal);
+
+                                                            const newQuantity = asset.quantity + sharesVal;
+                                                            const newBookCost = effectiveBookCost + costVal;
+                                                            const newMarketValue = newQuantity * asset.currentPrice;
+                                                            const newProfit = newMarketValue - newBookCost;
+                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
+
                                                             return (
                                                                 <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <p className="text-slate-500">Cost <span className="text-white font-mono">${costVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    <p className="text-blue-400 font-bold">New Avg: ${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                                                    <div className="flex justify-between">
+                                                                        <p className="text-slate-400">Cost: <span className="text-white font-mono">${costVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    </div>
+                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
+                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })()}
