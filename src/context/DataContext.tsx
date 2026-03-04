@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Member, Institution, Account, Asset, Transaction, NetWorthSnapshot, WatchlistItem } from '../types';
+import type {
+    Member, Institution, Account, Asset, Transaction, NetWorthSnapshot, WatchlistItem,
+    AcbAccount, AcbTransaction
+} from '../types';
 
 interface DataContextType {
     members: Member[];
@@ -39,6 +42,15 @@ interface DataContextType {
     addToWatchlist: (ticker: string) => Promise<void>;
     removeFromWatchlist: (id: string) => void;
     refreshWatchlist: () => Promise<void>;
+
+    // ACB Tracking
+    acbAccounts: AcbAccount[];
+    acbTransactions: AcbTransaction[];
+    addAcbAccount: (name: string) => void;
+    deleteAcbAccount: (id: string) => void;
+    addAcbTransaction: (transaction: Omit<AcbTransaction, 'id'>) => void;
+    updateAcbTransaction: (id: string, transaction: Omit<AcbTransaction, 'id'>) => void;
+    deleteAcbTransaction: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -119,6 +131,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? (JSON.parse(saved).watchlist || []) : [];
     });
 
+    const [acbAccounts, setAcbAccounts] = useState<AcbAccount[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).acbAccounts || []) : [];
+    });
+
+    const [acbTransactions, setAcbTransactions] = useState<AcbTransaction[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).acbTransactions || []) : [];
+    });
+
     // Track if we need to auto-refresh after adding new asset
     const pendingRefreshRef = useRef(false);
 
@@ -133,7 +155,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             netWorthHistory,
             lastUpdated,
             backupPath,
-            watchlist
+            watchlist,
+            acbAccounts,
+            acbTransactions
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -146,7 +170,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist]);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, acbAccounts, acbTransactions]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -631,6 +655,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
     }, [watchlist]);
 
+    // ACB Tracking Methods
+    const addAcbAccount = (name: string) => {
+        setAcbAccounts([...acbAccounts, { id: uuidv4(), name }]);
+    };
+
+    const deleteAcbAccount = (id: string) => {
+        setAcbAccounts(acbAccounts.filter(a => a.id !== id));
+        // Also delete transactions for this account
+        setAcbTransactions(acbTransactions.filter(t => t.acbAccountId !== id));
+    };
+
+    const addAcbTransaction = (tx: Omit<AcbTransaction, 'id'>) => {
+        setAcbTransactions([...acbTransactions, { ...tx, id: uuidv4() }]);
+    };
+
+    const updateAcbTransaction = (id: string, tx: Omit<AcbTransaction, 'id'>) => {
+        setAcbTransactions(prev => prev.map(t => t.id === id ? { ...tx, id } : t));
+    };
+
+    const deleteAcbTransaction = (id: string) => {
+        setAcbTransactions(acbTransactions.filter(t => t.id !== id));
+    };
+
     return (
         <DataContext.Provider value={{
             members,
@@ -661,7 +708,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             watchlist,
             addToWatchlist,
             removeFromWatchlist,
-            refreshWatchlist
+            refreshWatchlist,
+            acbAccounts,
+            acbTransactions,
+            addAcbAccount,
+            deleteAcbAccount,
+            addAcbTransaction,
+            updateAcbTransaction,
+            deleteAcbTransaction
         }}>
             {children}
         </DataContext.Provider>

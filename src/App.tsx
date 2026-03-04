@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Reports from './pages/Reports';
 import StockResearch from './pages/StockResearch';
 import Settings from './pages/Settings';
+import AcbTracker from './pages/AcbTracker';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="accounts/:id" element={<AccountDetails />} />
             <Route path="reports" element={<Reports />} />
             <Route path="research" element={<StockResearch />} />
+            <Route path="acb" element={<AcbTracker />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

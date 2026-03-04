@@ -78,3 +78,47 @@ export type WatchlistItem = {
   avgVolume: number;
   sparkline?: { price: number; date?: string }[];
 };
+
+// --- ACB Tracking Types ---
+
+export type AcbTransactionType =
+  | 'Buy'
+  | 'Sell'
+  | 'Return of Capital'
+  | 'Capital Gains Dividend'
+  | 'Reinvested Dividend'
+  | 'Reinvested Capital Gains Distribution'
+  | 'Split';
+
+export type AcbAccount = {
+  id: string;
+  name: string;
+};
+
+export type AcbTransaction = {
+  id: string;
+  acbAccountId: string;
+  ticker: string;
+  date: string;
+  type: AcbTransactionType;
+  memo?: string;
+
+  // Buy / Sell
+  shares?: number;
+  pricePerShare?: number;
+  commission?: number;
+
+  // Return of Capital / Capital Gains Dividend (total amount)
+  amount?: number;
+
+  // Capital Gains Dividend (alternative by share)
+  amountPerShare?: boolean;
+
+  // Reinvested Dividend / Reinvested Capital Gains Distribution
+  reinvestedAmount?: number;
+  reinvestedShares?: number;
+
+  // Split
+  splitFrom?: number;
+  splitTo?: number;
+};
