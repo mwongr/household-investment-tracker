@@ -123,7 +123,11 @@ const Reports = () => {
                             <option value="Sell">Sell</option>
                             <option value="Deposit">Deposit</option>
                             <option value="Withdrawal">Withdrawal</option>
-                            <option value="Dividend">Dividend</option>
+                            <option value="Dividend Income">Dividend Income</option>
+                            <option value="Dividend Reinvested">Dividend Reinvested</option>
+                            <option value="Stock Split">Stock Split</option>
+                            <option value="Dividend">Dividend (Legacy)</option>
+                            <option value="DRIP">DRIP (Legacy)</option>
                         </select>
 
                         <input
@@ -188,7 +192,7 @@ const Reports = () => {
                                     <td className="text-slate-400 font-mono text-sm">{tx.date}</td>
                                     <td>
                                         <span className={`px-2 py-1 rounded text-xs font-medium 
-                                            ${tx.type === 'Buy' ? 'bg-green-500/20 text-green-400' :
+                                            ${['Buy', 'DRIP', 'Dividend Reinvested', 'Stock Split'].includes(tx.type) ? 'bg-green-500/20 text-green-400' :
                                                 tx.type === 'Sell' ? 'bg-red-500/20 text-red-400' :
                                                     'bg-blue-500/20 text-blue-400'}`}>
                                             {tx.type}

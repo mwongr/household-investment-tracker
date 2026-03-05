@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import StockSearch from '../components/StockSearch';
 import StockDetails from '../components/StockDetails';
 import ScreenerWidget from '../components/ScreenerWidget';
@@ -41,13 +41,16 @@ const StockResearch = () => {
     const [addingItem, setAddingItem] = useState(false);
     const [refreshingWatchlist, setRefreshingWatchlist] = useState(false);
 
-    // Auto-refresh watchlist on mount if names are missing (migration)
+    const initialRefreshDone = useRef(false);
+
+    // Auto-refresh watchlist on mount to get accurate prices
     useEffect(() => {
-        if (watchlist.length > 0 && watchlist.some(item => !item.name)) {
+        if (!initialRefreshDone.current && watchlist.length > 0) {
+            initialRefreshDone.current = true;
             const refresh = async () => {
                 setRefreshingWatchlist(true);
-                // The refreshWatchlist function in DataContext needs to be updated too to fetch names
-                await refreshWatchlist();
+                // Call without forcing, so it respects the 1-hour limit
+                await refreshWatchlist(false);
                 setRefreshingWatchlist(false);
             };
             refresh();
@@ -65,7 +68,8 @@ const StockResearch = () => {
 
     const handleRefreshWatchlist = async () => {
         setRefreshingWatchlist(true);
-        await refreshWatchlist();
+        // Force refresh heavily hits Yahoo API if true
+        await refreshWatchlist(true);
         setRefreshingWatchlist(false);
     };
 

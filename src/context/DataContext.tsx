@@ -39,9 +39,10 @@ interface DataContextType {
     refreshAsset: (assetId: string, range?: string) => Promise<void>;
 
     watchlist: WatchlistItem[];
+    watchlistLastUpdated: Date | null;
     addToWatchlist: (ticker: string) => Promise<void>;
     removeFromWatchlist: (id: string) => void;
-    refreshWatchlist: () => Promise<void>;
+    refreshWatchlist: (force: boolean) => Promise<void>;
 
     // ACB Tracking
     acbAccounts: AcbAccount[];
@@ -131,6 +132,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? (JSON.parse(saved).watchlist || []) : [];
     });
 
+    const [watchlistLastUpdated, setWatchlistLastUpdated] = useState<Date | null>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved && JSON.parse(saved).watchlistLastUpdated ? new Date(JSON.parse(saved).watchlistLastUpdated) : null;
+    });
+
     const [acbAccounts, setAcbAccounts] = useState<AcbAccount[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? (JSON.parse(saved).acbAccounts || []) : [];
@@ -156,6 +162,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             lastUpdated,
             backupPath,
             watchlist,
+            watchlistLastUpdated,
             acbAccounts,
             acbTransactions
         };
@@ -170,7 +177,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, acbAccounts, acbTransactions]);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -337,8 +344,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             case 'Sell': return amount;
             case 'Deposit': return amount;
             case 'Withdrawal': return -amount;
-            case 'Dividend': return amount;
-            case 'DRIP': return 0; // Cash in (Div) immediately out (Buy Shares)
+            case 'Dividend':
+            case 'Dividend Income': return amount;
+            case 'DRIP':
+            case 'Dividend Reinvested': return 0; // Cash in (Div) immediately out (Buy Shares)
+            case 'Stock Split': return 0;
             default: return 0;
         }
     };
@@ -447,7 +457,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Initialize with undefined/null or leave as is to show "N/A"
             }
 
-            if (tx.type === 'Buy' || tx.type === 'DRIP') {
+            if (tx.type === 'Buy' || tx.type === 'DRIP' || tx.type === 'Dividend Reinvested') {
                 const totalCostOld = asset.averageCost * asset.quantity;
                 const totalCostNew = totalCostOld + tx.amount;
                 const newQty = asset.quantity + (tx.shares || 0);
@@ -467,6 +477,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Custom book cost logic removed to prevent double-counting on recalculation
 
+            } else if (tx.type === 'Stock Split') {
+                const newQty = asset.quantity + (tx.shares || 0);
+
+                asset.quantity = newQty;
+                asset.averageCost = newQty > 0 ? asset.totalCost / newQty : 0;
             }
 
             asset.marketValue = asset.quantity * asset.currentPrice;
@@ -548,7 +563,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (watchlist.some(w => w.ticker === upperTicker)) return;
 
         try {
-            // Fetch detailed data for Avg Volume and other metadata
+            // Fetch detailed data for accurate real-time price and metadata
             const resDetailed = await fetch(`/api/quote-detailed?symbol=${upperTicker}`);
             if (!resDetailed.ok) throw new Error('Failed to fetch details');
             const dataDetailed = await resDetailed.json();
@@ -562,13 +577,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const newItem: WatchlistItem = {
                 id: uuidv4(),
                 ticker: dataDetailed.symbol || upperTicker,
-                name: dataDetailed.quoteType?.shortName || dataDetailed.price?.shortName || '',
-                price: dataDetailed.price?.regularMarketPrice || dataChart.regularMarketPrice,
-                changePercent: dataDetailed.price?.regularMarketChangePercent || dataChart.regularMarketChangePercent,
-                high52Week: dataDetailed.summaryDetail?.fiftyTwoWeekHigh || dataChart.fiftyTwoWeekHigh,
-                low52Week: dataDetailed.summaryDetail?.fiftyTwoWeekLow || dataChart.fiftyTwoWeekLow,
-                volume: dataDetailed.summaryDetail?.volume || dataDetailed.price?.regularMarketVolume || dataChart.volume,
-                avgVolume: dataDetailed.summaryDetail?.averageDailyVolume10Day || dataDetailed.price?.averageDailyVolume10Day || dataDetailed.summaryDetail?.averageVolume || 0,
+                name: dataDetailed.shortName || dataChart.shortName || '',
+                price: dataDetailed.price !== undefined ? dataDetailed.price : dataChart.regularMarketPrice,
+                changePercent: dataDetailed.changePercent !== undefined ? dataDetailed.changePercent : dataChart.regularMarketChangePercent,
+                high52Week: dataDetailed.fiftyTwoWeekHigh || dataChart.fiftyTwoWeekHigh,
+                low52Week: dataDetailed.fiftyTwoWeekLow || dataChart.fiftyTwoWeekLow,
+                volume: dataDetailed.volume || dataChart.volume,
+                avgVolume: dataDetailed.avgVolume || 0,
                 sparkline: dataChart.sparkline
             };
             setWatchlist(prev => [...prev, newItem]);
@@ -582,41 +597,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setWatchlist(prev => prev.filter(w => w.id !== id));
     };
 
-    const refreshWatchlist = useCallback(async () => {
+    const refreshWatchlist = useCallback(async (force: boolean = false) => {
+        // Only refresh if forced, or if data is older than 60 minutes
+        const ONE_HOURMs = 60 * 60 * 1000;
+        const now = new Date();
+        const shouldRefresh = force || !watchlistLastUpdated || (now.getTime() - watchlistLastUpdated.getTime()) > ONE_HOURMs;
+
+        if (!shouldRefresh) {
+            console.log("Watchlist data is recent. Skipping auto-refresh to save API hits.");
+            return;
+        }
+
         const uniqueTickers = watchlist.map(w => w.ticker);
         const newWatchlistDataMap = new Map<string, any>();
 
         await Promise.all(uniqueTickers.map(async (ticker) => {
             try {
-                // Check if we need to repair the name
-                const missingName = watchlist.find(w => w.ticker === ticker && !w.name);
+                // Fetch BOTH detailed (for price/name accuracy) and standard (for sparkline)
+                const [resDetailed, resQuote] = await Promise.all([
+                    fetch(`/api/quote-detailed?symbol=${ticker}`),
+                    fetch(`/api/quote?symbol=${ticker}`)
+                ]);
 
-                if (missingName) {
-                    // Fetch BOTH detailed (for name) and standard (for chart/price consistency)
-                    const [resDetailed, resQuote] = await Promise.all([
-                        fetch(`/api/quote-detailed?symbol=${ticker}`),
-                        fetch(`/api/quote?symbol=${ticker}`)
-                    ]);
+                const dataDetailed = resDetailed.ok ? await resDetailed.json() : {};
+                const dataQuote = resQuote.ok ? await resQuote.json() : {};
 
-                    const dataDetailed = resDetailed.ok ? await resDetailed.json() : {};
-                    const dataQuote = resQuote.ok ? await resQuote.json() : {};
-
-                    // Merge into a composite object
+                if (!dataQuote.error || !dataDetailed.error) {
                     newWatchlistDataMap.set(ticker, {
-                        ...dataQuote, // has sparkline, regularMarketPrice, etc
-                        fetchedName: dataDetailed.shortName || dataDetailed.symbol, // From detailed
-                        avgVolume: dataDetailed.avgVolume, // From detailed
-                        isRepair: true
+                        fetchedName: dataDetailed.shortName || dataDetailed.symbol,
+                        price: dataDetailed.price !== undefined ? dataDetailed.price : dataQuote.regularMarketPrice,
+                        changePercent: dataDetailed.changePercent !== undefined ? dataDetailed.changePercent : dataQuote.regularMarketChangePercent,
+                        high52Week: dataDetailed.fiftyTwoWeekHigh || dataQuote.fiftyTwoWeekHigh,
+                        low52Week: dataDetailed.fiftyTwoWeekLow || dataQuote.fiftyTwoWeekLow,
+                        volume: dataDetailed.volume || dataQuote.volume,
+                        avgVolume: dataDetailed.avgVolume,
+                        sparkline: dataQuote.sparkline
                     });
-                } else {
-                    // Standard update
-                    const response = await fetch(`/api/quote?symbol=${ticker}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data && !data.error) {
-                            newWatchlistDataMap.set(ticker, data);
-                        }
-                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch watchlist price for", ticker, error);
@@ -627,33 +643,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = newWatchlistDataMap.get(item.ticker);
             if (!data) return item;
 
-            // If it was a repair, we trust the merged data
-            if (data.isRepair) {
-                return {
-                    ...item,
-                    name: data.fetchedName || item.name,
-                    price: data.regularMarketPrice,
-                    changePercent: data.regularMarketChangePercent,
-                    high52Week: data.fiftyTwoWeekHigh,
-                    low52Week: data.fiftyTwoWeekLow,
-                    volume: data.volume,
-                    avgVolume: data.avgVolume || item.avgVolume,
-                    sparkline: data.sparkline
-                };
-            }
-
-            // Standard Update
             return {
                 ...item,
-                price: data.regularMarketPrice,
-                changePercent: data.regularMarketChangePercent,
-                high52Week: data.fiftyTwoWeekHigh,
-                low52Week: data.fiftyTwoWeekLow,
+                name: data.fetchedName || item.name,
+                price: data.price,
+                changePercent: data.changePercent,
+                high52Week: data.high52Week,
+                low52Week: data.low52Week,
                 volume: data.volume,
-                sparkline: data.sparkline
+                avgVolume: data.avgVolume !== undefined ? data.avgVolume : item.avgVolume,
+                sparkline: data.sparkline || item.sparkline
             };
         }));
-    }, [watchlist]);
+        setWatchlistLastUpdated(new Date());
+    }, [watchlist, watchlistLastUpdated]);
 
     // ACB Tracking Methods
     const addAcbAccount = (name: string) => {
@@ -706,6 +709,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             backupPath,
             setBackupPath,
             watchlist,
+            watchlistLastUpdated,
             addToWatchlist,
             removeFromWatchlist,
             refreshWatchlist,

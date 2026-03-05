@@ -46,7 +46,7 @@ export type Asset = {
   chartRange?: string; // e.g. '1mo', '3mo', '1y', '5y'
 };
 
-export type TransactionType = 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal' | 'Dividend' | 'DRIP';
+export type TransactionType = 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal' | 'Dividend' | 'Dividend Income' | 'DRIP' | 'Dividend Reinvested' | 'Stock Split';
 
 export type Transaction = {
   id: string;

@@ -42,19 +42,22 @@ const AccountDetails = () => {
         e.preventDefault();
 
         const isCashTx = type === 'Deposit' || type === 'Withdrawal';
-        const isDividendCash = type === 'Dividend';
+        const isDividendCash = type === 'Dividend' || type === 'Dividend Income';
+        const isStockSplit = type === 'Stock Split';
 
         // Validation: 
         // - Asset/DRIP: ticker + shares + price
         // - Dividend (Cash): ticker + price (Amount)
         // - Deposit/Withdrawal: price (Amount)
+        // - Stock Split: ticker + shares
         if (
             (isCashTx && price) ||
             (isDividendCash && ticker && price) ||
-            (!isCashTx && !isDividendCash && ticker && shares && price)
+            (isStockSplit && ticker && shares) ||
+            (!isCashTx && !isDividendCash && !isStockSplit && ticker && shares && price)
         ) {
             const qty = shares ? parseFloat(shares) : 0;
-            const priceVal = parseFloat(price); // Used as "Amount" for cash/dividend, or "Price Per Share" for asset
+            const priceVal = price ? parseFloat(price) : 0; // Used as "Amount" for cash/dividend, or "Price Per Share" for asset
             const commVal = commission ? parseFloat(commission) : 0;
 
             let amount = 0;
@@ -63,6 +66,10 @@ const AccountDetails = () => {
             if (isCashTx || isDividendCash) {
                 // For Cash Dividend or Deposit, user enters TOTAL Amount in "price" field
                 amount = priceVal;
+                finalPricePerShare = 0;
+            } else if (isStockSplit) {
+                // Stock split has no new monetary amount or price per share
+                amount = 0;
                 finalPricePerShare = 0;
             } else {
                 // Buy/Sell/DRIP
@@ -105,8 +112,10 @@ const AccountDetails = () => {
         setShares(tx.shares?.toString() || '');
 
         // For Dividend/Cash txs, we stored amount in 'amount' but UI usually uses 'price' state
-        if (tx.type === 'Deposit' || tx.type === 'Withdrawal' || tx.type === 'Dividend') {
+        if (tx.type === 'Deposit' || tx.type === 'Withdrawal' || tx.type === 'Dividend' || tx.type === 'Dividend Income') {
             setPrice(tx.amount.toString());
+        } else if (tx.type === 'Stock Split') {
+            setPrice('0');
         } else {
             setPrice(tx.pricePerShare?.toString() || '');
         }
@@ -166,30 +175,35 @@ const AccountDetails = () => {
             </div>
 
             {/* Account Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Total Value</p>
-                    <p className="text-2xl font-bold text-white font-mono">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Value</p>
+                    <p className="text-3xl font-bold text-white font-mono">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <TrendingUp size={48} className="absolute -right-2 -bottom-2 opacity-5 text-blue-500" />
                 </div>
                 <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Total Cost</p>
-                    <p className="text-2xl font-bold text-slate-300 font-mono">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Cost</p>
+                    <p className="text-3xl font-bold text-slate-200 font-mono">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <Wallet size={48} className="absolute -right-2 -bottom-2 opacity-5 text-slate-500" />
                 </div>
                 <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Total Profit</p>
-                    <p className={`text-2xl font-bold font-mono ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Profit</p>
+                    <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {totalProfit >= 0 ? '+' : ''}${Math.abs(totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <TrendingUp size={48} className={`absolute -right-2 -bottom-2 opacity-10 ${totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`} />
                 </div>
                 <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Total Return</p>
-                    <p className={`text-2xl font-bold font-mono ${totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Return</p>
+                    <p className={`text-3xl font-bold font-mono ${totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {totalProfitPercent >= 0 ? '+' : ''}{totalProfitPercent.toFixed(2)}%
                     </p>
                     <TrendingUp size={48} className={`absolute -right-2 -bottom-2 opacity-10 ${totalProfitPercent >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+                </div>
+                <div className="glass-panel p-4 relative overflow-hidden bg-blue-900/20 border-blue-500/30">
+                    <p className="text-xs text-blue-400 font-bold uppercase tracking-widest mb-1">Available Cash</p>
+                    <p className="text-3xl font-bold text-white font-mono">${account.cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <Wallet size={48} className="absolute -right-2 -bottom-2 opacity-10 text-blue-400" />
                 </div>
             </div>
 
@@ -246,8 +260,11 @@ const AccountDetails = () => {
                                     <option value="Sell">Sell</option>
                                     <option value="Deposit">Deposit</option>
                                     <option value="Withdrawal">Withdrawal</option>
-                                    <option value="Dividend">Dividend (Cash)</option>
-                                    <option value="DRIP">DRIP (Reinvested)</option>
+                                    <option value="Dividend Income">Dividend Income</option>
+                                    <option value="Dividend Reinvested">Dividend Reinvested</option>
+                                    <option value="Stock Split">Stock Split</option>
+                                    {type === 'Dividend' && <option value="Dividend">Dividend (Legacy)</option>}
+                                    {type === 'DRIP' && <option value="DRIP">DRIP (Legacy)</option>}
                                 </select>
                             </div>
 
@@ -274,7 +291,7 @@ const AccountDetails = () => {
                                         {type === 'Deposit' ? 'Add cash to your account balance.' : 'Remove cash from your account balance.'}
                                     </p>
                                 </div>
-                            ) : type === 'Dividend' ? (
+                            ) : (type === 'Dividend' || type === 'Dividend Income') ? (
                                 /* Cash Dividend Fields: Ticker + Amount */
                                 <>
                                     <div className="col-span-full md:col-span-1">
@@ -292,6 +309,18 @@ const AccountDetails = () => {
                                             onChange={e => setPrice(e.target.value)}
                                             required
                                         />
+                                    </div>
+                                </>
+                            ) : type === 'Stock Split' ? (
+                                /* Stock Split Fields: Ticker + New Additional Shares */
+                                <>
+                                    <div className="col-span-full md:col-span-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Ticker Symbol</label>
+                                        <input type="text" className="input" placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} required autoFocus />
+                                    </div>
+                                    <div className="col-span-full md:col-span-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Additional Shares Received</label>
+                                        <input type="number" step="any" className="input" placeholder="0" value={shares} onChange={e => setShares(e.target.value)} required />
                                     </div>
                                 </>
                             ) : (
@@ -341,22 +370,22 @@ const AccountDetails = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
                                         {/* 1. Stock Symbol/Shares */}
                                         <div>
-                                            <h3 className="text-xl font-bold text-white leading-none">{asset.ticker}</h3>
-                                            <p className="text-xs text-slate-400 font-medium mt-1">{asset.quantity.toLocaleString()} shares</p>
+                                            <h3 className="text-2xl font-bold text-white leading-none">{asset.ticker}</h3>
+                                            <p className="text-sm text-slate-300 font-medium mt-1">{asset.quantity.toLocaleString()} shares</p>
                                         </div>
 
                                         {/* 2. Avg. Cost */}
                                         <div className="text-center">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">Avg. Cost</p>
-                                            <p className="text-xl font-mono font-bold text-slate-300">${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Avg. Cost</p>
+                                            <p className="text-2xl font-mono font-bold text-slate-200">${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                         </div>
 
                                         {/* 3. Current Price */}
                                         <div className="text-center">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">Current Price</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Current Price</p>
                                             <div className="flex items-center justify-center gap-2">
-                                                <span className="text-xl font-mono font-bold text-white">${asset.currentPrice.toFixed(2)}</span>
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${asset.todayChangePercent >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                <span className="text-2xl font-mono font-bold text-white">${asset.currentPrice.toFixed(2)}</span>
+                                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${asset.todayChangePercent >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                                                     {asset.todayChangePercent > 0 ? '+' : ''}{asset.todayChangePercent?.toFixed(2)}%
                                                 </span>
                                             </div>
@@ -364,10 +393,10 @@ const AccountDetails = () => {
 
                                         {/* 4. Book Cost */}
                                         <div className="text-center">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
                                                 Book Cost
                                                 {asset.customBookCost !== undefined && asset.customBookCost !== null && (
-                                                    <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1 rounded">Custom</span>
+                                                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded">Custom</span>
                                                 )}
                                             </p>
                                             {editingBookCostId === asset.id ? (
@@ -375,7 +404,7 @@ const AccountDetails = () => {
                                                     <input
                                                         type="number"
                                                         step="any"
-                                                        className="w-32 bg-slate-900 border border-blue-500 rounded px-2 py-1 text-sm text-white font-mono focus:outline-none input-no-spinner"
+                                                        className="w-32 bg-slate-900 border border-blue-500 rounded px-2 py-1 text-base text-white font-mono focus:outline-none input-no-spinner"
                                                         value={customBookCostInput[asset.id] || ''}
                                                         onChange={(e) => setCustomBookCostInput({ ...customBookCostInput, [asset.id]: e.target.value })}
                                                         autoFocus
@@ -399,7 +428,7 @@ const AccountDetails = () => {
                                                         }}
                                                         className="p-1 hover:bg-green-700 rounded text-green-400 hover:text-white transition-all"
                                                     >
-                                                        <Save size={14} />
+                                                        <Save size={16} />
                                                     </button>
                                                     <button
                                                         onClick={() => {
@@ -408,7 +437,7 @@ const AccountDetails = () => {
                                                         }}
                                                         className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-all"
                                                     >
-                                                        <X size={14} />
+                                                        <X size={16} />
                                                     </button>
                                                     {asset.customBookCost !== undefined && asset.customBookCost !== null && (
                                                         <button
@@ -420,13 +449,13 @@ const AccountDetails = () => {
                                                             className="p-1 hover:bg-red-700 rounded text-red-400 hover:text-white transition-all"
                                                             title="Reset to calculated"
                                                         >
-                                                            <RotateCcw size={14} />
+                                                            <RotateCcw size={16} />
                                                         </button>
                                                     )}
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <p className="text-xl font-mono font-bold text-slate-300">
+                                                    <p className="text-2xl font-mono font-bold text-slate-200">
                                                         ${(asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </p>
                                                     <button
@@ -439,7 +468,7 @@ const AccountDetails = () => {
                                                         }}
                                                         className="p-1 hover:bg-slate-700 rounded text-slate-500 hover:text-white transition-all"
                                                     >
-                                                        <Pencil size={12} />
+                                                        <Pencil size={14} />
                                                     </button>
                                                 </div>
                                             )}
@@ -447,24 +476,24 @@ const AccountDetails = () => {
 
                                         {/* 5. Market Value */}
                                         <div className="text-center">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">Market Value</p>
-                                            <p className={`text-xl font-mono font-bold ${asset.marketValue >= (asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost) ? 'text-green-400' : 'text-red-400'}`}>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Market Value</p>
+                                            <p className={`text-2xl font-mono font-bold ${asset.marketValue >= (asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost) ? 'text-green-400' : 'text-red-400'}`}>
                                                 ${asset.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>
                                         </div>
 
                                         {/* 6. P/L ($) */}
                                         <div className="text-center">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">P/L ($)</p>
-                                            <p className={`text-xl font-mono font-bold ${asset.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">P/L ($)</p>
+                                            <p className={`text-2xl font-mono font-bold ${asset.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                 {asset.profit >= 0 ? '+' : '-'}${Math.abs(asset.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>
                                         </div>
 
                                         {/* 7. P/L (%) */}
                                         <div className="text-center">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">P/L (%)</p>
-                                            <p className={`text-xl font-mono font-bold ${asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">P/L (%)</p>
+                                            <p className={`text-2xl font-mono font-bold ${asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                 {asset.profitPercent >= 0 ? '+' : ''}{asset.profitPercent.toFixed(2)}%
                                             </p>
                                         </div>
@@ -479,23 +508,23 @@ const AccountDetails = () => {
                                         {/* Row 2: 52W Stats */}
                                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 pb-4 border-b border-slate-700/30 bg-slate-800/10 p-3 rounded-lg">
                                             <div>
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">52W High</p>
-                                                <p className="font-mono text-slate-400 text-xs">${asset.high52Week?.toFixed(2) || '-'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">52W High</p>
+                                                <p className="font-mono text-white text-base font-bold">${asset.high52Week?.toFixed(2) || '-'}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1">52W Low</p>
-                                                <p className="font-mono text-slate-400 text-xs">${asset.low52Week?.toFixed(2) || '-'}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">52W Low</p>
+                                                <p className="font-mono text-white text-base font-bold">${asset.low52Week?.toFixed(2) || '-'}</p>
                                             </div>
                                             <div className="col-span-1">
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1.5">% to High</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">% to High</p>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="flex-1 h-1 bg-slate-900 rounded-full overflow-hidden">
+                                                    <div className="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full bg-blue-500/80"
                                                             style={{ width: `${Math.max(0, Math.min(100, (asset.currentPrice / (asset.high52Week || 1)) * 100))}%` }}
                                                         ></div>
                                                     </div>
-                                                    <span className="text-[10px] text-slate-500 font-mono">
+                                                    <span className="text-xs text-white font-mono font-bold">
                                                         {asset.high52Week ? (100 - (asset.currentPrice / asset.high52Week * 100)).toFixed(1) : '-'}%
                                                     </span>
                                                 </div>
@@ -791,13 +820,15 @@ const AccountDetails = () => {
                                         <td className="px-6 py-4 text-sm text-slate-400 font-mono">{tx.date}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-white">{tx.ticker}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${tx.type === 'Buy' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${tx.type === 'Buy' || tx.type === 'DRIP' || tx.type === 'Dividend Reinvested' || tx.type === 'Stock Split' ? 'bg-green-500/10 text-green-400' : tx.type === 'Sell' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'}`}>
                                                 {tx.type}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">{tx.shares}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">${tx.pricePerShare?.toFixed(2)}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-white font-bold">${tx.amount.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">
+                                            {tx.shares ? (tx.type === 'Sell' ? '-' : '+') + tx.shares : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">${tx.pricePerShare?.toFixed(2) || '0.00'}</td>
+                                        <td className="px-6 py-4 text-sm text-right font-mono text-white font-bold">${tx.amount?.toFixed(2) || '0.00'}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => startEditTx(tx)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-all"><Pencil size={14} /></button>
