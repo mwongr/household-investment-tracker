@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import StockResearch from './pages/StockResearch';
 import Settings from './pages/Settings';
 import AcbTracker from './pages/AcbTracker';
+import NetWorth from './pages/NetWorth';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="research" element={<StockResearch />} />
             <Route path="acb" element={<AcbTracker />} />
+            <Route path="networth" element={<NetWorth />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

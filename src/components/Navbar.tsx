@@ -1,20 +1,25 @@
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, Users, Building, Wallet, FileBarChart, Settings, Search, Calculator } from 'lucide-react';
+import { LayoutDashboard, Users, Building, Wallet, FileBarChart, Settings, Search, Calculator, TrendingUp } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import '../styles/navbar.css';
 
 const Navbar = () => {
-    const { assets, accounts } = useData();
+    const { assets, accounts, bankAccounts, liabilities } = useData();
 
     // Calculate total net worth dynamically
-    const totalValue = assets.reduce((sum, a) => sum + a.marketValue, 0)
-        + accounts.reduce((sum, a) => sum + a.cashBalance, 0);
+    const totalAssetValue = assets.reduce((sum, a) => sum + (a.marketValue || 0), 0)
+        + accounts.reduce((sum, a) => sum + (a.cashBalance || 0), 0);
+    const totalCash = bankAccounts ? bankAccounts.reduce((sum, b) => sum + (b.balance || 0), 0) : 0;
+    const totalLiabilities = liabilities ? liabilities.reduce((sum, l) => sum + (l.balance || 0), 0) : 0;
+
+    const totalValue = totalAssetValue + totalCash - totalLiabilities;
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: Users, label: 'Members', path: '/members' },
         { icon: Building, label: 'Institutions', path: '/institutions' },
         { icon: Wallet, label: 'Accounts', path: '/accounts' },
+        { icon: TrendingUp, label: 'Net Worth', path: '/networth' },
         { icon: FileBarChart, label: 'Reports', path: '/reports' },
         { icon: Search, label: 'Research', path: '/research' },
         { icon: Calculator, label: 'ACB Tracker', path: '/acb' },

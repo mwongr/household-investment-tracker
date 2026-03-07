@@ -122,3 +122,27 @@ export type AcbTransaction = {
   splitFrom?: number;
   splitTo?: number;
 };
+
+// --- Net Worth Tracking Types ---
+
+export type BankAccount = {
+  id: string;
+  memberId: string | 'joint'; // 'joint' or specific member ID
+  name: string;
+  balance: number;
+};
+
+export type Liability = {
+  id: string;
+  memberId: string | 'joint';
+  name: string;
+  balance: number;
+};
+
+export type MonthlyExpense = {
+  id: string;
+  memberId: string | 'joint';
+  name: string;
+  amount: number;
+  category: string;
+};

@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { v4 as uuidv4 } from 'uuid';
 import type {
     Member, Institution, Account, Asset, Transaction, NetWorthSnapshot, WatchlistItem,
-    AcbAccount, AcbTransaction
+    AcbAccount, AcbTransaction,
+    BankAccount, Liability, MonthlyExpense
 } from '../types';
 
 interface DataContextType {
@@ -52,6 +53,22 @@ interface DataContextType {
     addAcbTransaction: (transaction: Omit<AcbTransaction, 'id'>) => void;
     updateAcbTransaction: (id: string, transaction: Omit<AcbTransaction, 'id'>) => void;
     deleteAcbTransaction: (id: string) => void;
+
+    // Net Worth Tracking
+    bankAccounts: BankAccount[];
+    addBankAccount: (bankAccount: Omit<BankAccount, 'id'>) => void;
+    updateBankAccount: (id: string, bankAccount: Omit<BankAccount, 'id'>) => void;
+    deleteBankAccount: (id: string) => void;
+
+    liabilities: Liability[];
+    addLiability: (liability: Omit<Liability, 'id'>) => void;
+    updateLiability: (id: string, liability: Omit<Liability, 'id'>) => void;
+    deleteLiability: (id: string) => void;
+
+    monthlyExpenses: MonthlyExpense[];
+    addMonthlyExpense: (expense: Omit<MonthlyExpense, 'id'>) => void;
+    updateMonthlyExpense: (id: string, expense: Omit<MonthlyExpense, 'id'>) => void;
+    deleteMonthlyExpense: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -147,6 +164,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? (JSON.parse(saved).acbTransactions || []) : [];
     });
 
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).bankAccounts || []) : [];
+    });
+
+    const [liabilities, setLiabilities] = useState<Liability[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).liabilities || []) : [];
+    });
+
+    const [monthlyExpenses, setMonthlyExpenses] = useState<MonthlyExpense[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? (JSON.parse(saved).monthlyExpenses || []) : [];
+    });
+
     // Track if we need to auto-refresh after adding new asset
     const pendingRefreshRef = useRef(false);
 
@@ -164,7 +196,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             watchlist,
             watchlistLastUpdated,
             acbAccounts,
-            acbTransactions
+            acbTransactions,
+            bankAccounts,
+            liabilities,
+            monthlyExpenses
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -177,7 +212,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions]);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -681,6 +716,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAcbTransactions(acbTransactions.filter(t => t.id !== id));
     };
 
+    // Net Worth Tracking Methods
+    const addBankAccount = (bank: Omit<BankAccount, 'id'>) => setBankAccounts(prev => [...prev, { ...bank, id: uuidv4() }]);
+    const updateBankAccount = (id: string, bank: Omit<BankAccount, 'id'>) => setBankAccounts(prev => prev.map(b => b.id === id ? { ...bank, id } : b));
+    const deleteBankAccount = (id: string) => setBankAccounts(prev => prev.filter(b => b.id !== id));
+
+    const addLiability = (liability: Omit<Liability, 'id'>) => setLiabilities(prev => [...prev, { ...liability, id: uuidv4() }]);
+    const updateLiability = (id: string, liability: Omit<Liability, 'id'>) => setLiabilities(prev => prev.map(l => l.id === id ? { ...liability, id } : l));
+    const deleteLiability = (id: string) => setLiabilities(prev => prev.filter(l => l.id !== id));
+
+    const addMonthlyExpense = (expense: Omit<MonthlyExpense, 'id'>) => setMonthlyExpenses(prev => [...prev, { ...expense, id: uuidv4() }]);
+    const updateMonthlyExpense = (id: string, expense: Omit<MonthlyExpense, 'id'>) => setMonthlyExpenses(prev => prev.map(e => e.id === id ? { ...expense, id } : e));
+    const deleteMonthlyExpense = (id: string) => setMonthlyExpenses(prev => prev.filter(e => e.id !== id));
+
     return (
         <DataContext.Provider value={{
             members,
@@ -719,7 +767,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteAcbAccount,
             addAcbTransaction,
             updateAcbTransaction,
-            deleteAcbTransaction
+            deleteAcbTransaction,
+            bankAccounts,
+            addBankAccount,
+            updateBankAccount,
+            deleteBankAccount,
+            liabilities,
+            addLiability,
+            updateLiability,
+            deleteLiability,
+            monthlyExpenses,
+            addMonthlyExpense,
+            updateMonthlyExpense,
+            deleteMonthlyExpense
         }}>
             {children}
         </DataContext.Provider>
