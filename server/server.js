@@ -99,17 +99,16 @@ app.get('/api/quote', async (req, res) => {
             const data = await resPrice.json();
             const result = data.chart?.result?.[0];
             if (result && result.meta) {
-                const price = result.meta.regularMarketPrice;
-                const prevClose = result.meta.chartPreviousClose; // For 1d, this IS yesterday's close
+                const price = result.meta.regularMarketPrice || 0;
+                const prevClose = result.meta.chartPreviousClose || 0; // For 1d, this IS yesterday's close
 
-                dailyChangePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+                dailyChangePercent = (prevClose && prevClose !== 0) ? ((price - prevClose) / prevClose) * 100 : 0;
 
                 // Update priceData with more accurate daily info
                 priceData = {
                     price: price,
                     currency: result.meta.currency, // Should be same
                     high: result.meta.fiftyTwoWeekHigh, // Should be same
-                    low: result.meta.fiftyTwoWeekLow,
                     low: result.meta.fiftyTwoWeekLow,
                     prevClose: prevClose,
                     volume: result.meta.regularMarketVolume
@@ -122,20 +121,16 @@ app.get('/api/quote', async (req, res) => {
         if (!foundDailyData && sparklineData.length >= 2) {
             const current = sparklineData[sparklineData.length - 1].price;
             const previous = sparklineData[sparklineData.length - 2].price;
-            if (previous !== 0) {
+            if (previous && previous !== 0) {
                 dailyChangePercent = ((current - previous) / previous) * 100;
             }
-            // Use last price from history as current price if meta was suspect? 
-            // Usually meta regularMarketPrice is real-timeish even on 5y chart.
         } else if (!foundDailyData && priceData && priceData.prevClose) {
-            // Absolute fallback if we only have 5y meta (WARNING: This gave the +68% bug if prevClose was 5y old)
-            // We should check granularity or assume it's wrong for daily change if range > 1mo.
-            // If range is 5y, priceData.prevClose is ANCIENT using v8 chart meta.
-            // Safest to return 0 if we can't calc from history.
+            const price = priceData.price || 0;
+            const prevClose = priceData.prevClose || 0;
             if (range === '5y' || range === '1y') {
                 dailyChangePercent = 0;
-            } else {
-                dailyChangePercent = ((priceData.price - priceData.prevClose) / priceData.prevClose) * 100;
+            } else if (prevClose !== 0) {
+                dailyChangePercent = ((price - prevClose) / prevClose) * 100;
             }
         }
 

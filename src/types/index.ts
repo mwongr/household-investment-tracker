@@ -40,6 +40,7 @@ export type Asset = {
   profit: number; // $
   profitPercent: number; // %
   todayChangePercent: number;
+  todayChangeDollar: number;
   high52Week?: number; // Mock data for now
   low52Week?: number; // Mock data for now
   sparkline?: { price: number; date?: string }[];

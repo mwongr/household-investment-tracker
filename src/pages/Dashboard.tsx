@@ -83,7 +83,7 @@ const Dashboard = () => {
     const assetsWithAccountInfo = assets.map(asset => {
         const account = accounts.find(acc => acc.id === asset.accountId);
         const member = members.find(m => m.id === account?.memberId);
-        const percentTo52WeekHigh = asset.high52Week
+        const percentTo52WeekHigh = (asset.high52Week && asset.high52Week !== 0)
             ? ((asset.currentPrice - asset.high52Week) / asset.high52Week) * 100
             : 0;
 
@@ -1331,6 +1331,9 @@ const Dashboard = () => {
                                 <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('todayChangePercent')}>
                                     <div className="flex items-center justify-end gap-1">Day % <ArrowUpDown size={12} /></div>
                                 </th>
+                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('todayChangeDollar')}>
+                                    <div className="flex items-center justify-end gap-1">Day $ <ArrowUpDown size={12} /></div>
+                                </th>
                                 <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('averageCost')}>
                                     <div className="flex items-center justify-end gap-1">Avg Cost <ArrowUpDown size={12} /></div>
                                 </th>
@@ -1373,6 +1376,9 @@ const Dashboard = () => {
                                     </td>
                                     <td className={`p-2 text-right font-medium ${asset.todayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                         {asset.todayChangePercent >= 0 ? '+' : ''}{asset.todayChangePercent.toFixed(2)}%
+                                    </td>
+                                    <td className={`p-2 text-right font-medium ${(asset.todayChangeDollar || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {(asset.todayChangeDollar || 0) >= 0 ? '+' : '-'}${Math.abs(asset.todayChangeDollar || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-2 text-right text-slate-300 font-medium">
                                         ${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1509,12 +1515,13 @@ const Dashboard = () => {
                                                                 <th className="px-4 py-3 text-right font-medium">Avg Cost</th>
                                                                 <th className="px-4 py-3 text-right font-medium">Book</th>
                                                                 <th className="px-4 py-3 text-right font-medium">Value</th>
+                                                                <th className="px-4 py-3 text-right font-medium">Day %</th>
+                                                                <th className="px-4 py-3 text-right font-medium">Day $</th>
                                                                 <th className="px-4 py-3 text-right font-medium">P/L $</th>
                                                                 <th className="px-4 py-3 text-right font-medium">P/L %</th>
                                                                 <th className="px-4 py-3 text-right font-medium">Low</th>
                                                                 <th className="px-4 py-3 text-right font-medium">High</th>
                                                                 <th className="px-4 py-3 text-right font-medium">% High</th>
-                                                                <th className="px-4 py-3 font-medium">Account</th>
                                                                 <th className="px-4 py-3 text-right font-medium">Action</th>
                                                             </tr>
                                                         </thead>
@@ -1527,6 +1534,12 @@ const Dashboard = () => {
                                                                     <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                                     <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${(asset.customBookCost || asset.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                                     <td className="px-4 py-2 text-right text-white font-bold tabular-nums">${asset.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    <td className={`px-4 py-2 text-right font-medium tabular-nums ${asset.todayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                        {asset.todayChangePercent >= 0 ? '+' : ''}{asset.todayChangePercent.toFixed(2)}%
+                                                                    </td>
+                                                                    <td className={`px-4 py-2 text-right font-medium tabular-nums ${(asset.todayChangeDollar || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                        {(asset.todayChangeDollar || 0) >= 0 ? '+' : '-'}${Math.abs(asset.todayChangeDollar || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
                                                                     <td className={`px-4 py-2 text-right font-bold tabular-nums ${asset.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                                         {asset.profit >= 0 ? '+' : '-'}${Math.abs(asset.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                     </td>
@@ -1538,7 +1551,6 @@ const Dashboard = () => {
                                                                     <td className={`px-4 py-2 text-right font-semibold tabular-nums ${asset.percentTo52WeekHigh >= -5 ? 'text-green-400' : 'text-slate-400'}`}>
                                                                         {asset.percentTo52WeekHigh.toFixed(2)}%
                                                                     </td>
-                                                                    <td className="px-4 py-2 text-slate-400 text-xs">{accGroup.account.name}</td>
                                                                     <td className="px-4 py-2 text-right">
                                                                         <div className="flex items-center justify-end gap-2">
                                                                             <Link to={`/accounts/${asset.accountId}`} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 hover:text-blue-300 transition-colors" title="View Account">

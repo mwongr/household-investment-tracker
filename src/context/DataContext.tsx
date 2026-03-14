@@ -246,6 +246,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const marketValue = asset.quantity * currentPrice;
             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
 
+            const todayChangePercent = marketData.regularMarketChangePercent || 0;
+            // Robust calculation: Change = Price - PrevClose
+            // Price = PrevClose * (1 + change/100) => PrevClose = Price / (1 + change/100)
+            const divisor = 1 + (todayChangePercent / 100);
+            const prevPrice = divisor !== 0 ? currentPrice / divisor : currentPrice; 
+            const todayChangeDollar = divisor !== 0 ? (currentPrice - prevPrice) * asset.quantity : 0;
+
             return {
                 ...asset,
                 currentPrice: currentPrice,
@@ -254,7 +261,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 profitPercent: effectiveBookCost > 0 ? ((marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0,
                 high52Week: marketData.fiftyTwoWeekHigh,
                 low52Week: marketData.fiftyTwoWeekLow,
-                todayChangePercent: marketData.regularMarketChangePercent,
+                todayChangePercent: todayChangePercent,
+                todayChangeDollar: todayChangeDollar,
                 sparkline: marketData.sparkline,
                 chartRange: range // store the fetch range context if needed
             };
@@ -282,6 +290,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         const marketValue = a.quantity * currentPrice;
                         const effectiveBookCost = a.customBookCost !== undefined && a.customBookCost !== null ? a.customBookCost : a.totalCost;
 
+                        const todayChangePercent = data.regularMarketChangePercent || 0;
+                        const divisor = 1 + (todayChangePercent / 100);
+                        const prevPrice = divisor !== 0 ? currentPrice / divisor : currentPrice;
+                        const todayChangeDollar = divisor !== 0 ? a.quantity * (currentPrice - prevPrice) : 0;
+
                         return {
                             ...a,
                             currentPrice: currentPrice,
@@ -290,7 +303,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             profitPercent: effectiveBookCost > 0 ? ((marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0,
                             high52Week: data.fiftyTwoWeekHigh,
                             low52Week: data.fiftyTwoWeekLow,
-                            todayChangePercent: data.regularMarketChangePercent,
+                            todayChangePercent: todayChangePercent,
+                            todayChangeDollar: todayChangeDollar,
                             sparkline: data.sparkline,
                             chartRange: range
                         };
@@ -478,6 +492,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     profit: 0,
                     profitPercent: 0,
                     todayChangePercent: existingAsset?.todayChangePercent || 0,
+                    todayChangeDollar: existingAsset?.todayChangeDollar || 0,
                     high52Week: existingAsset?.high52Week,
                     low52Week: existingAsset?.low52Week,
                     sparkline: existingAsset?.sparkline,
@@ -524,6 +539,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
             asset.profit = asset.marketValue - effectiveBookCost;
             asset.profitPercent = effectiveBookCost > 0 ? (asset.profit / effectiveBookCost) * 100 : 0;
+
+            // Recalculate Day $ Change
+            const cp = asset.todayChangePercent || 0;
+            const div = 1 + (cp / 100);
+            const pp = div !== 0 ? asset.currentPrice / div : asset.currentPrice;
+            asset.todayChangeDollar = div !== 0 ? (asset.currentPrice - pp) * asset.quantity : 0;
+
+            // Final safety check
+            if (isNaN(asset.todayChangeDollar) || !isFinite(asset.todayChangeDollar)) {
+                asset.todayChangeDollar = 0;
+            }
         }
 
         // Post-processing: Adjust Custom Book Cost based on quantity changes
