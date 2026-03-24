@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ArrowUp, ArrowDown, X, Plus, Check } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import StockAnalysisCard from './StockAnalysisCard';
 
 interface StockData {
     symbol: string;
@@ -212,6 +213,9 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                     </div>
                 </div>
             </div>
+
+            {/* Technical Analysis Section */}
+            <StockAnalysisCard ticker={data.symbol} />
         </div>
     );
 };

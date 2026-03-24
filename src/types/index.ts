@@ -78,6 +78,9 @@ export type WatchlistItem = {
   volume: number;
   avgVolume: number;
   sparkline?: { price: number; date?: string }[];
+  signal?: TaSignal;
+  rsi?: number | null;
+  goldenCross?: boolean;
 };
 
 // --- ACB Tracking Types ---
@@ -147,3 +150,58 @@ export type MonthlyExpense = {
   amount: number;
   category: string;
 };
+
+// --- Technical Analysis Types ---
+
+export interface OhlcvBar {
+  time: number; // Unix timestamp
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface EmaSeries {
+  time: number;
+  ema50: number | null;
+  ema200: number | null;
+}
+
+export interface MacdResult {
+  MACD: number | null;
+  signal: number | null;
+  histogram: number | null;
+}
+
+export interface TaIndicators {
+  ema50: number | null;
+  ema200: number | null;
+  rsi: number | null;
+  macd: MacdResult;
+  goldenCross: boolean;
+}
+
+export type TaSignal = 'buy' | 'sell' | 'neutral';
+
+export interface AnalysisData {
+  ticker: string;
+  currentPrice: number;
+  currency: string;
+  indicators: TaIndicators;
+  signal: TaSignal;
+  priceTargets: PriceTargets;
+  ohlcv: OhlcvBar[];
+  emaSeries: EmaSeries[];
+  fetchedAt: string;
+}
+
+export interface PriceTargets {
+  bollingerUpper: number | null;
+  bollingerMiddle: number | null;
+  suggestedBuyPrice: number | null;   // Lower Bollinger Band
+  suggestedSellPrice: number | null;  // Upper Bollinger Band
+  high52w: number | null;
+  low52w: number | null;
+  fibEntry: number | null;            // 61.8% Fibonacci retracement entry
+}

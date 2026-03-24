@@ -633,6 +633,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const resChart = await fetch(`/api/quote?symbol=${upperTicker}`);
             const dataChart = resChart.ok ? await resChart.json() : {};
 
+            const resAnalysis = await fetch(`/api/stocks/${upperTicker}/analysis`);
+            const dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
+
             if (dataDetailed.error) throw new Error(dataDetailed.error);
 
             const newItem: WatchlistItem = {
@@ -645,7 +648,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 low52Week: dataDetailed.fiftyTwoWeekLow || dataChart.fiftyTwoWeekLow,
                 volume: dataDetailed.volume || dataChart.volume,
                 avgVolume: dataDetailed.avgVolume || 0,
-                sparkline: dataChart.sparkline
+                sparkline: dataChart.sparkline,
+                signal: dataAnalysis.signal,
+                rsi: dataAnalysis.indicators?.rsi,
+                goldenCross: dataAnalysis.indicators?.goldenCross
             };
             setWatchlist(prev => [...prev, newItem]);
         } catch (e) {
@@ -674,14 +680,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         await Promise.all(uniqueTickers.map(async (ticker) => {
             try {
-                // Fetch BOTH detailed (for price/name accuracy) and standard (for sparkline)
-                const [resDetailed, resQuote] = await Promise.all([
+                // Fetch BOTH detailed (for price/name accuracy), standard (for sparkline) and analysis (for TA labels)
+                const [resDetailed, resQuote, resAnalysis] = await Promise.all([
                     fetch(`/api/quote-detailed?symbol=${ticker}`),
-                    fetch(`/api/quote?symbol=${ticker}`)
+                    fetch(`/api/quote?symbol=${ticker}`),
+                    fetch(`/api/stocks/${ticker}/analysis`)
                 ]);
 
                 const dataDetailed = resDetailed.ok ? await resDetailed.json() : {};
                 const dataQuote = resQuote.ok ? await resQuote.json() : {};
+                const dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
 
                 if (!dataQuote.error || !dataDetailed.error) {
                     newWatchlistDataMap.set(ticker, {
@@ -692,7 +700,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         low52Week: dataDetailed.fiftyTwoWeekLow || dataQuote.fiftyTwoWeekLow,
                         volume: dataDetailed.volume || dataQuote.volume,
                         avgVolume: dataDetailed.avgVolume,
-                        sparkline: dataQuote.sparkline
+                        sparkline: dataQuote.sparkline,
+                        signal: dataAnalysis.signal,
+                        rsi: dataAnalysis.indicators?.rsi,
+                        goldenCross: dataAnalysis.indicators?.goldenCross
                     });
                 }
             } catch (error) {
@@ -713,7 +724,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 low52Week: data.low52Week,
                 volume: data.volume,
                 avgVolume: data.avgVolume !== undefined ? data.avgVolume : item.avgVolume,
-                sparkline: data.sparkline || item.sparkline
+                sparkline: data.sparkline || item.sparkline,
+                signal: data.signal !== undefined ? data.signal : item.signal,
+                rsi: data.rsi !== undefined ? data.rsi : item.rsi,
+                goldenCross: data.goldenCross !== undefined ? data.goldenCross : item.goldenCross
             };
         }));
         setWatchlistLastUpdated(new Date());

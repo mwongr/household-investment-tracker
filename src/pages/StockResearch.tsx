@@ -139,6 +139,17 @@ const StockResearch = () => {
                                         <p className={`text-xs font-bold ${item.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                             {item.changePercent >= 0 ? '+' : ''}{item.changePercent?.toFixed(2)}%
                                         </p>
+                                        <div className="mt-2 flex items-center gap-1.5">
+                                            {item.goldenCross ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 uppercase border border-blue-500/30 whitespace-nowrap">Golden Cross</span>
+                                            ) : (item.signal === 'buy' || (item.rsi !== undefined && item.rsi !== null && item.rsi < 30)) ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/20 text-green-400 uppercase border border-green-500/30 whitespace-nowrap">Buy Signal</span>
+                                            ) : (item.signal === 'sell' || (item.rsi !== undefined && item.rsi !== null && item.rsi > 70)) ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 uppercase border border-red-500/30 whitespace-nowrap">Sell Signal</span>
+                                            ) : typeof item.signal === 'string' ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-700/50 text-slate-400 uppercase border border-slate-600/50 whitespace-nowrap">Neutral</span>
+                                            ) : null}
+                                        </div>
                                     </div>
 
                                     {/* 52W Range */}
