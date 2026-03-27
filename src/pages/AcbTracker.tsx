@@ -37,7 +37,7 @@ const AcbTracker = () => {
     const [editingTxId, setEditingTxId] = useState<string | null>(null);
 
     // Transaction Form State
-    const [txForm, setTxForm] = useState<Partial<AcbTransaction>>({
+    const [txForm, setTxForm] = useState<any>({
         type: 'Buy',
         date: new Date().toISOString().split('T')[0],
         memo: ''
@@ -248,12 +248,27 @@ const AcbTracker = () => {
     const handleAddTransaction = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedAccountId && txForm.ticker && txForm.date && txForm.type) {
+            const cleanNumber = (val: any) => val === '' || val === undefined || val === null ? undefined : Number(val);
+            
+            const payload: Omit<AcbTransaction, 'id'> = {
+                ...txForm,
+                acbAccountId: selectedAccountId,
+                shares: cleanNumber(txForm.shares),
+                pricePerShare: cleanNumber(txForm.pricePerShare),
+                commission: cleanNumber(txForm.commission),
+                amount: cleanNumber(txForm.amount),
+                reinvestedAmount: cleanNumber(txForm.reinvestedAmount),
+                reinvestedShares: cleanNumber(txForm.reinvestedShares),
+                splitFrom: cleanNumber(txForm.splitFrom),
+                splitTo: cleanNumber(txForm.splitTo),
+            };
+
             if (editingTxId) {
                 // We're editing
-                updateAcbTransaction(editingTxId, { ...txForm, acbAccountId: selectedAccountId } as Omit<AcbTransaction, 'id'>);
+                updateAcbTransaction(editingTxId, payload);
             } else {
                 // We're adding new
-                addAcbTransaction({ ...txForm, acbAccountId: selectedAccountId } as Omit<AcbTransaction, 'id'>);
+                addAcbTransaction(payload);
             }
 
             setIsAddTxModalOpen(false);
@@ -692,18 +707,18 @@ const AcbTracker = () => {
                                             <div>
                                                 <label className="block text-xs text-slate-400 mb-1">Shares *</label>
                                                 <input type="number" step="any" min="0" required className="input"
-                                                    value={txForm.shares || ''} onChange={e => setTxForm({ ...txForm, shares: parseFloat(e.target.value) })} />
+                                                    value={txForm.shares ?? ''} onChange={e => setTxForm({ ...txForm, shares: e.target.value })} />
                                             </div>
                                             <div>
                                                 <label className="block text-xs text-slate-400 mb-1">Price per share *</label>
                                                 <input type="number" step="any" min="0" required className="input"
-                                                    value={txForm.pricePerShare || ''} onChange={e => setTxForm({ ...txForm, pricePerShare: parseFloat(e.target.value) })} />
+                                                    value={txForm.pricePerShare ?? ''} onChange={e => setTxForm({ ...txForm, pricePerShare: e.target.value })} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-xs text-slate-400 mb-1">Commission</label>
                                             <input type="number" step="any" min="0" className="input" placeholder="0.00"
-                                                value={txForm.commission || ''} onChange={e => setTxForm({ ...txForm, commission: parseFloat(e.target.value) })} />
+                                                value={txForm.commission ?? ''} onChange={e => setTxForm({ ...txForm, commission: e.target.value })} />
                                         </div>
                                     </>
                                 )}
@@ -720,7 +735,7 @@ const AcbTracker = () => {
                                             )}
                                         </div>
                                         <input type="number" step="any" min="0" required className="input"
-                                            value={txForm.amount || ''} onChange={e => setTxForm({ ...txForm, amount: parseFloat(e.target.value) })} />
+                                            value={txForm.amount ?? ''} onChange={e => setTxForm({ ...txForm, amount: e.target.value })} />
                                     </div>
                                 )}
 
@@ -729,12 +744,12 @@ const AcbTracker = () => {
                                         <div>
                                             <label className="block text-xs text-slate-400 mb-1">Reinvested Amount ($) *</label>
                                             <input type="number" step="any" min="0" required className="input"
-                                                value={txForm.reinvestedAmount || ''} onChange={e => setTxForm({ ...txForm, reinvestedAmount: parseFloat(e.target.value) })} />
+                                                value={txForm.reinvestedAmount ?? ''} onChange={e => setTxForm({ ...txForm, reinvestedAmount: e.target.value })} />
                                         </div>
                                         <div>
                                             <label className="block text-xs text-slate-400 mb-1">Shares Received *</label>
                                             <input type="number" step="any" min="0" required className="input"
-                                                value={txForm.reinvestedShares || ''} onChange={e => setTxForm({ ...txForm, reinvestedShares: parseFloat(e.target.value) })} />
+                                                value={txForm.reinvestedShares ?? ''} onChange={e => setTxForm({ ...txForm, reinvestedShares: e.target.value })} />
                                         </div>
                                     </div>
                                 )}
@@ -744,12 +759,12 @@ const AcbTracker = () => {
                                         <div>
                                             <label className="block text-xs text-slate-400 mb-1">Old Shares (From) *</label>
                                             <input type="number" step="any" min="1" required className="input"
-                                                value={txForm.splitFrom || ''} onChange={e => setTxForm({ ...txForm, splitFrom: parseFloat(e.target.value) })} />
+                                                value={txForm.splitFrom ?? ''} onChange={e => setTxForm({ ...txForm, splitFrom: e.target.value })} />
                                         </div>
                                         <div>
                                             <label className="block text-xs text-slate-400 mb-1">New Shares (To) *</label>
                                             <input type="number" step="any" min="1" required className="input"
-                                                value={txForm.splitTo || ''} onChange={e => setTxForm({ ...txForm, splitTo: parseFloat(e.target.value) })} />
+                                                value={txForm.splitTo ?? ''} onChange={e => setTxForm({ ...txForm, splitTo: e.target.value })} />
                                         </div>
                                         <div className="col-span-2 text-xs text-slate-400 text-center">
                                             Example: For a 2-for-1 split, Old Shares = 1, New Shares = 2
