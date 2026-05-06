@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, Users, Building, Wallet, FileBarChart, Settings, Search, Calculator, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Users, Building, Wallet, FileBarChart, Settings, Search, Calculator, TrendingUp, Percent } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import '../styles/navbar.css';
 
@@ -23,6 +23,7 @@ const Navbar = () => {
         { icon: FileBarChart, label: 'Reports', path: '/reports' },
         { icon: Search, label: 'Research', path: '/research' },
         { icon: Calculator, label: 'ACB Tracker', path: '/acb' },
+        { icon: Percent, label: 'Tax Optimizer', path: '/tax' },
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 

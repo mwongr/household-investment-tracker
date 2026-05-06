@@ -205,3 +205,48 @@ export interface PriceTargets {
   low52w: number | null;
   fibEntry: number | null;            // 61.8% Fibonacci retracement entry
 }
+
+// --- Tax Bracket Optimizer Types ---
+
+export interface TaxBracket {
+  minIncome: number;    // Lower bound of this bracket (inclusive)
+  maxIncome: number;    // Upper bound of this bracket (exclusive; use Infinity for the top bracket)
+  rate: number;         // Marginal rate as a decimal (e.g. 0.26 for 26%)
+}
+
+export interface LayerCakeSegment {
+  label: string;            // e.g. "$55,868 – $111,733"
+  amount: number;           // Dollar amount of income in this layer
+  federalRate: number;      // Effective federal rate (after abatement)
+  provincialRate: number;
+  combinedRate: number;     // effectiveFederal + provincial
+  isShielded: boolean;      // Whether the RRSP contribution covers this layer
+  partialShield: number;    // 0–1 fraction of layer covered by RRSP shield
+}
+
+export interface OptimizationResult {
+  taxableIncome: number;            // annualIncome - rrspContribution
+  totalRefund: number;              // Estimated dollar refund from the contribution
+  effectiveTaxSavingsPercentage: number; // refund / contribution as %
+  remainingRoomInCurrentBracket: number; // $ until dropping to the next bracket
+  currentCombinedRate: number;      // Top marginal combined rate on taxable income
+  sweetSpotContribution: number;    // Optimal contribution to drop one full bracket
+  layers: LayerCakeSegment[];       // Layer-cake breakdown for visualization
+  diminishingReturns: boolean;      // true when effective rate after contrib < 30%
+}
+
+export interface TaxScenario {
+  id: string;
+  savedAt: string;             // ISO date string
+  annualIncome: number;
+  rrspContribution: number;
+  totalRefund: number;
+  effectiveRate: number;       // effectiveTaxSavingsPercentage
+  notes?: string;
+}
+
+export interface TaxSettings {
+  federalBrackets: TaxBracket[];
+  provincialBrackets: TaxBracket[];
+  abatement: number;
+}

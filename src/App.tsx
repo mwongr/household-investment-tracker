@@ -12,6 +12,7 @@ import StockResearch from './pages/StockResearch';
 import Settings from './pages/Settings';
 import AcbTracker from './pages/AcbTracker';
 import NetWorth from './pages/NetWorth';
+import TaxOptimizer from './pages/TaxOptimizer';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="research" element={<StockResearch />} />
             <Route path="acb" element={<AcbTracker />} />
             <Route path="networth" element={<NetWorth />} />
+            <Route path="tax" element={<TaxOptimizer />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

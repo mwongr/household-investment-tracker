@@ -582,6 +582,112 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
     }
 });
 
+// ─── Tax Scenarios ────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/tax-scenarios
+ * Returns all saved tax scenarios from database.json (newest first).
+ */
+app.get('/api/tax-scenarios', (req, res) => {
+    try {
+        const raw = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH, 'utf-8') : '{}';
+        const db = JSON.parse(raw);
+        const scenarios = db.taxScenarios || [];
+        // Return sorted newest-first
+        res.json([...scenarios].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)));
+    } catch (e) {
+        console.error('[TaxScenarios] GET failed:', e.message);
+        res.status(500).json({ error: 'Failed to read scenarios' });
+    }
+});
+
+/**
+ * POST /api/tax-scenarios
+ * Body: { annualIncome, rrspContribution, totalRefund, effectiveRate }
+ * Appends a new scenario to database.json and returns the saved record.
+ */
+app.post('/api/tax-scenarios', (req, res) => {
+    try {
+        const { annualIncome, rrspContribution, totalRefund, effectiveRate } = req.body;
+        if (annualIncome == null || rrspContribution == null) {
+            return res.status(400).json({ error: 'annualIncome and rrspContribution are required' });
+        }
+
+        const raw = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH, 'utf-8') : '{}';
+        const db = JSON.parse(raw);
+        if (!db.taxScenarios) db.taxScenarios = [];
+
+        const newScenario = {
+            id: `ts_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            savedAt: new Date().toISOString(),
+            annualIncome: Number(annualIncome),
+            rrspContribution: Number(rrspContribution),
+            totalRefund: Number(totalRefund),
+            effectiveRate: Number(effectiveRate),
+        };
+
+        db.taxScenarios.push(newScenario);
+        fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+
+        console.log(`[TaxScenarios] Saved scenario ${newScenario.id} — Income: $${annualIncome}, RRSP: $${rrspContribution}, Refund: $${totalRefund?.toFixed(2)}`);
+        res.json(newScenario);
+    } catch (e) {
+        console.error('[TaxScenarios] POST failed:', e.message);
+        res.status(500).json({ error: 'Failed to save scenario' });
+    }
+});
+
+/**
+ * DELETE /api/tax-scenarios/:id
+ */
+app.delete('/api/tax-scenarios/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const raw = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH, 'utf-8') : '{}';
+        const db = JSON.parse(raw);
+        
+        if (db.taxScenarios) {
+            db.taxScenarios = db.taxScenarios.filter(s => s.id !== id);
+            fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+            console.log(`[TaxScenarios] Deleted scenario ${id}`);
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[TaxScenarios] DELETE failed:', e.message);
+        res.status(500).json({ error: 'Failed to delete scenario' });
+    }
+});
+
+/**
+ * GET /api/tax-settings
+ */
+app.get('/api/tax-settings', (req, res) => {
+    try {
+        const raw = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH, 'utf-8') : '{}';
+        const db = JSON.parse(raw);
+        res.json(db.taxSettings || null);
+    } catch (e) {
+        console.error('[TaxSettings] GET failed:', e.message);
+        res.status(500).json({ error: 'Failed to read tax settings' });
+    }
+});
+
+/**
+ * POST /api/tax-settings
+ */
+app.post('/api/tax-settings', (req, res) => {
+    try {
+        const raw = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH, 'utf-8') : '{}';
+        const db = JSON.parse(raw);
+        db.taxSettings = req.body;
+        fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[TaxSettings] POST failed:', e.message);
+        res.status(500).json({ error: 'Failed to save tax settings' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Proxy server running on http://localhost:${PORT}`);
 });
