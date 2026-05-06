@@ -1,7 +1,8 @@
 /**
  * Tax Engine — Quebec RRSP Bracket Optimizer
  * ============================================
- * Uses dynamic Federal and Quebec provincial tax brackets.
+ * Implements the "top-down cascade" algorithm to calculate CRA and RQ refunds
+ * separately, using 2026 Federal and Quebec provincial tax brackets.
  */
 
 import type { TaxBracket, LayerCakeSegment, OptimizationResult, TaxSettings } from '../types';
@@ -26,163 +27,213 @@ export const defaultProvincialBrackets: TaxBracket[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getFederalRate(income: number, brackets: TaxBracket[]): number {
-  const bracket = brackets.slice().reverse().find(b => income > b.minIncome);
+/** Returns the marginal rate at a given income from a bracket array. */
+function getMarginalRate(income: number, brackets: TaxBracket[]): number {
+  if (income <= 0) return 0;
+  const bracket = [...brackets].reverse().find(b => income > b.minIncome);
   return bracket ? bracket.rate : 0;
 }
 
-function getProvincialRate(income: number, brackets: TaxBracket[]): number {
-  const bracket = brackets.slice().reverse().find(b => income > b.minIncome);
-  return bracket ? bracket.rate : 0;
+/**
+ * Top-Down Cascade Refund
+ * Calculates the tax savings of shielding income from `incomeHigh`
+ * down to `incomeLow` through a given set of brackets.
+ *
+ * Step B from the spec:
+ *   For each bracket: Overlap = min(incomeHigh, bracket.max) - max(incomeLow, bracket.min)
+ *   If Overlap > 0 → Layer_Refund = Overlap * rate * rateMultiplier
+ */
+function cascadeRefund(
+  incomeHigh: number,
+  incomeLow: number,
+  brackets: TaxBracket[],
+  rateMultiplier: number
+): number {
+  if (incomeHigh <= incomeLow || incomeHigh <= 0) return 0;
+  let refund = 0;
+  for (const b of brackets) {
+    const bMax = b.maxIncome === Infinity ? 1e9 : b.maxIncome;
+    const overlap = Math.min(incomeHigh, bMax) - Math.max(incomeLow, b.minIncome);
+    if (overlap > 0) {
+      refund += overlap * b.rate * rateMultiplier;
+    }
+  }
+  return refund;
 }
 
-function effectiveFederalRate(rate: number, abatement: number): number {
-  return rate * (1 - abatement);
-}
-
-function combinedRate(fedRate: number, provRate: number, abatement: number): number {
-  return effectiveFederalRate(fedRate, abatement) + provRate;
-}
-
-function getAllBreakpoints(federal: TaxBracket[], provincial: TaxBracket[]): number[] {
-  const points = new Set<number>();
-  [...federal, ...provincial].forEach(b => {
-    points.add(b.minIncome);
-    if (b.maxIncome !== Infinity) points.add(b.maxIncome);
-  });
-  return Array.from(points).sort((a, b) => a - b);
-}
-
-// ─── Core: Build Layer Cake ───────────────────────────────────────────────────
+// ─── Layer Cake ───────────────────────────────────────────────────────────────
 
 export function buildLayerCakeData(
-  income: number,
+  federalTaxableIncome: number,
   rrspContribution: number,
   settings: TaxSettings
 ): LayerCakeSegment[] {
-  if (income <= 0) return [];
-
+  if (federalTaxableIncome <= 0) return [];
   const { federalBrackets, provincialBrackets, abatement } = settings;
-  const allBreakpoints = getAllBreakpoints(federalBrackets, provincialBrackets);
-  const bands: { from: number; to: number; fedRate: number; provRate: number }[] = [];
-  const breakpoints = [0, ...allBreakpoints.filter(p => p > 0 && p < income), income];
 
+  // Build breakpoints from both bracket sets within income range
+  const pointSet = new Set<number>([0, federalTaxableIncome]);
+  for (const b of [...federalBrackets, ...provincialBrackets]) {
+    if (b.minIncome > 0 && b.minIncome < federalTaxableIncome) pointSet.add(b.minIncome);
+    if (b.maxIncome !== Infinity && b.maxIncome < federalTaxableIncome) pointSet.add(b.maxIncome);
+  }
+  const breakpoints = Array.from(pointSet).sort((a, b) => a - b);
+
+  // Build raw bands
+  const bands: LayerCakeSegment[] = [];
   for (let i = 0; i < breakpoints.length - 1; i++) {
     const from = breakpoints[i];
-    const to = breakpoints[i + 1];
-    const mid = (from + to) / 2;
+    const to   = breakpoints[i + 1];
+    const mid  = (from + to) / 2;
+    const fedRate  = getMarginalRate(mid, federalBrackets) * (1 - abatement);
+    const provRate = getMarginalRate(mid, provincialBrackets);
     bands.push({
-      from,
-      to,
-      fedRate: getFederalRate(mid, federalBrackets),
-      provRate: getProvincialRate(mid, provincialBrackets),
+      label: `$${Math.round(from).toLocaleString('en-CA')} – $${Math.round(to).toLocaleString('en-CA')}`,
+      amount: to - from,
+      federalRate: fedRate,
+      provincialRate: provRate,
+      combinedRate: fedRate + provRate,
+      isShielded: false,
+      partialShield: 0,
     });
   }
 
-  const merged: typeof bands = [];
+  // Merge adjacent bands with same combined rate
+  const merged: LayerCakeSegment[] = [];
   for (const band of bands) {
     const last = merged[merged.length - 1];
-    if (
-      last &&
-      Math.abs(combinedRate(last.fedRate, last.provRate, abatement) - combinedRate(band.fedRate, band.provRate, abatement)) < 0.0001
-    ) {
-      last.to = band.to;
+    if (last && Math.abs(last.combinedRate - band.combinedRate) < 0.0001) {
+      // Extend the last segment's label and amount
+      const labelFrom = last.label.split(' – ')[0];
+      last.label = `${labelFrom} – $${Math.round(parseFloat(band.label.split(' – ')[1].replace(/[$,]/g, ''))).toLocaleString('en-CA')}`;
+      last.amount += band.amount;
     } else {
       merged.push({ ...band });
     }
   }
 
-  const clampedShield = Math.min(Math.max(rrspContribution, 0), income);
-  let shieldRemaining = clampedShield;
-
-  const layers: LayerCakeSegment[] = merged.map(band => {
-    const amount = band.to - band.from;
-    const fedR = band.fedRate;
-    const provR = band.provRate;
-    return {
-      label: `$${Math.round(band.from).toLocaleString('en-CA')} – $${band.to === income ? Math.round(income).toLocaleString('en-CA') : Math.round(band.to).toLocaleString('en-CA')}`,
-      amount,
-      federalRate: effectiveFederalRate(fedR, abatement),
-      provincialRate: provR,
-      combinedRate: combinedRate(fedR, provR, abatement),
-      isShielded: false,
-      partialShield: 0,
-    };
-  });
-
-  for (let i = layers.length - 1; i >= 0 && shieldRemaining > 0; i--) {
-    const layer = layers[i];
+  // Apply RRSP shield top-down
+  const shieldAmount = Math.min(Math.max(rrspContribution, 0), federalTaxableIncome);
+  let shieldRemaining = shieldAmount;
+  for (let i = merged.length - 1; i >= 0 && shieldRemaining > 0; i--) {
+    const layer = merged[i];
     if (shieldRemaining >= layer.amount) {
       layer.isShielded = true;
       layer.partialShield = 1;
       shieldRemaining -= layer.amount;
     } else {
-      layer.isShielded = false;
       layer.partialShield = shieldRemaining / layer.amount;
       shieldRemaining = 0;
     }
   }
-
-  return layers;
+  return merged;
 }
 
-// ─── Core: Calculate Optimization ────────────────────────────────────────────
+// ─── Main Optimization ───────────────────────────────────────────────────────
 
 export function calculateOptimization(
-  annualIncome: number,
+  federalTaxableIncome: number,
+  quebecTaxableIncome: number,
   currentRRSPContribution: number,
   settings: TaxSettings
 ): OptimizationResult {
   const { federalBrackets, provincialBrackets, abatement } = settings;
-  const contribution = Math.max(0, currentRRSPContribution);
-  const taxableIncome = Math.max(0, annualIncome - contribution);
+  const contribution    = Math.max(0, currentRRSPContribution);
+  const newFedTaxable   = Math.max(0, federalTaxableIncome - contribution);
+  const newQcTaxable    = Math.max(0, quebecTaxableIncome  - contribution);
 
-  const layers = buildLayerCakeData(annualIncome, contribution, settings);
+  // === Step A: Effective rates & cascade ===
+  // CRA refund: federal cascade with abatement applied
+  const craRefund = cascadeRefund(federalTaxableIncome, newFedTaxable, federalBrackets, 1 - abatement);
+  // RQ refund: provincial cascade (no abatement multiplier needed here)
+  const rqRefund  = cascadeRefund(quebecTaxableIncome,  newQcTaxable,  provincialBrackets, 1);
 
-  const topFedRate = getFederalRate(taxableIncome, federalBrackets);
-  const topProvRate = getProvincialRate(taxableIncome, provincialBrackets);
-  const currentCombinedRate = combinedRate(topFedRate, topProvRate, abatement);
+  const totalRefund                 = craRefund + rqRefund;
+  const effectiveTaxSavingsPercentage = contribution > 0 ? (totalRefund / contribution) * 100 : 0;
 
-  let refund = 0;
-  let remainingContribution = contribution;
-  const allBreakpoints = getAllBreakpoints(federalBrackets, provincialBrackets);
+  // === Current top combined rate (BEFORE RRSP) ===
+  const topFedRate  = getMarginalRate(federalTaxableIncome, federalBrackets) * (1 - abatement);
+  const topProvRate = getMarginalRate(quebecTaxableIncome,  provincialBrackets);
+  const currentCombinedRate = topFedRate + topProvRate;
 
-  const breakpoints = [0, ...allBreakpoints.filter(p => p > 0 && p < annualIncome), annualIncome]
-    .sort((a, b) => b - a);
+  // === New top combined rate (AFTER RRSP) ===
+  const newFedRate  = getMarginalRate(newFedTaxable, federalBrackets) * (1 - abatement);
+  const newProvRate = getMarginalRate(newQcTaxable,  provincialBrackets);
+  const newCombinedRate = newFedRate + newProvRate;
 
-  for (let i = 0; i < breakpoints.length - 1 && remainingContribution > 0; i++) {
-    const layerTop = breakpoints[i];
-    const layerBot = breakpoints[i + 1];
-    const layerSize = layerTop - layerBot;
-    const applied = Math.min(remainingContribution, layerSize);
+  // === Step C: Sweet Spot — next COMBINED rate drop ===
+  // Build candidate contributions that would push either federal or QC income
+  // across a bracket boundary. The sweet spot is the smallest such contribution
+  // that actually lowers the COMBINED marginal rate.
+  const fedBreaks = federalBrackets.map(b => b.minIncome).filter(bp => bp > 0 && bp < federalTaxableIncome);
+  const qcBreaks  = provincialBrackets.map(b => b.minIncome).filter(bp => bp > 0 && bp < quebecTaxableIncome);
 
-    const mid = (layerTop + layerBot) / 2;
-    const fedR = getFederalRate(mid, federalBrackets);
-    const provR = getProvincialRate(mid, provincialBrackets);
-    const rate = combinedRate(fedR, provR, abatement);
+  // For each fed breakpoint, the required contribution is (federalTaxableIncome - bp)
+  // For each QC breakpoint, the required contribution is (quebecTaxableIncome - bp)
+  const candidates = [
+    ...fedBreaks.map(bp => federalTaxableIncome - bp),
+    ...qcBreaks.map(bp => quebecTaxableIncome - bp),
+  ].filter(c => c > contribution); // Only candidates ABOVE current contribution
 
-    refund += applied * rate;
-    remainingContribution -= applied;
+  let sweetSpotContribution = contribution; // default: already at sweet spot
+  let remainingRoomInCurrentBracket = 0;
+
+  // Find the smallest contribution that drops the COMBINED rate
+  const sortedCandidates = candidates.sort((a, b) => a - b);
+  for (const candidate of sortedCandidates) {
+    const testFed  = Math.max(0, federalTaxableIncome - candidate);
+    const testQc   = Math.max(0, quebecTaxableIncome  - candidate);
+    const testCombined = getMarginalRate(testFed, federalBrackets) * (1 - abatement)
+                       + getMarginalRate(testQc,  provincialBrackets);
+    if (testCombined < currentCombinedRate - 0.001) {
+      sweetSpotContribution = candidate;
+      remainingRoomInCurrentBracket = Math.max(0, candidate - contribution);
+      break;
+    }
   }
 
-  const effectiveTaxSavingsPercentage = contribution > 0 ? (refund / contribution) * 100 : 0;
+  // If current contribution already dropped the rate, find the NEXT drop from here
+  if (sweetSpotContribution === contribution && newCombinedRate < currentCombinedRate - 0.001) {
+    // Already dropped — find next drop above current contribution
+    const nextCandidates = [
+      ...fedBreaks.map(bp => federalTaxableIncome - bp),
+      ...qcBreaks.map(bp => quebecTaxableIncome - bp),
+    ].filter(c => c > contribution).sort((a, b) => a - b);
 
-  const nextBreakpoint = allBreakpoints.slice()
-    .filter(p => p < taxableIncome)
-    .sort((a, b) => b - a)[0] ?? 0;
+    for (const candidate of nextCandidates) {
+      const testFed  = Math.max(0, federalTaxableIncome - candidate);
+      const testQc   = Math.max(0, quebecTaxableIncome  - candidate);
+      const testCombined = getMarginalRate(testFed, federalBrackets) * (1 - abatement)
+                         + getMarginalRate(testQc,  provincialBrackets);
+      if (testCombined < newCombinedRate - 0.001) {
+        sweetSpotContribution = candidate;
+        remainingRoomInCurrentBracket = Math.max(0, candidate - contribution);
+        break;
+      }
+    }
+  }
 
-  const remainingRoomInCurrentBracket = taxableIncome - nextBreakpoint;
-  const sweetSpotContribution = contribution + remainingRoomInCurrentBracket;
-  const diminishingReturns = currentCombinedRate < 0.30;
+  // === Layer Cake ===
+  const layers = buildLayerCakeData(federalTaxableIncome, contribution, settings);
+
+  // === Flags ===
+  const diminishingReturns = newCombinedRate < 0.30;
+  const bracketCrossed     = newCombinedRate < currentCombinedRate - 0.001;
 
   return {
-    taxableIncome,
-    totalRefund: refund,
+    federalTaxableIncome,
+    quebecTaxableIncome,
+    taxableIncome: newFedTaxable,
+    totalRefund,
+    craRefund,
+    rqRefund,
     effectiveTaxSavingsPercentage,
     remainingRoomInCurrentBracket,
     currentCombinedRate,
+    newCombinedRate,
     sweetSpotContribution,
     layers,
     diminishingReturns,
+    bracketCrossed,
   };
 }

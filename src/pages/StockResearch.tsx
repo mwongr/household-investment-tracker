@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import StockSearch from '../components/StockSearch';
 import StockDetails from '../components/StockDetails';
-import ScreenerWidget from '../components/ScreenerWidget';
+import StockComparison from '../components/StockComparison';
 import { useData } from '../context/DataContext';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
@@ -213,14 +213,9 @@ const StockResearch = () => {
                 )}
             </div>
 
-            <div className="mt-12">
-                <h2 className="text-2xl font-bold mb-6 text-white text-center md:text-left">Market Screeners (Canada)</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <ScreenerWidget title="Day Gainers" type="day_gainers" />
-                    <ScreenerWidget title="Day Losers" type="day_losers" />
-                    <ScreenerWidget title="Most Active" type="most_actives" />
-                </div>
-            </div>
+            {/* Performance Comparison Tool */}
+            <StockComparison />
+
         </div >
     );
 };

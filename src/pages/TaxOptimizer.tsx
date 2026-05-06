@@ -8,6 +8,7 @@ import {
   defaultProvincialBrackets
 } from '../utils/taxEngine';
 import type { OptimizationResult, TaxScenario, LayerCakeSegment, TaxSettings, TaxBracket } from '../types';
+import { useData } from '../context/DataContext';
 import '../styles/taxoptimizer.css';
 
 const API_BASE = 'http://localhost:3001';
@@ -30,21 +31,26 @@ function rateClass(rate: number): string {
   return 'rate-low';
 }
 
-const FormattedNumberInput = ({ value, onChange, className, placeholder, id, style }: any) => {
-  const [strValue, setStrValue] = useState(value ? value.toLocaleString('en-CA') : '');
+const FormattedNumberInput = ({ value, onChange, className, placeholder, id, style, emptyIsInfinity }: any) => {
+  const formatVal = (v: any) => {
+    if (v == null || (emptyIsInfinity && v === Infinity)) return '';
+    return Number(v).toLocaleString('en-CA');
+  };
+
+  const [strValue, setStrValue] = useState(formatVal(value));
 
   useEffect(() => {
     const currentParsed = Number(strValue.replace(/,/g, ''));
-    if (currentParsed !== value) {
-      setStrValue(value ? value.toLocaleString('en-CA') : '');
+    if (currentParsed !== value && !(emptyIsInfinity && strValue === '' && value === Infinity)) {
+      setStrValue(formatVal(value));
     }
-  }, [value, strValue]);
+  }, [value, strValue, emptyIsInfinity]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/,/g, '');
     if (raw === '') {
       setStrValue('');
-      onChange(0);
+      onChange(emptyIsInfinity ? Infinity : 0);
       return;
     }
     if (!isNaN(Number(raw))) {
@@ -55,8 +61,8 @@ const FormattedNumberInput = ({ value, onChange, className, placeholder, id, sty
 
   const handleBlur = () => {
     const raw = Number(strValue.replace(/,/g, ''));
-    if (!isNaN(raw)) {
-      setStrValue(raw.toLocaleString('en-CA'));
+    if (!isNaN(raw) && strValue !== '') {
+      setStrValue(formatVal(raw));
     }
   };
 
@@ -205,7 +211,7 @@ const NextMilestoneCard: React.FC<{ result: OptimizationResult; contribution: nu
       <div className="milestone-amount">{fmt.format(additionalNeeded)}</div>
       <div className="milestone-desc">
         more to contribute to exit the{' '}
-        <strong style={{ color: rateColor(currentCombinedRate) }}>{(currentCombinedRate * 100).toFixed(1)}%</strong> combined bracket.
+        <strong style={{ color: rateColor(result.newCombinedRate) }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong> combined bracket.
       </div>
       {nextRate !== null && (
         <div className="milestone-bracket-drop">
@@ -300,13 +306,20 @@ const TaxOptimizer: React.FC = () => {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  const [annualIncome, setAnnualIncome] = useState<number>(120000);
+  const [fedIncome, setFedIncome] = useState<number>(120000);
+  const [qcIncome, setQcIncome] = useState<number>(120000);
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [rrspRoom, setRrspRoom] = useState<number>(30000);
   const [contribution, setContribution] = useState<number>(10000);
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [scenarios, setScenarios] = useState<TaxScenario[]>([]);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string>('');
   const [scenariosLoaded, setScenariosLoaded] = useState(false);
+
+  const { accounts, transactions, assets } = useData();
+  const rrspAccounts = accounts.filter(a => a.type === 'RRSP');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
   // Load settings
   useEffect(() => {
@@ -323,12 +336,12 @@ const TaxOptimizer: React.FC = () => {
 
   // Recalculate whenever inputs change
   useEffect(() => {
-    if (settingsLoaded && annualIncome > 0) {
-      setResult(calculateOptimization(annualIncome, contribution, settings));
+    if (settingsLoaded && fedIncome > 0) {
+      setResult(calculateOptimization(fedIncome, advancedMode ? qcIncome : fedIncome, contribution, settings));
     } else {
       setResult(null);
     }
-  }, [annualIncome, contribution, settings, settingsLoaded]);
+  }, [fedIncome, qcIncome, advancedMode, contribution, settings, settingsLoaded]);
 
   // Load saved scenarios on mount
   useEffect(() => {
@@ -347,11 +360,15 @@ const TaxOptimizer: React.FC = () => {
   const handleSave = async () => {
     if (!result) return;
     setSaveState('saving');
+    setSaveError('');
     try {
       const body = {
-        annualIncome,
+        annualIncome: fedIncome,
+        quebecTaxableIncome: advancedMode ? qcIncome : fedIncome,
         rrspContribution: contribution,
         totalRefund: result.totalRefund,
+        craRefund: result.craRefund,
+        rqRefund: result.rqRefund,
         effectiveRate: result.effectiveTaxSavingsPercentage,
       };
       const r = await fetch(`${API_BASE}/api/tax-scenarios`, {
@@ -364,9 +381,18 @@ const TaxOptimizer: React.FC = () => {
         setScenarios(prev => [saved, ...prev]);
         setSaveState('saved');
         setTimeout(() => setSaveState('idle'), 2500);
+      } else {
+        const errText = await r.text();
+        console.error('[TaxOptimizer] Save failed:', r.status, errText);
+        setSaveError(`Server error ${r.status}: ${errText}`);
+        setSaveState('error');
+        setTimeout(() => setSaveState('idle'), 4000);
       }
-    } catch {
-      setSaveState('idle');
+    } catch (e: any) {
+      console.error('[TaxOptimizer] Save exception:', e);
+      setSaveError(e?.message || 'Network error — is the server running?');
+      setSaveState('error');
+      setTimeout(() => setSaveState('idle'), 4000);
     }
   };
 
@@ -382,8 +408,13 @@ const TaxOptimizer: React.FC = () => {
   };
 
   const handleLoadScenario = (scenario: TaxScenario) => {
-    setAnnualIncome(scenario.annualIncome);
+    setFedIncome(scenario.annualIncome);
+    if (scenario.quebecTaxableIncome && scenario.quebecTaxableIncome !== scenario.annualIncome) {
+      setQcIncome(scenario.quebecTaxableIncome);
+      setAdvancedMode(true);
+    }
     setContribution(scenario.rrspContribution);
+    setIsSpousal(scenario.isSpousal ?? false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -431,7 +462,11 @@ const TaxOptimizer: React.FC = () => {
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#6366f1,#8b5cf6)' } as React.CSSProperties}>
             <span className="tax-kpi-label">Estimated Refund</span>
             <span className="tax-kpi-value" style={{ color: '#a5b4fc' }}>{fmtDec.format(result.totalRefund)}</span>
-            <span className="tax-kpi-sub">From your {fmt.format(contribution)} contribution</span>
+            <span className="tax-kpi-sub" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+              <span style={{ color: '#93c5fd' }}>CRA: {fmt.format(result.craRefund)}</span>
+              <span style={{ color: '#475569' }}>·</span>
+              <span style={{ color: '#c4b5fd' }}>RQ: {fmt.format(result.rqRefund)}</span>
+            </span>
           </div>
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#10b981,#059669)' } as React.CSSProperties}>
             <span className="tax-kpi-label">Effective Savings Rate</span>
@@ -440,8 +475,8 @@ const TaxOptimizer: React.FC = () => {
           </div>
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#f59e0b,#d97706)' } as React.CSSProperties}>
             <span className="tax-kpi-label">Top Marginal Rate</span>
-            <span className={`tax-kpi-value ${rateClass(result.currentCombinedRate)}`}>
-              {(result.currentCombinedRate * 100).toFixed(1)}%
+            <span className={`tax-kpi-value ${rateClass(result.newCombinedRate)}`}>
+              {(result.newCombinedRate * 100).toFixed(1)}%
             </span>
             <span className="tax-kpi-sub">Combined Fed + QC on top dollar</span>
           </div>
@@ -471,13 +506,14 @@ const TaxOptimizer: React.FC = () => {
             <div className="tax-panel-body">
               <div className="tax-input-grid">
                 <div className="tax-input-group">
-                  <label className="tax-input-label">Annual Gross Income (CAD)</label>
+                  <label className="tax-input-label">Estimated Taxable Income (CAD)</label>
                   <FormattedNumberInput
                     id="tax-annual-income"
                     className="tax-input"
-                    value={annualIncome}
+                    value={fedIncome}
                     onChange={(v: number) => {
-                      setAnnualIncome(v);
+                      setFedIncome(v);
+                      if (!advancedMode) setQcIncome(v);
                       if (contribution > v) setContribution(v);
                     }}
                   />
@@ -494,6 +530,33 @@ const TaxOptimizer: React.FC = () => {
                     }}
                   />
                 </div>
+              </div>
+
+              {/* Advanced: Federal / Quebec split */}
+              <div style={{ marginTop: '0.75rem' }}>
+                <button
+                  onClick={() => setAdvancedMode(m => !m)}
+                  style={{ fontSize: '0.72rem', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <span>{advancedMode ? '▼' : '▶'}</span> Advanced: Federal / Quebec Split
+                </button>
+                {advancedMode && (
+                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(99,102,241,0.07)', borderRadius: '0.5rem', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <p style={{ fontSize: '0.71rem', color: '#818cf8', margin: '0 0 0.5rem' }}>Quebec taxable income is sometimes higher than federal (e.g. employer-paid health premiums).</p>
+                    <div className="tax-input-grid">
+                      <div className="tax-input-group">
+                        <label className="tax-input-label">Federal Taxable Income</label>
+                        <FormattedNumberInput id="tax-fed-income" className="tax-input" value={fedIncome}
+                          onChange={(v: number) => { setFedIncome(v); if (contribution > v) setContribution(v); }} />
+                      </div>
+                      <div className="tax-input-group">
+                        <label className="tax-input-label">Quebec Taxable Income</label>
+                        <FormattedNumberInput id="tax-qc-income" className="tax-input" value={qcIncome}
+                          onChange={(v: number) => setQcIncome(v)} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Slider */}
@@ -526,22 +589,121 @@ const TaxOptimizer: React.FC = () => {
                   />
                 </div>
 
-                {contribution > 0 && (
-                  <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: '#94a3b8' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Month</span>
-                      <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 12)}</strong>
-                    </div>
-                    <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Bi-Weekly</span>
-                      <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 26)}</strong>
-                    </div>
-                    <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Week</span>
-                      <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 52)}</strong>
-                    </div>
+                {/* RRSP Tracker & Schedule */}
+                <div style={{ marginTop: '1.25rem', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                  <div style={{ padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0' }}>RRSP Funding Schedule</div>
+                    <select
+                      value={selectedAccountId}
+                      onChange={(e) => setSelectedAccountId(e.target.value)}
+                      style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem', outline: 'none' }}
+                    >
+                      <option value="">Select RRSP Account...</option>
+                      {rrspAccounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {(() => {
+                    const selectedAcc = accounts.find(a => a.id === selectedAccountId);
+                    if (!selectedAcc) {
+                       return contribution > 0 ? (
+                         <div style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: '#94a3b8' }}>
+                           <div style={{ textAlign: 'center' }}>
+                             <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Month</span>
+                             <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 12)}</strong>
+                           </div>
+                           <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                           <div style={{ textAlign: 'center' }}>
+                             <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Bi-Weekly</span>
+                             <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 26)}</strong>
+                           </div>
+                           <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                           <div style={{ textAlign: 'center' }}>
+                             <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Week</span>
+                             <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 52)}</strong>
+                           </div>
+                         </div>
+                       ) : <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>Enter a proposed contribution to see schedule</div>;
+                    }
+
+                    const today = new Date();
+                    const isFirst60Days = today.getMonth() === 0 || today.getMonth() === 1 || (today.getMonth() === 2 && today.getDate() === 1);
+                    const taxYear = isFirst60Days ? today.getFullYear() - 1 : today.getFullYear();
+                    
+                    const startDate = new Date(taxYear, 0, 1); // Jan 1, Tax Year
+                    const endDate = new Date(taxYear + 1, 2, 1); // March 1, Tax Year + 1
+
+                    const ytdDeposits = transactions
+                      .filter(t => t.accountId === selectedAccountId && t.type === 'Deposit')
+                      .filter(t => {
+                         const d = new Date(t.date);
+                         return d >= startDate && d <= endDate;
+                      })
+                      .reduce((sum, t) => sum + (t.amount || 0), 0);
+                      
+                    const totalAssetValue = assets.filter(a => a.accountId === selectedAccountId).reduce((sum, a) => sum + a.marketValue, 0);
+                    const totalValue = totalAssetValue + selectedAcc.cashBalance;
+                    
+                    const remainingTarget = Math.max(0, contribution - ytdDeposits);
+                    
+                    const remainingDays = Math.max(1, (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const remainingMonths = Math.max(1, remainingDays / 30.44);
+                    const remainingBiWeeks = Math.max(1, remainingDays / 14);
+                    const remainingWeeks = Math.max(1, remainingDays / 7);
+
+                    return (
+                      <div style={{ padding: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                          <span style={{ color: '#94a3b8' }}>Account Value: <strong style={{ color: '#e2e8f0' }}>{fmt.format(totalValue)}</strong></span>
+                          <span style={{ color: '#94a3b8' }}>Cash: <strong style={{ color: '#6ee7b7' }}>{fmt.format(selectedAcc.cashBalance)}</strong></span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.75rem' }}>
+                          <span style={{ color: '#94a3b8' }} title={`Deposits from Jan 1, ${taxYear} to Mar 1, ${taxYear + 1}`}>
+                            Contributions: <strong style={{ color: '#f59e0b' }}>{fmt.format(ytdDeposits)}</strong>
+                          </span>
+                          <span style={{ color: '#94a3b8' }}>Remaining Target: <strong style={{ color: '#c7d2fe' }}>{fmt.format(remainingTarget)}</strong></span>
+                        </div>
+                        
+                        {remainingTarget > 0 ? (
+                          <>
+                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', textAlign: 'center', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                              Required schedule before Mar 1, {taxYear + 1}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '0.25rem' }}>
+                              <div style={{ textAlign: 'center' }}>
+                                <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Month</span>
+                                <strong style={{ color: '#e2e8f0' }}>{fmt.format(remainingTarget / remainingMonths)}</strong>
+                              </div>
+                              <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                              <div style={{ textAlign: 'center' }}>
+                                <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Bi-Weekly</span>
+                                <strong style={{ color: '#e2e8f0' }}>{fmt.format(remainingTarget / remainingBiWeeks)}</strong>
+                              </div>
+                              <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                              <div style={{ textAlign: 'center' }}>
+                                <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Week</span>
+                                <strong style={{ color: '#e2e8f0' }}>{fmt.format(remainingTarget / remainingWeeks)}</strong>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                           <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#6ee7b7', padding: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.25rem' }}>
+                             <Check size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }}/>
+                             Target reached for the {taxYear} tax year!
+                           </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Bracket-crossing warning */}
+                {result?.bracketCrossed && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.875rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#a5b4fc', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1rem' }}>🎯</span>
+                    <span><strong>Bracket Drop!</strong> Your contribution crosses a bracket boundary: <strong style={{ color: '#f87171' }}>{(result.currentCombinedRate * 100).toFixed(1)}%</strong> → <strong style={{ color: '#34d399' }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong>. Further contributions shield income at a lower rate.</span>
                   </div>
                 )}
               </div>
@@ -557,7 +719,7 @@ const TaxOptimizer: React.FC = () => {
               </span>
             </div>
             {result ? (
-              <LayerCakeBar layers={result.layers} income={annualIncome} />
+              <LayerCakeBar layers={result.layers} income={fedIncome} />
             ) : (
               <div className="tax-empty">Enter your income above.</div>
             )}
@@ -610,16 +772,24 @@ const TaxOptimizer: React.FC = () => {
             <div className="tax-panel-body">
               <button
                 id="tax-save-scenario-btn"
-                className={`save-btn ${saveState === 'saved' ? 'saved' : ''}`}
+                className={`save-btn ${saveState === 'saved' ? 'saved' : saveState === 'error' ? 'error' : ''}`}
                 onClick={handleSave}
                 disabled={saveState === 'saving' || !result}
+                style={saveState === 'error' ? { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5' } : {}}
               >
                 {saveState === 'saved'
                   ? <><Check size={16} /> Scenario Saved!</>
                   : saveState === 'saving'
                   ? 'Saving…'
+                  : saveState === 'error'
+                  ? <><AlertTriangle size={16} /> Save Failed</>
                   : <><Save size={16} /> Save Current Scenario</>}
               </button>
+              {saveState === 'error' && saveError && (
+                <p style={{ fontSize: '0.7rem', color: '#f87171', textAlign: 'center', marginTop: '0.4rem', wordBreak: 'break-all' }}>
+                  {saveError}
+                </p>
+              )}
               <p style={{ fontSize: '0.72rem', color: '#475569', textAlign: 'center', marginTop: '0.5rem' }}>
                 Snapshots are persisted to your local database.
               </p>
@@ -638,49 +808,60 @@ const TaxOptimizer: React.FC = () => {
                 <div className="tax-empty">No saved scenarios yet. Save one above!</div>
               )}
               {scenarios.length > 0 && (
-                <table className="scenarios-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Income</th>
-                      <th>RRSP</th>
-                      <th>Refund</th>
-                      <th>Rate</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scenarios.slice(0, 10).map(s => (
-                      <tr key={s.id}>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          {new Date(s.savedAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
-                        </td>
-                        <td>{fmt.format(s.annualIncome)}</td>
-                        <td>{fmt.format(s.rrspContribution)}</td>
-                        <td style={{ color: '#6ee7b7' }}>{fmt.format(s.totalRefund)}</td>
-                        <td>
-                          <span className={rateClass(s.effectiveRate / 100)}>
-                            {s.effectiveRate.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
+                  {scenarios.slice(0, 10).map(s => (
+                    <div key={s.id} style={{ background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '0.5rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', position: 'relative' }}>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+                          {new Date(s.savedAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
                             onClick={() => handleLoadScenario(s)} 
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#93c5fd', padding: '0.2rem', marginRight: '0.5rem' }} 
+                            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '0.25rem', cursor: 'pointer', color: '#a5b4fc', padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', transition: 'all 0.2s' }} 
                             title="Load Scenario into Calculator">
-                            <Eye size={14} />
+                            <Eye size={12} /> Load
                           </button>
                           <button 
                             onClick={() => handleDeleteScenario(s.id)} 
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#f87171', padding: '0.2rem' }} 
+                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.25rem', cursor: 'pointer', color: '#fca5a5', padding: '0.25rem', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }} 
                             title="Delete Scenario">
-                            <Trash2 size={14} />
+                            <Trash2 size={12} />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Income</div>
+                          <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>{fmt.format(s.annualIncome)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Contribution</div>
+                          <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>{fmt.format(s.rrspContribution)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Total Refund</div>
+                          <div style={{ fontSize: '0.9rem', color: '#6ee7b7', fontWeight: 700 }}>{fmt.format(s.totalRefund)}</div>
+                          {(s.craRefund != null || s.rqRefund != null) && (
+                            <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.65rem', marginTop: '0.15rem' }}>
+                              {s.craRefund != null && <span style={{ color: '#93c5fd' }}>CRA: {fmt.format(s.craRefund)}</span>}
+                              {s.rqRefund != null && <span style={{ color: '#c4b5fd' }}>RQ: {fmt.format(s.rqRefund)}</span>}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Savings Rate</div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 600 }} className={rateClass(s.effectiveRate / 100)}>
+                            {s.effectiveRate.toFixed(1)}%
+                          </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -730,8 +911,8 @@ const SettingsModal: React.FC<{ settings: TaxSettings, onSave: (s: TaxSettings) 
             </div>
             {draft.federalBrackets.map((b, i) => (
               <div key={i} className="tax-settings-grid">
-                <input type="number" value={b.minIncome} onChange={(e) => handleBracketChange('federalBrackets', i, 'minIncome', Number(e.target.value))} className="tax-input" />
-                <input type="number" value={b.maxIncome === Infinity ? '' : b.maxIncome} placeholder="Infinity" onChange={(e) => handleBracketChange('federalBrackets', i, 'maxIncome', e.target.value ? Number(e.target.value) : Infinity)} className="tax-input" />
+                <FormattedNumberInput value={b.minIncome} onChange={(v: number) => handleBracketChange('federalBrackets', i, 'minIncome', v)} className="tax-input" />
+                <FormattedNumberInput value={b.maxIncome} emptyIsInfinity={true} placeholder="Infinity" onChange={(v: number) => handleBracketChange('federalBrackets', i, 'maxIncome', v)} className="tax-input" />
                 <input type="number" step="0.1" value={+(b.rate * 100).toFixed(2)} onChange={(e) => handleBracketChange('federalBrackets', i, 'rate', Number(e.target.value))} className="tax-input" />
               </div>
             ))}
@@ -744,8 +925,8 @@ const SettingsModal: React.FC<{ settings: TaxSettings, onSave: (s: TaxSettings) 
             </div>
             {draft.provincialBrackets.map((b, i) => (
               <div key={i} className="tax-settings-grid">
-                <input type="number" value={b.minIncome} onChange={(e) => handleBracketChange('provincialBrackets', i, 'minIncome', Number(e.target.value))} className="tax-input" />
-                <input type="number" value={b.maxIncome === Infinity ? '' : b.maxIncome} placeholder="Infinity" onChange={(e) => handleBracketChange('provincialBrackets', i, 'maxIncome', e.target.value ? Number(e.target.value) : Infinity)} className="tax-input" />
+                <FormattedNumberInput value={b.minIncome} onChange={(v: number) => handleBracketChange('provincialBrackets', i, 'minIncome', v)} className="tax-input" />
+                <FormattedNumberInput value={b.maxIncome} emptyIsInfinity={true} placeholder="Infinity" onChange={(v: number) => handleBracketChange('provincialBrackets', i, 'maxIncome', v)} className="tax-input" />
                 <input type="number" step="0.1" value={+(b.rate * 100).toFixed(2)} onChange={(e) => handleBracketChange('provincialBrackets', i, 'rate', Number(e.target.value))} className="tax-input" />
               </div>
             ))}

@@ -424,7 +424,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-slate-400 text-sm font-medium uppercase">Net Worth</p>
-                            <h2 className="text-3xl font-bold text-white mt-2">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2>
+                            <h2 className="text-3xl font-bold text-white mt-2">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
                         </div>
                         <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
                             <DollarSign size={24} />
@@ -436,7 +436,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-slate-400 text-sm font-medium uppercase">Total Invested</p>
-                            <h2 className="text-3xl font-bold text-white mt-2">${totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2>
+                            <h2 className="text-3xl font-bold text-white mt-2">${totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
                         </div>
                         <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
                             <Wallet size={24} />
@@ -450,7 +450,7 @@ const Dashboard = () => {
                             <p className="text-slate-400 text-sm font-medium uppercase">Total Profit ($)</p>
                             <div className="flex items-center gap-2 mt-2">
                                 <h2 className={`text-3xl font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    {totalProfit >= 0 ? '+' : '-'}${Math.abs(totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    {totalProfit >= 0 ? '+' : '-'}${Math.abs(totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </h2>
                             </div>
                         </div>
@@ -480,7 +480,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-slate-400 text-sm font-medium uppercase">Cash Available</p>
-                            <h2 className="text-3xl font-bold text-white mt-2">${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2>
+                            <h2 className="text-3xl font-bold text-white mt-2">${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
                         </div>
                         <div className="p-2 bg-slate-500/10 rounded-lg text-slate-500">
                             <DollarSign size={24} />
@@ -504,7 +504,7 @@ const Dashboard = () => {
                             <div className="mb-3">
                                 <p className="text-slate-400 text-xs font-medium uppercase mb-1">Total Worth</p>
                                 <p className="text-2xl font-bold text-white">
-                                    ${member.totalWorth.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    ${member.totalWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                             </div>
 
@@ -512,7 +512,7 @@ const Dashboard = () => {
                             <div className="mb-3">
                                 <p className="text-slate-400 text-xs font-medium uppercase mb-1">Invested</p>
                                 <p className="text-lg font-semibold text-slate-300">
-                                    ${member.invested.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    ${member.invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                             </div>
 
@@ -521,7 +521,7 @@ const Dashboard = () => {
                                 <p className="text-slate-400 text-xs font-medium uppercase mb-1">Profit/Loss</p>
                                 <div className="flex items-center gap-2">
                                     <p className={`text-lg font-bold ${member.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {member.profit >= 0 ? '+' : '-'}${Math.abs(member.profit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        {member.profit >= 0 ? '+' : '-'}${Math.abs(member.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </p>
                                     {member.profit >= 0 ?
                                         <TrendingUp size={18} className="text-green-400" /> :
@@ -537,7 +537,7 @@ const Dashboard = () => {
                             <div className="pt-3 border-t border-slate-700">
                                 <p className="text-slate-400 text-xs font-medium uppercase mb-1">Cash Available</p>
                                 <p className="text-lg font-semibold text-slate-300">
-                                    ${member.cash.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    ${member.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                             </div>
                         </div>
@@ -613,7 +613,7 @@ const Dashboard = () => {
                                     <p className="text-slate-400 text-xs uppercase">Total Profit/Loss</p>
                                     <div className="text-right">
                                         <p className={`text-xl font-bold ${bestPerformer.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {bestPerformer.profit >= 0 ? '+' : '-'}${Math.abs(bestPerformer.profit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {bestPerformer.profit >= 0 ? '+' : '-'}${Math.abs(bestPerformer.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>
                                 </div>
@@ -710,7 +710,7 @@ const Dashboard = () => {
                                     <p className="text-slate-400 text-xs uppercase">Total Profit/Loss</p>
                                     <div className="text-right">
                                         <p className={`text-xl font-bold ${worstPerformer.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {worstPerformer.profit >= 0 ? '+' : '-'}${Math.abs(worstPerformer.profit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {worstPerformer.profit >= 0 ? '+' : '-'}${Math.abs(worstPerformer.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>
                                 </div>
@@ -759,7 +759,7 @@ const Dashboard = () => {
                                     </div>
                                     <div className={`px-3 py-1 rounded-lg ${highestGainerDollar.profit >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                                         <p className="text-lg font-bold">
-                                            {highestGainerDollar.profit >= 0 ? '+' : '-'}${Math.abs(highestGainerDollar.profit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {highestGainerDollar.profit >= 0 ? '+' : '-'}${Math.abs(highestGainerDollar.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>
                                 </div>
@@ -858,7 +858,7 @@ const Dashboard = () => {
                                     </div>
                                     <div className={`px-3 py-1 rounded-lg ${lowestGainerDollar.profit >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                                         <p className="text-lg font-bold">
-                                            {lowestGainerDollar.profit >= 0 ? '+' : '-'}${Math.abs(lowestGainerDollar.profit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {lowestGainerDollar.profit >= 0 ? '+' : '-'}${Math.abs(lowestGainerDollar.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                     </div>
                                 </div>

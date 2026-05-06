@@ -17,6 +17,7 @@ const AccountDetails = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'assets' | 'transactions'>('assets');
     const [editingTxId, setEditingTxId] = useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = useState<number | 'All'>(new Date().getFullYear());
 
     // Transaction Form State
     const [ticker, setTicker] = useState('');
@@ -148,6 +149,19 @@ const AccountDetails = () => {
     const totalProfit = totalValue - totalCost;
     const totalProfitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
+    // Transaction activity summary with year filter
+    const accountTxs = transactions.filter(tx => tx.accountId === id);
+    const txYears = Array.from(new Set(accountTxs.map(tx => new Date(tx.date).getFullYear()))).sort((a, b) => b - a);
+    const filteredTxs = selectedYear === 'All' ? accountTxs : accountTxs.filter(tx => new Date(tx.date).getFullYear() === selectedYear);
+    const txSummary = filteredTxs.reduce((acc, tx) => {
+        if (tx.type === 'Deposit') acc.deposits += tx.amount;
+        else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
+        else if (tx.type === 'Buy' || tx.type === 'Dividend Reinvested' || tx.type === 'DRIP') acc.buys += tx.amount;
+        else if (tx.type === 'Sell') acc.sells += tx.amount;
+        else if (tx.type === 'Dividend Income' || tx.type === 'Dividend') acc.dividends += tx.amount;
+        return acc;
+    }, { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0 });
+
     return (
         <div>
             {/* Page Header */}
@@ -204,6 +218,52 @@ const AccountDetails = () => {
                     <p className="text-xs text-blue-400 font-bold uppercase tracking-widest mb-1">Available Cash</p>
                     <p className="text-3xl font-bold text-white font-mono">${account.cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <Wallet size={48} className="absolute -right-2 -bottom-2 opacity-10 text-blue-400" />
+                </div>
+            </div>
+
+            {/* Transaction Activity Summary */}
+            <div className="glass-panel p-4 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Transaction Activity</span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                        {txYears.map(yr => (
+                            <button
+                                key={yr}
+                                onClick={() => setSelectedYear(yr)}
+                                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${ selectedYear === yr ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700' }`}
+                            >
+                                {yr}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setSelectedYear('All')}
+                            className={`px-3 py-1 rounded text-xs font-semibold transition-all ${ selectedYear === 'All' ? 'bg-slate-500 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700' }`}
+                        >
+                            All Time
+                        </button>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div className="bg-slate-800/60 rounded-lg p-3 border border-green-500/10">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Deposits</p>
+                        <p className="text-lg font-bold font-mono text-green-400">${txSummary.deposits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg p-3 border border-red-500/10">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Withdrawals</p>
+                        <p className="text-lg font-bold font-mono text-red-400">${txSummary.withdrawals.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg p-3 border border-blue-500/10">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Buys</p>
+                        <p className="text-lg font-bold font-mono text-blue-400">${txSummary.buys.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg p-3 border border-purple-500/10">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Sells</p>
+                        <p className="text-lg font-bold font-mono text-purple-400">${txSummary.sells.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-slate-800/60 rounded-lg p-3 border border-yellow-500/10">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Dividends</p>
+                        <p className="text-lg font-bold font-mono text-yellow-400">${txSummary.dividends.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
                 </div>
             </div>
 
@@ -825,10 +885,10 @@ const AccountDetails = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">
-                                            {tx.shares ? (tx.type === 'Sell' ? '-' : '+') + tx.shares : '-'}
+                                            {tx.shares ? (tx.type === 'Sell' ? '-' : '+') + tx.shares.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">${tx.pricePerShare?.toFixed(2) || '0.00'}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-white font-bold">${tx.amount?.toFixed(2) || '0.00'}</td>
+                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">${tx.pricePerShare ? tx.pricePerShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                                        <td className="px-6 py-4 text-sm text-right font-mono text-white font-bold">${tx.amount ? tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => startEditTx(tx)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-all"><Pencil size={14} /></button>

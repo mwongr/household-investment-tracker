@@ -9,7 +9,9 @@ const Reports = () => {
     
     // Transactions Filter State
     const [filterType, setFilterType] = useState('All');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [filterMemberId, setFilterMemberId] = useState('All');
+    const [filterAccountId, setFilterAccountId] = useState('All');
+    const [filterTicker, setFilterTicker] = useState('All');
 
     // Pagination & Date Range State
     const [startDate, setStartDate] = useState('');
@@ -17,10 +19,13 @@ const Reports = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
+    // Unique tickers for dropdown
+    const uniqueTickers = Array.from(new Set(transactions.map(tx => tx.ticker).filter(Boolean))).sort();
+
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [filterType, searchTerm, startDate, endDate, rowsPerPage]);
+    }, [filterType, filterMemberId, filterAccountId, filterTicker, startDate, endDate, rowsPerPage]);
 
     // Enrich transactions with readable names and preserve original order
     const enrichedTransactions = transactions.map((tx, index) => {
@@ -30,6 +35,7 @@ const Reports = () => {
 
         return {
             ...tx,
+            memberId: member?.id,
             accountName: account?.name || 'Unknown',
             memberName: member?.name || 'Unknown',
             institutionName: institution?.name || 'Unknown',
@@ -40,10 +46,9 @@ const Reports = () => {
     // Filter Logic
     const filteredData = enrichedTransactions.filter(tx => {
         const matchesType = filterType === 'All' || tx.type === filterType;
-        const matchesSearch =
-            tx.ticker?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tx.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tx.memberName.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesMember = filterMemberId === 'All' || tx.memberId === filterMemberId;
+        const matchesAccount = filterAccountId === 'All' || tx.accountId === filterAccountId;
+        const matchesTicker = filterTicker === 'All' || tx.ticker === filterTicker;
 
         const txDate = new Date(tx.date);
         const start = startDate ? new Date(startDate) : null;
@@ -51,7 +56,7 @@ const Reports = () => {
 
         const matchesDate = (!start || txDate >= start) && (!end || txDate <= end);
 
-        return matchesType && matchesSearch && matchesDate;
+        return matchesType && matchesMember && matchesAccount && matchesTicker && matchesDate;
     }).sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
@@ -200,69 +205,93 @@ const Reports = () => {
             {activeTab === 'transactions' && (
                 <>
                     <div className="card mb-6 p-4">
-                        <div className="flex flex-col gap-4">
-                            {/* Top Row: Type and Search */}
-                            <div className="flex flex-wrap gap-4 items-center">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Filter size={18} />
-                                    <span className="text-sm font-medium">Filters:</span>
-                                </div>
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <div className="flex items-center gap-2 text-slate-400 font-medium whitespace-nowrap border-r border-slate-700 pr-3">
+                                <Filter size={16} /> Filters
+                            </div>
 
-                                <select
-                                    className="input w-auto min-w-[150px]"
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                >
-                                    <option value="All">All Types</option>
-                                    <option value="Buy">Buy</option>
-                                    <option value="Sell">Sell</option>
-                                    <option value="Deposit">Deposit</option>
-                                    <option value="Withdrawal">Withdrawal</option>
-                                    <option value="Dividend Income">Dividend Income</option>
-                                    <option value="Dividend Reinvested">Dividend Reinvested</option>
-                                    <option value="Stock Split">Stock Split</option>
-                                    <option value="Dividend">Dividend (Legacy)</option>
-                                    <option value="DRIP">DRIP (Legacy)</option>
-                                </select>
+                            <select
+                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500 min-w-[110px]"
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                            >
+                                <option value="All">All Types</option>
+                                <option value="Buy">Buy</option>
+                                <option value="Sell">Sell</option>
+                                <option value="Deposit">Deposit</option>
+                                <option value="Withdrawal">Withdrawal</option>
+                                <option value="Dividend Income">Dividend Income</option>
+                                <option value="Dividend Reinvested">Dividend Reinvested</option>
+                                <option value="Stock Split">Stock Split</option>
+                            </select>
 
+                            <select
+                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500 min-w-[120px]"
+                                value={filterMemberId}
+                                onChange={(e) => {
+                                    setFilterMemberId(e.target.value);
+                                    setFilterAccountId('All');
+                                }}
+                            >
+                                <option value="All">All Members</option>
+                                {members.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                ))}
+                            </select>
+
+                            <select
+                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500 min-w-[130px]"
+                                value={filterAccountId}
+                                onChange={(e) => setFilterAccountId(e.target.value)}
+                            >
+                                <option value="All">All Accounts</option>
+                                {accounts
+                                    .filter(a => filterMemberId === 'All' || a.memberId === filterMemberId)
+                                    .map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}</option>
+                                ))}
+                            </select>
+
+                            <select
+                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500 min-w-[100px]"
+                                value={filterTicker}
+                                onChange={(e) => setFilterTicker(e.target.value)}
+                            >
+                                <option value="All">All Tickers</option>
+                                {uniqueTickers.map((t, i) => (
+                                    <option key={i} value={t as string}>{t}</option>
+                                ))}
+                            </select>
+
+                            <div className="border-r border-slate-700 h-6 mx-1"></div>
+
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-500 text-xs uppercase tracking-wider font-bold">From</span>
                                 <input
-                                    type="text"
-                                    className="input w-auto flex-1 min-w-[200px]"
-                                    placeholder="Search ticker, account, or member..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    type="date"
+                                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-blue-500 w-[130px]"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
                                 />
                             </div>
-
-                            {/* Bottom Row: Date Range */}
-                            <div className="flex flex-wrap gap-4 items-center">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-slate-400 text-sm">From:</span>
-                                    <input
-                                        type="date"
-                                        className="input py-1 px-2 w-[160px] text-sm"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-slate-400 text-sm">To:</span>
-                                    <input
-                                        type="date"
-                                        className="input py-1 px-2 w-[160px] text-sm"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                    />
-                                </div>
-                                {(startDate || endDate) && (
-                                    <button
-                                        onClick={() => { setStartDate(''); setEndDate(''); }}
-                                        className="text-xs text-blue-400 hover:text-blue-300 underline"
-                                    >
-                                        Clear Dates
-                                    </button>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-500 text-xs uppercase tracking-wider font-bold">To</span>
+                                <input
+                                    type="date"
+                                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-blue-500 w-[130px]"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                />
                             </div>
+                            
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                                    className="text-xs text-blue-400 hover:text-blue-300 underline ml-auto"
+                                >
+                                    Clear Dates
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -325,6 +354,43 @@ const Reports = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Totals Row */}
+                        {filteredData.length > 0 && (() => {
+                            const totals = filteredData.reduce((acc, tx) => {
+                                if (tx.type === 'Deposit') acc.deposits += tx.amount;
+                                else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
+                                else if (tx.type === 'Buy') acc.buys += tx.amount;
+                                else if (tx.type === 'Sell') acc.sells += tx.amount;
+                                else if (tx.type.includes('Dividend') || tx.type === 'DRIP') acc.dividends += tx.amount;
+                                return acc;
+                            }, { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0 });
+
+                            return (
+                                <div className="bg-slate-800/80 p-4 border-t border-slate-700 flex flex-wrap gap-x-8 gap-y-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 uppercase text-xs font-bold tracking-wider">Total Deposits</span>
+                                        <span className="text-green-400 font-mono font-bold text-lg">${totals.deposits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 uppercase text-xs font-bold tracking-wider">Total Withdrawals</span>
+                                        <span className="text-red-400 font-mono font-bold text-lg">${totals.withdrawals.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 uppercase text-xs font-bold tracking-wider">Total Buys</span>
+                                        <span className="text-blue-400 font-mono font-bold text-lg">${totals.buys.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 uppercase text-xs font-bold tracking-wider">Total Sells</span>
+                                        <span className="text-purple-400 font-mono font-bold text-lg">${totals.sells.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 uppercase text-xs font-bold tracking-wider">Total Dividends</span>
+                                        <span className="text-yellow-400 font-mono font-bold text-lg">${totals.dividends.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Pagination Controls */}
                         {filteredData.length > 0 && (
@@ -459,6 +525,36 @@ const Reports = () => {
                             </div>
                         </div>
                     ))}
+                    
+                    {/* Grand Total Row */}
+                    {memberAccountAssets.length > 0 && (() => {
+                        const grandInvested = memberAccountAssets.reduce((sum, m) => sum + m.totalInvested, 0);
+                        const grandValue = memberAccountAssets.reduce((sum, m) => sum + m.totalValue, 0);
+                        const grandProfit = memberAccountAssets.reduce((sum, m) => sum + m.totalProfit, 0);
+
+                        return (
+                            <div className="card p-6 bg-slate-800 border-2 border-blue-500/30">
+                                <h2 className="text-2xl font-bold text-white mb-4">Household Grand Total</h2>
+                                <div className="flex flex-wrap gap-8">
+                                    <div>
+                                        <div className="text-sm text-slate-400">Total Invested</div>
+                                        <div className="font-mono font-bold text-xl text-white">${grandInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm text-slate-400">Total Current Value</div>
+                                        <div className="font-mono font-bold text-xl text-white">${grandValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm text-slate-400">Total Profit/Loss</div>
+                                        <div className={`font-mono font-bold text-xl ${grandProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {grandProfit >= 0 ? '+' : ''}${grandProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {memberAccountAssets.length === 0 && (
                         <div className="card p-8 text-center text-slate-500">
                             <FileText size={48} className="mx-auto mb-4 opacity-50" />

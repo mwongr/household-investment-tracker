@@ -28,8 +28,18 @@ app.post('/api/sync', (req, res) => {
         if (!data || Object.keys(data).length === 0) {
             return res.status(400).json({ error: 'Empty data' });
         }
+        let existingData = {};
+        if (fs.existsSync(DB_PATH)) {
+            try { 
+                existingData = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8')); 
+            } catch (e) {}
+        }
 
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+        // Merge existing data with incoming data to preserve keys not managed by DataContext 
+        // (like taxScenarios and taxSettings)
+        const mergedData = { ...existingData, ...data };
+
+        fs.writeFileSync(DB_PATH, JSON.stringify(mergedData, null, 2));
         res.json({ success: true, timestamp: new Date().toISOString() });
     } catch (e) {
         console.error('Sync failed:', e);
@@ -603,12 +613,14 @@ app.get('/api/tax-scenarios', (req, res) => {
 
 /**
  * POST /api/tax-scenarios
- * Body: { annualIncome, rrspContribution, totalRefund, effectiveRate }
- * Appends a new scenario to database.json and returns the saved record.
  */
 app.post('/api/tax-scenarios', (req, res) => {
     try {
-        const { annualIncome, rrspContribution, totalRefund, effectiveRate } = req.body;
+        const {
+            annualIncome, quebecTaxableIncome,
+            rrspContribution, totalRefund, craRefund, rqRefund,
+            effectiveRate, isSpousal, attributionDate
+        } = req.body;
         if (annualIncome == null || rrspContribution == null) {
             return res.status(400).json({ error: 'annualIncome and rrspContribution are required' });
         }
@@ -621,21 +633,28 @@ app.post('/api/tax-scenarios', (req, res) => {
             id: `ts_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
             savedAt: new Date().toISOString(),
             annualIncome: Number(annualIncome),
+            quebecTaxableIncome: quebecTaxableIncome != null ? Number(quebecTaxableIncome) : Number(annualIncome),
             rrspContribution: Number(rrspContribution),
             totalRefund: Number(totalRefund),
+            craRefund: craRefund != null ? Number(craRefund) : null,
+            rqRefund: rqRefund != null ? Number(rqRefund) : null,
             effectiveRate: Number(effectiveRate),
+            isSpousal: Boolean(isSpousal),
+            attributionDate: isSpousal ? (attributionDate || new Date().toISOString()) : null,
         };
 
         db.taxScenarios.push(newScenario);
         fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 
-        console.log(`[TaxScenarios] Saved scenario ${newScenario.id} — Income: $${annualIncome}, RRSP: $${rrspContribution}, Refund: $${totalRefund?.toFixed(2)}`);
+        const type = newScenario.isSpousal ? 'Spousal' : 'Personal';
+        console.log(`[TaxScenarios] Saved ${type} scenario ${newScenario.id} — Fed: $${annualIncome}, RRSP: $${rrspContribution}, CRA: $${craRefund?.toFixed(2)}, RQ: $${rqRefund?.toFixed(2)}`);
         res.json(newScenario);
     } catch (e) {
         console.error('[TaxScenarios] POST failed:', e.message);
         res.status(500).json({ error: 'Failed to save scenario' });
     }
 });
+
 
 /**
  * DELETE /api/tax-scenarios/:id
@@ -686,6 +705,164 @@ app.post('/api/tax-settings', (req, res) => {
         console.error('[TaxSettings] POST failed:', e.message);
         res.status(500).json({ error: 'Failed to save tax settings' });
     }
+});
+
+// ─── Stock Comparison Endpoint ─────────────────────────────────────────────
+// In-memory cache: { key -> { data, expiresAt } }
+const compareCache = new Map();
+
+/**
+ * GET /api/stocks/compare?symbols=XEQT.TO,XGRO.TO&range=1y
+ * Returns normalized % performance data aligned by common trading dates.
+ * Uses adjClose (dividend-adjusted) for fair total-return comparison.
+ */
+app.get('/api/stocks/compare', async (req, res) => {
+    const { symbols, range = '1y' } = req.query;
+
+    if (!symbols) {
+        return res.status(400).json({ error: 'symbols query parameter is required' });
+    }
+
+    const symbolList = symbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    if (symbolList.length === 0) {
+        return res.status(400).json({ error: 'At least one symbol is required' });
+    }
+    if (symbolList.length > 8) {
+        return res.status(400).json({ error: 'Maximum 8 symbols allowed' });
+    }
+
+    const cacheKey = `${symbolList.sort().join(',')}_${range}`;
+    const cached = compareCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        console.log(`[Compare] Cache hit: ${cacheKey}`);
+        return res.json(cached.data);
+    }
+
+    console.log(`[Compare] Fetching ${symbolList.join(', ')} | range=${range}`);
+
+    // Fetch historical data for all symbols in parallel using Yahoo V8 API directly
+    const fetchResults = await Promise.allSettled(
+        symbolList.map(async (symbol) => {
+            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`, { 
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } 
+            });
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            const result = data.chart?.result?.[0];
+            if (!result || !result.timestamp || !result.indicators) {
+                throw new Error('Invalid data structure');
+            }
+            
+            const timestamps = result.timestamp;
+            const quote = result.indicators.quote[0];
+            const adjcloseArr = result.indicators.adjclose?.[0]?.adjclose || quote.close;
+            
+            const rows = [];
+            for (let i = 0; i < timestamps.length; i++) {
+                const ac = adjcloseArr[i];
+                if (ac !== null && ac !== undefined) {
+                    rows.push({
+                        date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+                        adjClose: ac,
+                        close: quote.close[i] !== null ? quote.close[i] : ac
+                    });
+                }
+            }
+            // Ensure sorted by date (though API typically returns sorted)
+            rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            return { symbol, rows };
+        })
+    );
+
+    // Separate successes from failures
+    const successfulSeries = [];
+    const errors = {};
+
+    for (let i = 0; i < fetchResults.length; i++) {
+        const result = fetchResults[i];
+        const symbol = symbolList[i];
+        if (result.status === 'fulfilled' && result.value.rows.length > 0) {
+            successfulSeries.push(result.value);
+        } else {
+            const reason = result.status === 'rejected' ? result.reason?.message : 'No data returned';
+            console.warn(`[Compare] Failed to fetch ${symbol}: ${reason}`);
+            errors[symbol] = reason || 'No data available for this symbol';
+        }
+    }
+
+    if (successfulSeries.length === 0) {
+        return res.status(404).json({ error: 'No data found for any of the requested symbols', errors });
+    }
+
+    // ── Date Alignment ──────────────────────────────────────────────────────
+    // Build a Set of dates that ALL symbols have data for (inner join).
+    // This ensures the chart starts at the same point for all assets.
+    const dateSets = successfulSeries.map(({ rows }) =>
+        new Set(rows.map(r => new Date(r.date).toISOString().split('T')[0]))
+    );
+    // Intersection of all date sets
+    let commonDates = dateSets[0];
+    for (let i = 1; i < dateSets.length; i++) {
+        commonDates = new Set([...commonDates].filter(d => dateSets[i].has(d)));
+    }
+    const alignedDates = Array.from(commonDates).sort();
+
+    if (alignedDates.length < 2) {
+        return res.status(422).json({ error: 'Insufficient overlapping dates between the requested symbols' });
+    }
+
+    // ── Normalization ────────────────────────────────────────────────────────
+    // For each symbol: take adjClose on first aligned date as base (= 0%)
+    // then compute ((adjClose - base) / base) * 100 for each subsequent date.
+    const seriesData = {};
+    const summaryData = {};
+
+    for (const { symbol, rows } of successfulSeries) {
+        // Build a lookup map: dateStr -> adjClose (fallback to close)
+        const priceMap = new Map();
+        for (const row of rows) {
+            const dateStr = new Date(row.date).toISOString().split('T')[0];
+            // Prefer adjClose for total-return accuracy (accounts for dividends)
+            priceMap.set(dateStr, row.adjClose ?? row.close);
+        }
+
+        const firstPrice = priceMap.get(alignedDates[0]);
+        if (!firstPrice || firstPrice === 0) continue;
+
+        const normalizedValues = alignedDates.map(d => {
+            const price = priceMap.get(d);
+            if (price == null) return null;
+            return parseFloat(((price - firstPrice) / firstPrice * 100).toFixed(4));
+        });
+
+        seriesData[symbol] = normalizedValues;
+
+        // Summary: current raw price + total return for the period
+        const lastPrice = priceMap.get(alignedDates[alignedDates.length - 1]) ?? 0;
+        const totalReturn = parseFloat(((lastPrice - firstPrice) / firstPrice * 100).toFixed(2));
+        summaryData[symbol] = {
+            currentPrice: parseFloat(lastPrice.toFixed(2)),
+            firstPrice:   parseFloat(firstPrice.toFixed(2)),
+            totalReturn,
+        };
+    }
+
+    const responseData = {
+        dates:   alignedDates,
+        series:  seriesData,
+        summary: summaryData,
+        errors,
+        range,
+        fetchedAt: new Date().toISOString(),
+    };
+
+    // Cache for 1 hour
+    compareCache.set(cacheKey, { data: responseData, expiresAt: Date.now() + 60 * 60 * 1000 });
+
+    console.log(`[Compare] Done — ${alignedDates.length} aligned dates, ${Object.keys(seriesData).length} series`);
+    res.json(responseData);
 });
 
 app.listen(PORT, () => {

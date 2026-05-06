@@ -225,23 +225,34 @@ export interface LayerCakeSegment {
 }
 
 export interface OptimizationResult {
-  taxableIncome: number;            // annualIncome - rrspContribution
-  totalRefund: number;              // Estimated dollar refund from the contribution
-  effectiveTaxSavingsPercentage: number; // refund / contribution as %
-  remainingRoomInCurrentBracket: number; // $ until dropping to the next bracket
-  currentCombinedRate: number;      // Top marginal combined rate on taxable income
-  sweetSpotContribution: number;    // Optimal contribution to drop one full bracket
-  layers: LayerCakeSegment[];       // Layer-cake breakdown for visualization
-  diminishingReturns: boolean;      // true when effective rate after contrib < 30%
+  federalTaxableIncome: number;         // Input: federal taxable income
+  quebecTaxableIncome: number;          // Input: Quebec taxable income (may differ)
+  taxableIncome: number;                // New federal taxable after RRSP
+  totalRefund: number;
+  craRefund: number;                    // Federal portion of refund (CRA)
+  rqRefund: number;                     // Provincial portion of refund (Revenu Québec)
+  effectiveTaxSavingsPercentage: number;
+  remainingRoomInCurrentBracket: number;
+  currentCombinedRate: number;          // Rate BEFORE RRSP
+  newCombinedRate: number;              // Rate AFTER RRSP
+  sweetSpotContribution: number;
+  layers: LayerCakeSegment[];
+  diminishingReturns: boolean;          // Rate after RRSP < 30%
+  bracketCrossed: boolean;              // Contribution crossed a bracket boundary
 }
 
 export interface TaxScenario {
   id: string;
-  savedAt: string;             // ISO date string
-  annualIncome: number;
+  savedAt: string;
+  annualIncome: number;                 // federalTaxableIncome
+  quebecTaxableIncome?: number;
   rrspContribution: number;
   totalRefund: number;
-  effectiveRate: number;       // effectiveTaxSavingsPercentage
+  craRefund?: number;
+  rqRefund?: number;
+  effectiveRate: number;
+  isSpousal: boolean;
+  attributionDate?: string;             // ISO — contribution date for 3-yr rule tracking
   notes?: string;
 }
 
@@ -249,4 +260,23 @@ export interface TaxSettings {
   federalBrackets: TaxBracket[];
   provincialBrackets: TaxBracket[];
   abatement: number;
+}
+
+// ─── Stock Comparison Tool ────────────────────────────────────────────────────
+
+export type CompareRange = '1mo' | '6mo' | '1y' | '5y' | 'ytd';
+
+export interface CompareSymbolSummary {
+  currentPrice: number;    // Latest raw price
+  firstPrice: number;      // Price at start of comparison period
+  totalReturn: number;     // % return for the period (dividend-adjusted)
+}
+
+export interface CompareApiResponse {
+  dates:     string[];                                // 'YYYY-MM-DD' aligned trading dates
+  series:    Record<string, (number | null)[]>;       // symbol → normalized % values
+  summary:   Record<string, CompareSymbolSummary>;    // symbol → summary row
+  errors:    Record<string, string>;                  // symbol → error message (if any)
+  range:     CompareRange;
+  fetchedAt: string;
 }
