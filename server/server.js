@@ -471,9 +471,20 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
                 close: closes[i],
                 volume: volumes[i],
             }))
-            .filter(bar => bar.close != null && bar.open != null);
+            .filter(bar => bar.close != null && bar.open != null && bar.high != null && bar.low != null);
 
         const closePrices = ohlcv.map(b => b.close);
+        const highPrices  = ohlcv.map(b => b.high);
+        const lowPrices   = ohlcv.map(b => b.low);
+
+        // ── ATR (14) ──────────────────────────────────────────────────────────
+        const atrValues = technicalindicators.ATR.calculate({
+            period: 14,
+            high: highPrices,
+            low: lowPrices,
+            close: closePrices,
+        });
+        const currentATR = atrValues.length > 0 ? atrValues[atrValues.length - 1] : null;
 
         // ── EMA 50 & 200 ──────────────────────────────────────────────────────
         const ema50Values = technicalindicators.EMA.calculate({ period: 50, values: closePrices });
@@ -567,6 +578,7 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
             ticker,
             currentPrice: meta.regularMarketPrice,
             currency: meta.currency,
+            currentATR: currentATR ? parseFloat(currentATR.toFixed(4)) : null,
             indicators: {
                 ema50,
                 ema200,
@@ -582,8 +594,11 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
             fetchedAt: new Date().toISOString(),
         };
 
-        setCached(ticker, analysisData);
-        console.log(`[Analysis] ${ticker}: RSI=${rsi?.toFixed(1)}, EMA50=${ema50?.toFixed(2)}, EMA200=${ema200?.toFixed(2)}, Signal=${signal}`);
+        // Don't cache if ATR is null — means bad data slipped through; retry next request
+        if (currentATR !== null) {
+            setCached(ticker, analysisData);
+        }
+        console.log(`[Analysis] ${ticker}: RSI=${rsi?.toFixed(1)}, EMA50=${ema50?.toFixed(2)}, EMA200=${ema200?.toFixed(2)}, ATR=${currentATR?.toFixed(4)}, Signal=${signal}`);
         res.json(analysisData);
 
     } catch (err) {

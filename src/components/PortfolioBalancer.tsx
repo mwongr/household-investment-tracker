@@ -121,8 +121,8 @@ const PortfolioBalancer: React.FC<Props> = ({ assets, totalInvested }) => {
                         <Sliders size={20} className="text-white" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-white">Portfolio Balancer</h2>
-                        <p className="text-xs text-white/60">Set your target allocation and see how far your portfolio has drifted</p>
+                        <h2 className="text-lg font-bold text-white">Account Balancer</h2>
+                        <p className="text-xs text-white/60">Set your target allocation and see how far your account has drifted</p>
                     </div>
                 </div>
                 <button

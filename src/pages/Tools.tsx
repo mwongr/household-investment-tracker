@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Wrench, Target, Shield, PieChart, Leaf, Plus, Trash2, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Wrench, Target, Shield, PieChart, Leaf, Plus, Trash2, TrendingUp, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
 import '../styles/shared.css';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -18,11 +18,15 @@ interface InputFieldProps {
     placeholder?: string;
     step?: string;
     min?: string;
+    action?: React.ReactNode;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, value, onChange, prefix, suffix, placeholder, step = 'any', min = '0' }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, value, onChange, prefix, suffix, placeholder, step = 'any', min = '0', action }) => (
     <div>
-        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">{label}</label>
+        <div className="flex justify-between items-end mb-1.5">
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</label>
+            {action && <div>{action}</div>}
+        </div>
         <div className="relative flex items-center">
             {prefix && <span className="absolute left-3 text-slate-400 text-sm font-medium pointer-events-none">{prefix}</span>}
             <input
@@ -49,16 +53,27 @@ const ResultRow: React.FC<{ label: string; value: string; color?: string; large?
     </div>
 );
 
-const CardShell: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; accentColor: string; children: React.ReactNode }> = ({
-    icon, title, subtitle, accentColor, children
+const CardShell: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; accentColor: string; onClear?: () => void; children: React.ReactNode }> = ({
+    icon, title, subtitle, accentColor, onClear, children
 }) => (
     <div className={`bg-slate-800/50 border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl flex flex-col`}>
-        <div className={`p-5 border-b border-slate-700/50 bg-gradient-to-r ${accentColor}`}>
-            <div className="flex items-center gap-3 mb-1">
-                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">{icon}</div>
-                <h2 className="text-lg font-bold text-white">{title}</h2>
+        <div className={`p-5 border-b border-slate-700/50 bg-gradient-to-r ${accentColor} flex justify-between items-start`}>
+            <div>
+                <div className="flex items-center gap-3 mb-1">
+                    <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">{icon}</div>
+                    <h2 className="text-lg font-bold text-white">{title}</h2>
+                </div>
+                <p className="text-xs text-white/60 ml-12">{subtitle}</p>
             </div>
-            <p className="text-xs text-white/60 ml-12">{subtitle}</p>
+            {onClear && (
+                <button 
+                    onClick={onClear}
+                    title="Clear Calculator"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                >
+                    <RotateCcw size={14} /> Clear
+                </button>
+            )}
         </div>
         <div className="p-5 flex-1 flex flex-col gap-5">{children}</div>
     </div>
@@ -71,6 +86,19 @@ const ProfitLossCalc: React.FC = () => {
     const [target, setTarget] = useState('');
     const [stopLoss, setStopLoss] = useState('');
     const [shares, setShares] = useState('');
+
+    const handleAutoStopLoss = () => {
+        const e = parseFloat(entry);
+        const t = parseFloat(target);
+        if (e > 0 && t > e) {
+            const reward = t - e;
+            const risk = reward / 2;
+            const autoSl = e - risk;
+            if (autoSl > 0) {
+                setStopLoss(autoSl.toFixed(2));
+            }
+        }
+    };
 
     const result = useMemo(() => {
         const e = parseFloat(entry);
@@ -91,17 +119,41 @@ const ProfitLossCalc: React.FC = () => {
         return { totalProfit, totalLoss, profitPct, lossPct, rrRatio, isFavorable };
     }, [entry, target, stopLoss, shares]);
 
+    const handleClear = () => {
+        setEntry('');
+        setTarget('');
+        setStopLoss('');
+        setShares('');
+    };
+
     return (
         <CardShell
             icon={<Target size={20} className="text-white" />}
             title="Profit / Loss & Risk-Reward"
             subtitle="Evaluate your trade's upside vs. downside before entering"
             accentColor="from-blue-900/80 to-indigo-900/60"
+            onClear={handleClear}
         >
             <div className="grid grid-cols-2 gap-3">
                 <InputField label="Entry Price" value={entry} onChange={setEntry} prefix="$" placeholder="e.g. 50.00" />
                 <InputField label="Target Price" value={target} onChange={setTarget} prefix="$" placeholder="e.g. 65.00" />
-                <InputField label="Stop Loss Price" value={stopLoss} onChange={setStopLoss} prefix="$" placeholder="e.g. 45.00" />
+                <InputField 
+                    label="Stop Loss Price" 
+                    value={stopLoss} 
+                    onChange={setStopLoss} 
+                    prefix="$" 
+                    placeholder="e.g. 45.00"
+                    action={
+                        <button 
+                            type="button"
+                            onClick={handleAutoStopLoss}
+                            title="Auto-calculate 1:2 Risk/Reward based on Entry and Target"
+                            className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase bg-blue-500/10 hover:bg-blue-500/20 px-1.5 py-0.5 rounded transition-colors"
+                        >
+                            Auto 1:2
+                        </button>
+                    }
+                />
                 <InputField label="Number of Shares" value={shares} onChange={setShares} placeholder="e.g. 100" step="1" />
             </div>
 
@@ -140,11 +192,50 @@ const ProfitLossCalc: React.FC = () => {
 
 // ─── 2. Position Sizing Calculator ───────────────────────────────────────────
 
+const API_BASE = 'http://localhost:3001';
+
 const PositionSizingCalc: React.FC = () => {
     const [balance, setBalance] = useState('');
     const [riskPct, setRiskPct] = useState('1');
     const [entryPrice, setEntryPrice] = useState('');
     const [stopLoss, setStopLoss] = useState('');
+
+    // ATR fields
+    const [atrTicker, setAtrTicker] = useState('');
+    const [currentATR, setCurrentATR] = useState('');
+    const [multiplier, setMultiplier] = useState(2.0);
+    const [atrLoading, setAtrLoading] = useState(false);
+    const [atrError, setAtrError] = useState('');
+
+    const fetchATR = async () => {
+        const sym = atrTicker.trim().toUpperCase();
+        if (!sym) return;
+        setAtrLoading(true);
+        setAtrError('');
+        try {
+            const res = await fetch(`${API_BASE}/api/stocks/${sym}/analysis`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.currentATR != null) {
+                setCurrentATR(data.currentATR.toFixed(4));
+                if (data.currentPrice) setEntryPrice(data.currentPrice.toFixed(2));
+            } else {
+                setAtrError('ATR not available for this symbol.');
+            }
+        } catch {
+            setAtrError('Could not fetch ATR. Check ticker or server.');
+        } finally {
+            setAtrLoading(false);
+        }
+    };
+
+    const handleAutoStopLoss = () => {
+        const ep = parseFloat(entryPrice);
+        const atr = parseFloat(currentATR);
+        if (!ep || !atr || ep <= 0 || atr <= 0) return;
+        const sl = ep - atr * multiplier;
+        if (sl > 0) setStopLoss(sl.toFixed(2));
+    };
 
     const result = useMemo(() => {
         const bal = parseFloat(balance);
@@ -162,18 +253,128 @@ const PositionSizingCalc: React.FC = () => {
         return { dollarRisk, shares, positionSize, pctOfPortfolio, riskPerShare };
     }, [balance, riskPct, entryPrice, stopLoss]);
 
+    const canAutoSL = parseFloat(entryPrice) > 0 && parseFloat(currentATR) > 0;
+
+    const handleClear = () => {
+        setBalance('');
+        setRiskPct('1');
+        setEntryPrice('');
+        setStopLoss('');
+        setAtrTicker('');
+        setCurrentATR('');
+        setMultiplier(2.0);
+        setAtrError('');
+    };
+
     return (
         <CardShell
             icon={<Shield size={20} className="text-white" />}
             title="Position Sizing"
             subtitle="Risk only what you can afford to lose on each trade"
             accentColor="from-blue-900/80 to-indigo-900/60"
+            onClear={handleClear}
         >
             <div className="grid grid-cols-2 gap-3">
                 <InputField label="Account Balance" value={balance} onChange={setBalance} prefix="$" placeholder="e.g. 25000" />
                 <InputField label="Risk %" value={riskPct} onChange={setRiskPct} suffix="%" placeholder="e.g. 1" min="0.1" step="0.1" />
                 <InputField label="Entry Price" value={entryPrice} onChange={setEntryPrice} prefix="$" placeholder="e.g. 50.00" />
-                <InputField label="Stop Loss Price" value={stopLoss} onChange={setStopLoss} prefix="$" placeholder="e.g. 46.00" />
+                <InputField
+                    label="Stop Loss Price"
+                    value={stopLoss}
+                    onChange={setStopLoss}
+                    prefix="$"
+                    placeholder="e.g. 46.00"
+                    action={
+                        <button
+                            type="button"
+                            onClick={handleAutoStopLoss}
+                            disabled={!canAutoSL}
+                            title="Set stop loss using ATR × Multiplier"
+                            className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-30 disabled:cursor-not-allowed px-1.5 py-0.5 rounded transition-colors"
+                        >
+                            ATR Auto
+                        </button>
+                    }
+                />
+            </div>
+
+            {/* ATR Lookup Panel */}
+            <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 flex flex-col gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400">
+                    📡 ATR-Based Stop Loss
+                </p>
+
+                {/* Ticker fetch row */}
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <input
+                            type="text"
+                            className="input input-no-spinner w-full uppercase"
+                            placeholder="Ticker (e.g. AAPL)"
+                            value={atrTicker}
+                            onChange={e => setAtrTicker(e.target.value.toUpperCase())}
+                            onKeyDown={e => e.key === 'Enter' && fetchATR()}
+                        />
+                    </div>
+                    <button
+                        onClick={fetchATR}
+                        disabled={atrLoading || !atrTicker.trim()}
+                        className="px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors whitespace-nowrap"
+                    >
+                        {atrLoading ? '...' : 'Fetch ATR'}
+                    </button>
+                </div>
+
+                {atrError && (
+                    <p className="text-xs text-red-400 flex items-center gap-1">
+                        <AlertTriangle size={12} /> {atrError}
+                    </p>
+                )}
+
+                {/* ATR value + multiplier */}
+                <div className="grid grid-cols-2 gap-3">
+                    <InputField
+                        label="Current ATR ($)"
+                        value={currentATR}
+                        onChange={setCurrentATR}
+                        prefix="$"
+                        placeholder="Auto-filled or manual"
+                    />
+                    <div>
+                        <div className="flex justify-between items-end mb-1.5">
+                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                Volatility Multiplier
+                            </label>
+                            <span className="text-xs font-bold text-blue-400">{multiplier.toFixed(1)}×</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="1.0"
+                            max="3.0"
+                            step="0.1"
+                            value={multiplier}
+                            onChange={e => setMultiplier(parseFloat(e.target.value))}
+                            className="w-full accent-blue-500 cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[10px] text-slate-600 mt-0.5">
+                            <span>1.0× Tight</span>
+                            <span>2.0× Standard</span>
+                            <span>3.0× Wide</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Preview of auto stop loss */}
+                {canAutoSL && (
+                    <div className="flex items-center justify-between p-2.5 bg-blue-500/8 border border-blue-500/20 rounded-lg">
+                        <span className="text-xs text-slate-400">
+                            Auto Stop: {parseFloat(entryPrice).toFixed(2)} − ({parseFloat(currentATR).toFixed(4)} × {multiplier.toFixed(1)})
+                        </span>
+                        <span className="font-mono font-bold text-blue-300 text-sm">
+                            = ${Math.max(0, parseFloat(entryPrice) - parseFloat(currentATR) * multiplier).toFixed(2)}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {result ? (
@@ -201,6 +402,7 @@ const PositionSizingCalc: React.FC = () => {
         </CardShell>
     );
 };
+
 
 // ─── 3. Portfolio Allocation Splitter ────────────────────────────────────────
 
@@ -238,12 +440,22 @@ const PortfolioSplitter: React.FC = () => {
 
     const pctBarColor = !isValid ? 'bg-red-500' : 'bg-green-500';
 
+    const handleClear = () => {
+        setCash('');
+        setAssets([
+            { id: '1', ticker: 'VOO', pct: 50 },
+            { id: '2', ticker: 'AAPL', pct: 30 },
+            { id: '3', ticker: 'BND', pct: 20 },
+        ]);
+    };
+
     return (
         <CardShell
             icon={<PieChart size={20} className="text-white" />}
             title="Portfolio Allocation Splitter"
             subtitle="Divide your cash across assets with instant dollar amounts"
             accentColor="from-blue-900/80 to-indigo-900/60"
+            onClear={handleClear}
         >
             <InputField label="Total Cash to Invest" value={cash} onChange={setCash} prefix="$" placeholder="e.g. 10000" />
 
@@ -366,12 +578,20 @@ const DripCalculator: React.FC = () => {
 
     const maxVal = Math.max(withDripFinal, withoutDripFinal);
 
+    const handleClear = () => {
+        setInitial('10000');
+        setDivYield('3');
+        setGrowth('7');
+        setYears('20');
+    };
+
     return (
         <CardShell
             icon={<Leaf size={20} className="text-white" />}
             title="DRIP Calculator"
             subtitle="See how dividend reinvestment compounds your wealth over time"
             accentColor="from-blue-900/80 to-indigo-900/60"
+            onClear={handleClear}
         >
             <div className="grid grid-cols-2 gap-3">
                 <InputField label="Initial Investment" value={initial} onChange={setInitial} prefix="$" placeholder="10000" />
@@ -464,7 +684,7 @@ const Tools: React.FC = () => (
                 <Wrench size={28} className="text-blue-400" />
             </div>
             <div>
-                <h1 className="text-3xl font-bold text-white">Investor's Swiss Army Knife</h1>
+                <h1 className="text-3xl font-bold text-white">Investment Tools</h1>
                 <p className="text-slate-400 text-sm mt-0.5">Interactive calculators for smarter trading and long-term investing decisions</p>
             </div>
         </div>

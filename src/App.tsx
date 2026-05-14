@@ -1,9 +1,7 @@
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import { DataProvider } from './context/DataContext';
-import Members from './pages/Members';
-import Institutions from './pages/Institutions';
 import Accounts from './pages/Accounts';
 import AccountDetails from './pages/AccountDetails';
 import Dashboard from './pages/Dashboard';
@@ -22,8 +20,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
-            <Route path="members" element={<Members />} />
-            <Route path="institutions" element={<Institutions />} />
+            <Route path="members" element={<Navigate to="/settings" replace />} />
+            <Route path="institutions" element={<Navigate to="/settings" replace />} />
             <Route path="accounts" element={<Accounts />} />
             <Route path="accounts/:id" element={<AccountDetails />} />
             <Route path="reports" element={<Reports />} />
