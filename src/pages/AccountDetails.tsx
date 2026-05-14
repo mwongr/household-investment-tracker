@@ -6,6 +6,7 @@ import { useData } from '../context/DataContext';
 import type { Transaction, TransactionType } from '../types';
 
 import '../styles/shared.css';
+import PortfolioBalancer from '../components/PortfolioBalancer';
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -906,6 +907,9 @@ const AccountDetails = () => {
                     </table>
                 </div>
             )}
+
+            {/* Portfolio Balancer — always shown at the bottom when there are assets */}
+            <PortfolioBalancer assets={assets} totalInvested={totalValue} />
         </div>
     );
 };
