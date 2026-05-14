@@ -1,0 +1,482 @@
+import React, { useState, useMemo } from 'react';
+import { Wrench, Target, Shield, PieChart, Leaf, Plus, Trash2, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import '../styles/shared.css';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const fmtCurrency = (n: number): string =>
+    n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmtPct = (n: number): string => n.toFixed(2) + '%';
+
+interface InputFieldProps {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    prefix?: string;
+    suffix?: string;
+    placeholder?: string;
+    step?: string;
+    min?: string;
+}
+
+const InputField: React.FC<InputFieldProps> = ({ label, value, onChange, prefix, suffix, placeholder, step = 'any', min = '0' }) => (
+    <div>
+        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">{label}</label>
+        <div className="relative flex items-center">
+            {prefix && <span className="absolute left-3 text-slate-400 text-sm font-medium pointer-events-none">{prefix}</span>}
+            <input
+                type="number"
+                step={step}
+                min={min}
+                className="input input-no-spinner w-full"
+                style={{ paddingLeft: prefix ? '1.75rem' : undefined, paddingRight: suffix ? '2.5rem' : undefined }}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                placeholder={placeholder ?? '0'}
+            />
+            {suffix && <span className="absolute right-3 text-slate-400 text-sm font-medium pointer-events-none">{suffix}</span>}
+        </div>
+    </div>
+);
+
+const ResultRow: React.FC<{ label: string; value: string; color?: string; large?: boolean }> = ({
+    label, value, color = 'text-white', large = false
+}) => (
+    <div className="flex justify-between items-center py-2 border-b border-slate-700/40 last:border-0">
+        <span className="text-sm text-slate-400">{label}</span>
+        <span className={`font-mono font-bold ${large ? 'text-lg' : 'text-sm'} ${color}`}>{value}</span>
+    </div>
+);
+
+const CardShell: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; accentColor: string; children: React.ReactNode }> = ({
+    icon, title, subtitle, accentColor, children
+}) => (
+    <div className={`bg-slate-800/50 border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl flex flex-col`}>
+        <div className={`p-5 border-b border-slate-700/50 bg-gradient-to-r ${accentColor}`}>
+            <div className="flex items-center gap-3 mb-1">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">{icon}</div>
+                <h2 className="text-lg font-bold text-white">{title}</h2>
+            </div>
+            <p className="text-xs text-white/60 ml-12">{subtitle}</p>
+        </div>
+        <div className="p-5 flex-1 flex flex-col gap-5">{children}</div>
+    </div>
+);
+
+// ─── 1. Profit / Loss & Risk-Reward Calculator ───────────────────────────────
+
+const ProfitLossCalc: React.FC = () => {
+    const [entry, setEntry] = useState('');
+    const [target, setTarget] = useState('');
+    const [stopLoss, setStopLoss] = useState('');
+    const [shares, setShares] = useState('');
+
+    const result = useMemo(() => {
+        const e = parseFloat(entry);
+        const t = parseFloat(target);
+        const s = parseFloat(stopLoss);
+        const sh = parseFloat(shares);
+        if (!e || !t || !s || !sh || e <= 0 || sh <= 0) return null;
+
+        const profitPerShare = t - e;
+        const lossPerShare = e - s;
+        const totalProfit = profitPerShare * sh;
+        const totalLoss = lossPerShare * sh;
+        const profitPct = (profitPerShare / e) * 100;
+        const lossPct = (lossPerShare / e) * 100;
+        const rrRatio = lossPerShare > 0 ? profitPerShare / lossPerShare : 0;
+        const isFavorable = rrRatio >= 2;
+
+        return { totalProfit, totalLoss, profitPct, lossPct, rrRatio, isFavorable };
+    }, [entry, target, stopLoss, shares]);
+
+    return (
+        <CardShell
+            icon={<Target size={20} className="text-white" />}
+            title="Profit / Loss & Risk-Reward"
+            subtitle="Evaluate your trade's upside vs. downside before entering"
+            accentColor="from-blue-900/80 to-indigo-900/60"
+        >
+            <div className="grid grid-cols-2 gap-3">
+                <InputField label="Entry Price" value={entry} onChange={setEntry} prefix="$" placeholder="e.g. 50.00" />
+                <InputField label="Target Price" value={target} onChange={setTarget} prefix="$" placeholder="e.g. 65.00" />
+                <InputField label="Stop Loss Price" value={stopLoss} onChange={setStopLoss} prefix="$" placeholder="e.g. 45.00" />
+                <InputField label="Number of Shares" value={shares} onChange={setShares} placeholder="e.g. 100" step="1" />
+            </div>
+
+            {result ? (
+                <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
+                    <ResultRow label="Total Profit (at target)" value={`+$${fmtCurrency(result.totalProfit)}`} color="text-green-400" large />
+                    <ResultRow label="Profit %" value={`+${fmtPct(result.profitPct)}`} color="text-green-400" />
+                    <ResultRow label="Total Loss (at stop)" value={`-$${fmtCurrency(result.totalLoss)}`} color="text-red-400" large />
+                    <ResultRow label="Loss %" value={`-${fmtPct(result.lossPct)}`} color="text-red-400" />
+                    <div className="flex justify-between items-center pt-3 mt-1 border-t border-slate-700/40">
+                        <span className="text-sm text-slate-400">Risk : Reward</span>
+                        <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-white text-lg">
+                                1 : {result.rrRatio.toFixed(2)}
+                            </span>
+                            {result.isFavorable ? (
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-500/15 text-green-400 text-xs font-bold border border-green-500/30">
+                                    <CheckCircle size={12} /> Favorable
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 text-xs font-bold border border-red-500/30">
+                                    <AlertTriangle size={12} /> High Risk
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex-1 flex items-center justify-center text-slate-600 text-sm italic bg-slate-900/30 rounded-xl p-6 text-center">
+                    Fill in all fields to see your risk/reward analysis
+                </div>
+            )}
+        </CardShell>
+    );
+};
+
+// ─── 2. Position Sizing Calculator ───────────────────────────────────────────
+
+const PositionSizingCalc: React.FC = () => {
+    const [balance, setBalance] = useState('');
+    const [riskPct, setRiskPct] = useState('1');
+    const [entryPrice, setEntryPrice] = useState('');
+    const [stopLoss, setStopLoss] = useState('');
+
+    const result = useMemo(() => {
+        const bal = parseFloat(balance);
+        const rp = parseFloat(riskPct);
+        const ep = parseFloat(entryPrice);
+        const sl = parseFloat(stopLoss);
+        if (!bal || !rp || !ep || !sl || ep <= sl || bal <= 0) return null;
+
+        const dollarRisk = (rp / 100) * bal;
+        const riskPerShare = ep - sl;
+        const shares = Math.floor(dollarRisk / riskPerShare);
+        const positionSize = shares * ep;
+        const pctOfPortfolio = (positionSize / bal) * 100;
+
+        return { dollarRisk, shares, positionSize, pctOfPortfolio, riskPerShare };
+    }, [balance, riskPct, entryPrice, stopLoss]);
+
+    return (
+        <CardShell
+            icon={<Shield size={20} className="text-white" />}
+            title="Position Sizing"
+            subtitle="Risk only what you can afford to lose on each trade"
+            accentColor="from-blue-900/80 to-indigo-900/60"
+        >
+            <div className="grid grid-cols-2 gap-3">
+                <InputField label="Account Balance" value={balance} onChange={setBalance} prefix="$" placeholder="e.g. 25000" />
+                <InputField label="Risk %" value={riskPct} onChange={setRiskPct} suffix="%" placeholder="e.g. 1" min="0.1" step="0.1" />
+                <InputField label="Entry Price" value={entryPrice} onChange={setEntryPrice} prefix="$" placeholder="e.g. 50.00" />
+                <InputField label="Stop Loss Price" value={stopLoss} onChange={setStopLoss} prefix="$" placeholder="e.g. 46.00" />
+            </div>
+
+            {result ? (
+                <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
+                    {/* Dollar Risk — highlighted */}
+                    <div className="mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 flex justify-between items-center">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-amber-400 mb-0.5">⚠ Maximum Dollar Risk</p>
+                            <p className="text-xs text-slate-400">This is the exact amount you can lose</p>
+                        </div>
+                        <span className="font-mono font-bold text-2xl text-amber-400">-${fmtCurrency(result.dollarRisk)}</span>
+                    </div>
+                    <ResultRow label="Risk per Share" value={`$${fmtCurrency(result.riskPerShare)}`} color="text-red-400" />
+                    <ResultRow label="Recommended Shares" value={result.shares.toLocaleString()} color="text-white" large />
+                    <ResultRow label="Total Position Size" value={`$${fmtCurrency(result.positionSize)}`} color="text-blue-400" large />
+                    <ResultRow label="% of Portfolio" value={fmtPct(result.pctOfPortfolio)} color="text-slate-300" />
+                </div>
+            ) : (
+                <div className="flex-1 flex items-center justify-center text-slate-600 text-sm italic bg-slate-900/30 rounded-xl p-6 text-center">
+                    {parseFloat(entryPrice) <= parseFloat(stopLoss) && entryPrice && stopLoss
+                        ? 'Entry price must be above stop loss'
+                        : 'Fill in all fields to calculate your position size'}
+                </div>
+            )}
+        </CardShell>
+    );
+};
+
+// ─── 3. Portfolio Allocation Splitter ────────────────────────────────────────
+
+interface AllocationAsset {
+    id: string;
+    ticker: string;
+    pct: number;
+}
+
+const PortfolioSplitter: React.FC = () => {
+    const [cash, setCash] = useState('');
+    const [assets, setAssets] = useState<AllocationAsset[]>([
+        { id: '1', ticker: 'VOO', pct: 50 },
+        { id: '2', ticker: 'AAPL', pct: 30 },
+        { id: '3', ticker: 'BND', pct: 20 },
+    ]);
+
+    const totalCash = parseFloat(cash) || 0;
+    const totalPct = assets.reduce((s, a) => s + a.pct, 0);
+    const isValid = Math.abs(totalPct - 100) < 0.01;
+
+    const addAsset = () => {
+        setAssets(prev => [...prev, { id: Date.now().toString(), ticker: '', pct: 0 }]);
+    };
+
+    const removeAsset = (id: string) => {
+        setAssets(prev => prev.filter(a => a.id !== id));
+    };
+
+    const updateAsset = (id: string, field: 'ticker' | 'pct', value: string) => {
+        setAssets(prev => prev.map(a =>
+            a.id === id ? { ...a, [field]: field === 'pct' ? parseFloat(value) || 0 : value.toUpperCase() } : a
+        ));
+    };
+
+    const pctBarColor = !isValid ? 'bg-red-500' : 'bg-green-500';
+
+    return (
+        <CardShell
+            icon={<PieChart size={20} className="text-white" />}
+            title="Portfolio Allocation Splitter"
+            subtitle="Divide your cash across assets with instant dollar amounts"
+            accentColor="from-blue-900/80 to-indigo-900/60"
+        >
+            <InputField label="Total Cash to Invest" value={cash} onChange={setCash} prefix="$" placeholder="e.g. 10000" />
+
+            {/* % validation bar */}
+            <div>
+                <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Allocation Total</span>
+                    <span className={`text-xs font-bold ${isValid ? 'text-green-400' : totalPct > 100 ? 'text-red-400' : 'text-amber-400'}`}>
+                        {totalPct.toFixed(1)}% {isValid ? '✓ Valid' : totalPct > 100 ? '— Over 100%' : '— Under 100%'}
+                    </span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-700/60 rounded-full overflow-hidden">
+                    <div
+                        className={`h-full rounded-full transition-all duration-300 ${pctBarColor}`}
+                        style={{ width: `${Math.min(totalPct, 100)}%` }}
+                    />
+                </div>
+            </div>
+
+            {/* Asset rows */}
+            <div className="flex flex-col gap-2">
+                {assets.map(asset => {
+                    const dollars = isValid && totalCash > 0 ? (asset.pct / 100) * totalCash : null;
+                    return (
+                        <div key={asset.id} className="flex items-center gap-2 p-2.5 bg-slate-900/50 rounded-lg border border-slate-700/40">
+                            <input
+                                type="text"
+                                className="input w-24 text-sm font-bold uppercase"
+                                placeholder="TICK"
+                                value={asset.ticker}
+                                onChange={e => updateAsset(asset.id, 'ticker', e.target.value)}
+                                maxLength={6}
+                            />
+                            <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                className="input input-no-spinner w-20 text-sm text-right font-mono"
+                                placeholder="%"
+                                value={asset.pct || ''}
+                                onChange={e => updateAsset(asset.id, 'pct', e.target.value)}
+                            />
+                            <span className="text-slate-500 text-sm">%</span>
+                            <div className="flex-1 text-right">
+                                {dollars !== null ? (
+                                    <span className="font-mono font-bold text-sm text-purple-300">${fmtCurrency(dollars)}</span>
+                                ) : (
+                                    <span className="text-slate-600 text-xs italic">—</span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => removeAsset(asset.id)}
+                                className="p-1.5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded transition-colors"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <button
+                onClick={addAsset}
+                className="flex items-center gap-2 justify-center py-2 text-sm text-slate-400 hover:text-purple-400 border border-dashed border-slate-700 hover:border-purple-500/50 rounded-lg transition-colors"
+            >
+                <Plus size={14} /> Add Asset
+            </button>
+        </CardShell>
+    );
+};
+
+// ─── 4. DRIP Calculator ──────────────────────────────────────────────────────
+
+interface DripYearRow {
+    year: number;
+    withDrip: number;
+    withoutDrip: number;
+    cashDividends: number;
+}
+
+const DripCalculator: React.FC = () => {
+    const [initial, setInitial] = useState('10000');
+    const [divYield, setDivYield] = useState('3');
+    const [growth, setGrowth] = useState('7');
+    const [years, setYears] = useState('20');
+
+    const { withDripFinal, withoutDripFinal, rows, advantage, advantagePct } = useMemo(() => {
+        const p = parseFloat(initial) || 0;
+        const dy = (parseFloat(divYield) || 0) / 100;
+        const gr = (parseFloat(growth) || 0) / 100;
+        const yr = Math.min(Math.max(Math.floor(parseFloat(years) || 0), 1), 50);
+
+        if (p <= 0 || yr <= 0) return { withDripFinal: 0, withoutDripFinal: 0, rows: [], advantage: 0, advantagePct: 0 };
+
+        const rows: DripYearRow[] = [];
+        let dripValue = p;
+        let noDripValue = p;
+        let totalCashDivs = 0;
+
+        for (let y = 1; y <= yr; y++) {
+            // WITH DRIP: dividends reinvested, compounding on total value
+            dripValue = dripValue * (1 + gr + dy);
+
+            // WITHOUT DRIP: only share price grows; dividends taken as cash
+            const cashDiv = noDripValue * dy;
+            totalCashDivs += cashDiv;
+            noDripValue = noDripValue * (1 + gr);
+
+            rows.push({ year: y, withDrip: dripValue, withoutDrip: noDripValue + totalCashDivs, cashDividends: totalCashDivs });
+        }
+
+        const withDripFinal = dripValue;
+        const withoutDripFinal = noDripValue + totalCashDivs;
+        const advantage = withDripFinal - withoutDripFinal;
+        const advantagePct = withoutDripFinal > 0 ? (advantage / withoutDripFinal) * 100 : 0;
+
+        return { withDripFinal, withoutDripFinal, rows, advantage, advantagePct };
+    }, [initial, divYield, growth, years]);
+
+    const maxVal = Math.max(withDripFinal, withoutDripFinal);
+
+    return (
+        <CardShell
+            icon={<Leaf size={20} className="text-white" />}
+            title="DRIP Calculator"
+            subtitle="See how dividend reinvestment compounds your wealth over time"
+            accentColor="from-blue-900/80 to-indigo-900/60"
+        >
+            <div className="grid grid-cols-2 gap-3">
+                <InputField label="Initial Investment" value={initial} onChange={setInitial} prefix="$" placeholder="10000" />
+                <InputField label="Annual Dividend Yield" value={divYield} onChange={setDivYield} suffix="%" placeholder="3" step="0.1" />
+                <InputField label="Annual Price Growth" value={growth} onChange={setGrowth} suffix="%" placeholder="7" step="0.1" />
+                <InputField label="Years to Grow" value={years} onChange={setYears} placeholder="20" step="1" min="1" />
+            </div>
+
+            {withDripFinal > 0 && (
+                <>
+                    {/* Side-by-side hero comparison */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-green-500/10 border border-green-500/25 rounded-xl p-4 text-center">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-1">With DRIP</p>
+                            <p className="text-2xl font-bold font-mono text-green-400">${fmtCurrency(withDripFinal)}</p>
+                            <div className="mt-2 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full" style={{ width: `${(withDripFinal / maxVal) * 100}%` }} />
+                            </div>
+                        </div>
+                        <div className="bg-slate-800/60 border border-slate-700/40 rounded-xl p-4 text-center">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Without DRIP</p>
+                            <p className="text-2xl font-bold font-mono text-slate-300">${fmtCurrency(withoutDripFinal)}</p>
+                            <div className="mt-2 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                                <div className="h-full bg-slate-500 rounded-full" style={{ width: `${(withoutDripFinal / maxVal) * 100}%` }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* DRIP advantage callout */}
+                    <div className="flex items-center justify-between bg-green-500/8 border border-green-500/20 rounded-xl px-4 py-3">
+                        <div className="flex items-center gap-2 text-green-400">
+                            <TrendingUp size={16} />
+                            <span className="text-sm font-semibold">DRIP Advantage</span>
+                        </div>
+                        <div className="text-right">
+                            <span className="font-mono font-bold text-green-400 text-lg">+${fmtCurrency(advantage)}</span>
+                            <span className="text-xs text-green-600 ml-2">(+{fmtPct(advantagePct)} more)</span>
+                        </div>
+                    </div>
+
+                    {/* Year-by-year table (last 5 milestones) */}
+                    <div className="bg-slate-900/50 rounded-xl border border-slate-700/40 overflow-hidden">
+                        <div className="px-4 py-2 bg-slate-800/60 border-b border-slate-700/40">
+                            <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Year-by-Year Milestones</span>
+                        </div>
+                        <div className="overflow-auto max-h-48">
+                            <table className="data-table w-full text-xs">
+                                <thead>
+                                    <tr>
+                                        <th className="text-left">Year</th>
+                                        <th className="text-right text-green-400">With DRIP</th>
+                                        <th className="text-right text-slate-400">Without DRIP</th>
+                                        <th className="text-right text-amber-400">Difference</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows
+                                        .filter((_, i, arr) => {
+                                            const yr = arr.length;
+                                            if (yr <= 10) return true;
+                                            // Show every 5 years + final
+                                            return (i + 1) % 5 === 0 || i === arr.length - 1;
+                                        })
+                                        .map(row => (
+                                            <tr key={row.year} className="hover:bg-slate-800/30">
+                                                <td className="font-bold text-slate-300">Yr {row.year}</td>
+                                                <td className="text-right font-mono text-green-400">${fmtCurrency(row.withDrip)}</td>
+                                                <td className="text-right font-mono text-slate-400">${fmtCurrency(row.withoutDrip)}</td>
+                                                <td className="text-right font-mono text-amber-400">+${fmtCurrency(row.withDrip - row.withoutDrip)}</td>
+                                            </tr>
+                                        ))
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
+        </CardShell>
+    );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+const Tools: React.FC = () => (
+    <div>
+        {/* Page Header */}
+        <div className="flex items-center gap-4 mb-8">
+            <div className="p-3 bg-blue-500/15 rounded-xl border border-blue-500/20">
+                <Wrench size={28} className="text-blue-400" />
+            </div>
+            <div>
+                <h1 className="text-3xl font-bold text-white">Investor's Swiss Army Knife</h1>
+                <p className="text-slate-400 text-sm mt-0.5">Interactive calculators for smarter trading and long-term investing decisions</p>
+            </div>
+        </div>
+
+        {/* 2×2 Responsive Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ProfitLossCalc />
+            <PositionSizingCalc />
+            <PortfolioSplitter />
+            <DripCalculator />
+        </div>
+    </div>
+);
+
+export default Tools;

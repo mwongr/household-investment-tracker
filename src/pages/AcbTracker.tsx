@@ -324,10 +324,10 @@ const AcbTracker = () => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden gap-6">
+        <div className="flex items-start gap-6 pb-12">
 
             {/* Left Sidebar: Accounts */}
-            <div className="w-1/4 min-w-[250px] max-w-[350px] flex flex-col gap-4 overflow-y-auto pr-2">
+            <div className="w-1/4 min-w-[250px] max-w-[350px] flex flex-col gap-4 sticky top-6">
                 <div className="flex justify-between items-center bg-slate-800/50 p-4 rounded-xl border border-slate-700">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <Calculator size={20} className="text-blue-400" />
@@ -388,7 +388,7 @@ const AcbTracker = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+            <div className="flex-1 flex flex-col gap-6">
                 {!selectedAccountId ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 bg-slate-800/10 rounded-2xl border border-slate-800 border-dashed">
                         <Calculator size={48} className="mb-4 opacity-30" />
@@ -467,7 +467,7 @@ const AcbTracker = () => {
 
                         {/* Bottom: Transaction History Table */}
                         {selectedTicker && (
-                            <div className="card flex-1 flex flex-col overflow-hidden p-0">
+                            <div className="card flex flex-col p-0">
                                 <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
                                     <h3 className="text-lg font-semibold text-white">
                                         <span className="text-blue-400">{selectedTicker}</span> Tracking History
@@ -520,9 +520,9 @@ const AcbTracker = () => {
                                     </div>
                                 )}
 
-                                <div className="overflow-y-auto flex-1 p-4">
-                                    <table className="data-table">
-                                        <thead className="sticky top-0 bg-slate-800 z-10 shadow-sm">
+                                <div className="p-4">
+                                    <table className="data-table w-full">
+                                        <thead className="bg-slate-800/50">
                                             <tr>
                                                 <th className="w-24">Date</th>
                                                 <th>Transaction</th>
@@ -547,8 +547,14 @@ const AcbTracker = () => {
                                                     <tr key={row.tx.id} className="hover:bg-slate-800/30 group">
                                                         <td className="text-sm text-slate-400 font-mono">{row.tx.date}</td>
                                                         <td>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium text-slate-200 text-sm">{row.tx.type}</span>
+                                                            <div className="flex flex-col items-start gap-1">
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                                    ['Buy', 'Reinvested Dividend', 'Reinvested Capital Gains Distribution', 'Split'].includes(row.tx.type) ? 'bg-green-500/10 text-green-400' :
+                                                                    row.tx.type === 'Sell' ? 'bg-red-500/10 text-red-400' :
+                                                                    'bg-blue-500/10 text-blue-400'
+                                                                }`}>
+                                                                    {row.tx.type}
+                                                                </span>
                                                                 {row.tx.memo && <span className="text-xs text-slate-500">{row.tx.memo}</span>}
                                                             </div>
                                                         </td>
