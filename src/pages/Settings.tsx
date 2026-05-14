@@ -1,6 +1,7 @@
 import { useState, useRef, type ChangeEvent } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Check, Settings as SettingsIcon, Folder, Users, Building, Plus, Save, X, Pencil } from 'lucide-react';
+import { Download, Upload, Trash2, AlertTriangle, Check, Settings as SettingsIcon, Folder, Users, Building, Plus, Save, X, Pencil, Sun, Moon, Monitor } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
 import type { Member, Institution } from '../types';
 import '../styles/shared.css';
 
@@ -192,6 +193,7 @@ const InstitutionsSection = () => {
 
 const Settings = () => {
     const { backupPath, setBackupPath } = useData();
+    const { theme, setTheme } = useTheme();
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const STORAGE_KEY = 'wealth-tracker-storage';
@@ -261,6 +263,56 @@ const Settings = () => {
                         {importStatus.message}
                     </div>
                 )}
+
+                {/* ── Appearance Section ── */}
+                <div className="card">
+                    <SectionHeader
+                        icon={<Monitor size={22} className="text-blue-400" />}
+                        title="Appearance"
+                        description="Choose your preferred colour theme for the application."
+                    />
+                    <div className="grid grid-cols-2 gap-4 max-w-sm">
+                        <button
+                            onClick={() => setTheme('dark')}
+                            className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                                theme === 'dark'
+                                    ? 'border-blue-500 bg-blue-500/10'
+                                    : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'
+                            }`}
+                        >
+                            <div className={`p-3 rounded-full ${ theme === 'dark' ? 'bg-blue-500/20' : 'bg-slate-700/40'}`}>
+                                <Moon size={22} className={theme === 'dark' ? 'text-blue-400' : 'text-slate-400'} />
+                            </div>
+                            <div className="text-center">
+                                <p className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-400'}`}>Dark</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Default</p>
+                            </div>
+                            {theme === 'dark' && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-full">Active</span>
+                            )}
+                        </button>
+
+                        <button
+                            onClick={() => setTheme('light')}
+                            className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                                theme === 'light'
+                                    ? 'border-blue-500 bg-blue-500/10'
+                                    : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'
+                            }`}
+                        >
+                            <div className={`p-3 rounded-full ${ theme === 'light' ? 'bg-blue-500/20' : 'bg-slate-700/40'}`}>
+                                <Sun size={22} className={theme === 'light' ? 'text-blue-400' : 'text-slate-400'} />
+                            </div>
+                            <div className="text-center">
+                                <p className={`font-semibold text-sm ${theme === 'light' ? 'text-white' : 'text-slate-400'}`}>Light</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Clean & bright</p>
+                            </div>
+                            {theme === 'light' && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-full">Active</span>
+                            )}
+                        </button>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
 

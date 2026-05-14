@@ -128,7 +128,7 @@ const StockResearch = () => {
                             <div
                                 key={item.id}
                                 onClick={() => handleSearch(item.ticker)}
-                                className="glass-panel p-4 flex flex-col md:flex-row gap-4 items-center justify-between group md:h-28 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                                className="glass-panel p-6 flex flex-col md:flex-row gap-4 items-center justify-between group md:h-32 cursor-pointer hover:bg-slate-800/50 transition-colors"
                             >
                                 <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
                                     {/* Ticker & Price */}

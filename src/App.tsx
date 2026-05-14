@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Accounts from './pages/Accounts';
 import AccountDetails from './pages/AccountDetails';
 import Dashboard from './pages/Dashboard';
@@ -15,7 +16,8 @@ import Tools from './pages/Tools';
 
 function App() {
   return (
-    <DataProvider>
+    <ThemeProvider>
+      <DataProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
@@ -34,7 +36,8 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </DataProvider>
+      </DataProvider>
+    </ThemeProvider>
   );
 }
 

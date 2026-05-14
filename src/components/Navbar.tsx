@@ -1,12 +1,13 @@
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, Wallet, FileBarChart, Settings, Search, Calculator, TrendingUp, Percent, Wrench } from 'lucide-react';
+import { LayoutDashboard, Wallet, FileBarChart, Settings, Search, Calculator, TrendingUp, Percent, Wrench, Sun, Moon } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
 import '../styles/navbar.css';
 
 const Navbar = () => {
     const { assets, accounts, bankAccounts, liabilities } = useData();
+    const { theme, toggleTheme } = useTheme();
 
-    // Calculate total net worth dynamically
     const totalAssetValue = assets.reduce((sum, a) => sum + (a.marketValue || 0), 0)
         + accounts.reduce((sum, a) => sum + (a.cashBalance || 0), 0);
     const totalCash = bankAccounts ? bankAccounts.reduce((sum, b) => sum + (b.balance || 0), 0) : 0;
@@ -52,6 +53,18 @@ const Navbar = () => {
                     <span className="label">Total Net Worth</span>
                     <span className="value">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
+
+                {/* Theme toggle button */}
+                <button
+                    onClick={toggleTheme}
+                    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                    className="theme-toggle-btn"
+                    aria-label="Toggle theme"
+                >
+                    {theme === 'dark'
+                        ? <Sun size={18} />
+                        : <Moon size={18} />}
+                </button>
             </div>
         </header>
     );
