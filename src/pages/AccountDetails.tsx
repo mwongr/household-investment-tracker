@@ -7,6 +7,7 @@ import type { Transaction, TransactionType } from '../types';
 
 import '../styles/shared.css';
 import PortfolioBalancer from '../components/PortfolioBalancer';
+import AverageDownCalc from '../components/AverageDownCalc';
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -908,8 +909,11 @@ const AccountDetails = () => {
                 </div>
             )}
 
-            {/* Portfolio Balancer — always shown at the bottom when there are assets */}
+            {/* Portfolio Balancer */}
             <PortfolioBalancer assets={assets} totalInvested={totalValue} />
+
+            {/* Average Down Calculator */}
+            <AverageDownCalc assets={assets} />
         </div>
     );
 };

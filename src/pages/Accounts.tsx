@@ -63,21 +63,16 @@ const Accounts = () => {
         setInitialCash('');
     };
 
-    // Helper to get Names
     const getMemberName = (id: string) => members.find(m => m.id === id)?.name || 'Unknown';
-    const getInstName = (id: string) => institutions.find(i => i.id === id)?.name || 'Unknown';
+    const getInstName   = (id: string) => institutions.find(i => i.id === id)?.name || 'Unknown';
 
     return (
         <div>
             <div className="page-header">
                 <h1 className="page-title">Accounts</h1>
                 {!isEditing && (
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => setIsEditing(true)}
-                    >
-                        <Plus size={18} />
-                        Add Account
+                    <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
+                        <Plus size={18} /> Add Account
                     </button>
                 )}
             </div>
@@ -91,72 +86,36 @@ const Accounts = () => {
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Account Name</label>
-                            <input
-                                type="text"
-                                className="input"
-                                placeholder="e.g. John's TFSA"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                required
-                            />
+                            <input type="text" className="input" placeholder="e.g. John's TFSA" value={name} onChange={e => setName(e.target.value)} required />
                         </div>
-
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Select Member</label>
-                            <select
-                                className="input"
-                                value={memberId}
-                                onChange={e => setMemberId(e.target.value)}
-                                required
-                            >
+                            <select className="input" value={memberId} onChange={e => setMemberId(e.target.value)} required>
                                 <option value="">-- Select Member --</option>
                                 {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                             </select>
                         </div>
-
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Select Institution</label>
-                            <select
-                                className="input"
-                                value={institutionId}
-                                onChange={e => setInstitutionId(e.target.value)}
-                                required
-                            >
+                            <select className="input" value={institutionId} onChange={e => setInstitutionId(e.target.value)} required>
                                 <option value="">-- Select Institution --</option>
                                 {institutions.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                             </select>
                         </div>
-
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Account Type</label>
-                            <select
-                                className="input"
-                                value={type}
-                                onChange={e => setType(e.target.value as AccountType)}
-                                required
-                            >
+                            <select className="input" value={type} onChange={e => setType(e.target.value as AccountType)} required>
                                 {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
-
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Initial Cash Balance ($)</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                className="input"
-                                placeholder="0.00"
-                                value={initialCash}
-                                onChange={e => setInitialCash(e.target.value)}
-                                required
-                            />
+                            <input type="number" step="0.01" className="input" placeholder="0.00" value={initialCash} onChange={e => setInitialCash(e.target.value)} required />
                         </div>
-
                         <div className="md:col-span-2 flex justify-end gap-3 mt-4">
                             <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>
                             <button type="submit" className="btn btn-primary">
-                                <Save size={18} />
-                                {editingId ? 'Update Account' : 'Save Account'}
+                                <Save size={18} /> {editingId ? 'Update Account' : 'Save Account'}
                             </button>
                         </div>
                     </form>
@@ -165,9 +124,7 @@ const Accounts = () => {
 
             <div className="card">
                 {accounts.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">
-                        No accounts found. Create one above!
-                    </div>
+                    <div className="text-center py-10 text-slate-500">No accounts found. Create one above!</div>
                 ) : (
                     <div className="table-container">
                         <table className="data-table">
@@ -186,15 +143,12 @@ const Accounts = () => {
                                 {accounts.map(acc => (
                                     <tr key={acc.id}>
                                         <td className="font-medium text-white flex items-center gap-2">
-                                            <Wallet size={16} className="text-blue-400" />
-                                            {acc.name}
+                                            <Wallet size={16} className="text-blue-400" /> {acc.name}
                                         </td>
                                         <td>{getMemberName(acc.memberId)}</td>
                                         <td>{getInstName(acc.institutionId)}</td>
                                         <td>
-                                            <span className="bg-slate-700 text-xs px-2 py-1 rounded-full text-slate-300">
-                                                {acc.type}
-                                            </span>
+                                            <span className="bg-slate-700 text-xs px-2 py-1 rounded-full text-slate-300">{acc.type}</span>
                                         </td>
                                         <td className="text-right text-slate-300">
                                             {assets.filter(a => a.accountId === acc.id).length}
@@ -210,18 +164,10 @@ const Accounts = () => {
                                             >
                                                 <TrendingUp size={16} /> Assets
                                             </Link>
-                                            <button
-                                                className="btn btn-secondary"
-                                                onClick={() => startEdit(acc)}
-                                                title="Edit Account"
-                                            >
+                                            <button className="btn btn-secondary" onClick={() => startEdit(acc)} title="Edit Account">
                                                 <Pencil size={16} />
                                             </button>
-                                            <button
-                                                className="btn btn-danger"
-                                                onClick={() => deleteAccount(acc.id)}
-                                                title="Delete Account"
-                                            >
+                                            <button className="btn btn-danger" onClick={() => deleteAccount(acc.id)} title="Delete Account">
                                                 <Trash2 size={16} />
                                             </button>
                                         </td>
