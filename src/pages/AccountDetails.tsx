@@ -910,7 +910,7 @@ const AccountDetails = () => {
             )}
 
             {/* Portfolio Balancer */}
-            <PortfolioBalancer assets={assets} totalInvested={totalValue} />
+            <PortfolioBalancer account={account} assets={assets} totalInvested={totalValue} />
 
             {/* Average Down Calculator */}
             <AverageDownCalc assets={assets} />

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Sliders, AlertTriangle, CheckCircle, RotateCcw, Plus, Trash2 } from 'lucide-react';
-import type { Asset } from '../types';
+import type { Asset, Account } from '../types';
+import { useData } from '../context/DataContext';
 
 interface BalancerRow {
     id: string;         // asset id or custom key
@@ -11,6 +12,7 @@ interface BalancerRow {
 }
 
 interface Props {
+    account: Account;
     assets: Asset[];
     totalInvested: number;  // sum of all marketValues in account
 }
@@ -23,19 +25,20 @@ const fmtPct = (n: number): string => n.toFixed(2) + '%';
 // Drift threshold: flag if actual is more than this many pp away from target
 const DRIFT_THRESHOLD = 2;
 
-const PortfolioBalancer: React.FC<Props> = ({ assets, totalInvested }) => {
-    // Initialise target percentages from current actual weights
-    const [targetPcts, setTargetPcts] = useState<Record<string, number>>(() => {
+const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) => {
+    const { updateAccount } = useData();
+
+    const targetPcts = useMemo(() => {
+        if (account.targetPcts) return account.targetPcts;
         const init: Record<string, number> = {};
         assets.forEach(a => {
             const pct = totalInvested > 0 ? (a.marketValue / totalInvested) * 100 : 0;
             init[a.id] = Math.round(pct * 10) / 10;
         });
         return init;
-    });
+    }, [account.targetPcts, assets, totalInvested]);
 
-    // Extra custom rows (tickers user wants to add to the plan that aren't held yet)
-    const [extraRows, setExtraRows] = useState<{ id: string; ticker: string; targetPct: number }[]>([]);
+    const extraRows = account.extraRows || [];
 
     const rows: BalancerRow[] = useMemo(() => {
         const assetRows: BalancerRow[] = assets.map(a => ({
@@ -64,22 +67,22 @@ const PortfolioBalancer: React.FC<Props> = ({ assets, totalInvested }) => {
         const num = parseFloat(val);
         const v = isNaN(num) ? 0 : Math.max(0, Math.min(100, num));
         if (isExtra) {
-            setExtraRows(prev => prev.map(r => r.id === id ? { ...r, targetPct: v } : r));
+            updateAccount(account.id, { extraRows: extraRows.map(r => r.id === id ? { ...r, targetPct: v } : r) });
         } else {
-            setTargetPcts(prev => ({ ...prev, [id]: v }));
+            updateAccount(account.id, { targetPcts: { ...targetPcts, [id]: v } });
         }
     };
 
     const addExtraRow = () => {
-        setExtraRows(prev => [...prev, { id: `custom-${Date.now()}`, ticker: '', targetPct: 0 }]);
+        updateAccount(account.id, { extraRows: [...extraRows, { id: `custom-${Date.now()}`, ticker: '', targetPct: 0 }] });
     };
 
     const removeExtraRow = (id: string) => {
-        setExtraRows(prev => prev.filter(r => r.id !== id));
+        updateAccount(account.id, { extraRows: extraRows.filter(r => r.id !== id) });
     };
 
     const updateExtraTicker = (id: string, val: string) => {
-        setExtraRows(prev => prev.map(r => r.id === id ? { ...r, ticker: val.toUpperCase() } : r));
+        updateAccount(account.id, { extraRows: extraRows.map(r => r.id === id ? { ...r, ticker: val.toUpperCase() } : r) });
     };
 
     // Reset targets to current actual weights
@@ -89,8 +92,7 @@ const PortfolioBalancer: React.FC<Props> = ({ assets, totalInvested }) => {
             const pct = totalInvested > 0 ? (a.marketValue / totalInvested) * 100 : 0;
             next[a.id] = Math.round(pct * 10) / 10;
         });
-        setTargetPcts(next);
-        setExtraRows([]);
+        updateAccount(account.id, { targetPcts: next, extraRows: [] });
     };
 
     // Rebalance amount: how much $ to buy/sell to reach target

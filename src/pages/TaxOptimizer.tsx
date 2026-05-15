@@ -437,7 +437,7 @@ const TaxOptimizer: React.FC = () => {
   return (
     <div className="tax-optimizer-page">
       {/* Header */}
-      <div className="page-header pb-4 border-b border-gray-700 flex justify-between items-center">
+      <div className="page-header pb-4 border-b border-slate-700 flex justify-between items-center">
         <div>
           <h1 className="page-title">
             <ShieldCheck className="text-indigo-400" size={30} />
@@ -461,16 +461,16 @@ const TaxOptimizer: React.FC = () => {
         <div className="tax-kpi-grid">
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#6366f1,#8b5cf6)' } as React.CSSProperties}>
             <span className="tax-kpi-label">Estimated Refund</span>
-            <span className="tax-kpi-value" style={{ color: '#a5b4fc' }}>{fmtDec.format(result.totalRefund)}</span>
+            <span className="tax-kpi-value text-indigo-400">{fmtDec.format(result.totalRefund)}</span>
             <span className="tax-kpi-sub" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-              <span style={{ color: '#93c5fd' }}>CRA: {fmt.format(result.craRefund)}</span>
-              <span style={{ color: '#475569' }}>·</span>
-              <span style={{ color: '#c4b5fd' }}>RQ: {fmt.format(result.rqRefund)}</span>
+              <span className="text-blue-400">CRA: {fmt.format(result.craRefund)}</span>
+              <span className="text-slate-500">·</span>
+              <span className="text-purple-400">RQ: {fmt.format(result.rqRefund)}</span>
             </span>
           </div>
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#10b981,#059669)' } as React.CSSProperties}>
             <span className="tax-kpi-label">Effective Savings Rate</span>
-            <span className="tax-kpi-value" style={{ color: '#6ee7b7' }}>{result.effectiveTaxSavingsPercentage.toFixed(1)}%</span>
+            <span className="tax-kpi-value text-green-400">{result.effectiveTaxSavingsPercentage.toFixed(1)}%</span>
             <span className="tax-kpi-sub">Refund per dollar contributed</span>
           </div>
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#f59e0b,#d97706)' } as React.CSSProperties}>
@@ -482,7 +482,7 @@ const TaxOptimizer: React.FC = () => {
           </div>
           <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#3b82f6,#1d4ed8)' } as React.CSSProperties}>
             <span className="tax-kpi-label">Taxable Income</span>
-            <span className="tax-kpi-value" style={{ color: '#93c5fd' }}>{fmt.format(result.taxableIncome)}</span>
+            <span className="tax-kpi-value text-blue-400">{fmt.format(result.taxableIncome)}</span>
             <span className="tax-kpi-sub">After {fmt.format(contribution)} RRSP deduction</span>
           </div>
         </div>
@@ -590,13 +590,13 @@ const TaxOptimizer: React.FC = () => {
                 </div>
 
                 {/* RRSP Tracker & Schedule */}
-                <div style={{ marginTop: '1.25rem', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                  <div style={{ padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0' }}>RRSP Funding Schedule</div>
+                <div style={{ marginTop: '1.25rem', background: 'rgba(var(--color-slate-800), 0.5)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                  <div style={{ padding: '0.75rem 1rem', background: 'var(--table-row-hover)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-light)' }}>RRSP Funding Schedule</div>
                     <select
                       value={selectedAccountId}
                       onChange={(e) => setSelectedAccountId(e.target.value)}
-                      style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem', outline: 'none' }}
+                      style={{ background: 'rgba(var(--color-slate-900), 0.8)', border: '1px solid var(--glass-border)', color: 'var(--color-text-light)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem', outline: 'none' }}
                     >
                       <option value="">Select RRSP Account...</option>
                       {rrspAccounts.map(acc => (
@@ -609,23 +609,23 @@ const TaxOptimizer: React.FC = () => {
                     const selectedAcc = accounts.find(a => a.id === selectedAccountId);
                     if (!selectedAcc) {
                        return contribution > 0 ? (
-                         <div style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: '#94a3b8' }}>
+                         <div style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
                            <div style={{ textAlign: 'center' }}>
                              <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Month</span>
-                             <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 12)}</strong>
+                             <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(contribution / 12)}</strong>
                            </div>
-                           <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                           <div style={{ width: '1px', background: 'var(--glass-border)' }}></div>
                            <div style={{ textAlign: 'center' }}>
                              <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Bi-Weekly</span>
-                             <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 26)}</strong>
+                             <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(contribution / 26)}</strong>
                            </div>
-                           <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                           <div style={{ width: '1px', background: 'var(--glass-border)' }}></div>
                            <div style={{ textAlign: 'center' }}>
                              <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Week</span>
-                             <strong style={{ color: '#e2e8f0' }}>{fmt.format(contribution / 52)}</strong>
+                             <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(contribution / 52)}</strong>
                            </div>
                          </div>
-                       ) : <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>Enter a proposed contribution to see schedule</div>;
+                       ) : <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Enter a proposed contribution to see schedule</div>;
                     }
 
                     const today = new Date();
@@ -656,35 +656,35 @@ const TaxOptimizer: React.FC = () => {
                     return (
                       <div style={{ padding: '0.75rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#94a3b8' }}>Account Value: <strong style={{ color: '#e2e8f0' }}>{fmt.format(totalValue)}</strong></span>
-                          <span style={{ color: '#94a3b8' }}>Cash: <strong style={{ color: '#6ee7b7' }}>{fmt.format(selectedAcc.cashBalance)}</strong></span>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Account Value: <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(totalValue)}</strong></span>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Cash: <strong style={{ color: '#6ee7b7' }}>{fmt.format(selectedAcc.cashBalance)}</strong></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#94a3b8' }} title={`Deposits from Jan 1, ${taxYear} to Mar 1, ${taxYear + 1}`}>
-                            Contributions: <strong style={{ color: '#f59e0b' }}>{fmt.format(ytdDeposits)}</strong>
+                          <span style={{ color: 'var(--color-text-secondary)' }} title={`Deposits from Jan 1, ${taxYear} to Mar 1, ${taxYear + 1}`}>
+                            Contributions: <strong className="text-amber-400">{fmt.format(ytdDeposits)}</strong>
                           </span>
-                          <span style={{ color: '#94a3b8' }}>Remaining Target: <strong style={{ color: '#c7d2fe' }}>{fmt.format(remainingTarget)}</strong></span>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Remaining Target: <strong className="text-indigo-400">{fmt.format(remainingTarget)}</strong></span>
                         </div>
                         
                         {remainingTarget > 0 ? (
                           <>
-                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', textAlign: 'center', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
                               Required schedule before Mar 1, {taxYear + 1}
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: 'var(--color-text-secondary)', background: 'var(--table-row-hover)', padding: '0.5rem', borderRadius: '0.25rem' }}>
                               <div style={{ textAlign: 'center' }}>
                                 <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Month</span>
-                                <strong style={{ color: '#e2e8f0' }}>{fmt.format(remainingTarget / remainingMonths)}</strong>
+                                <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(remainingTarget / remainingMonths)}</strong>
                               </div>
-                              <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                              <div style={{ width: '1px', background: 'var(--glass-border)' }}></div>
                               <div style={{ textAlign: 'center' }}>
                                 <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Bi-Weekly</span>
-                                <strong style={{ color: '#e2e8f0' }}>{fmt.format(remainingTarget / remainingBiWeeks)}</strong>
+                                <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(remainingTarget / remainingBiWeeks)}</strong>
                               </div>
-                              <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                              <div style={{ width: '1px', background: 'var(--glass-border)' }}></div>
                               <div style={{ textAlign: 'center' }}>
                                 <span style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Per Week</span>
-                                <strong style={{ color: '#e2e8f0' }}>{fmt.format(remainingTarget / remainingWeeks)}</strong>
+                                <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(remainingTarget / remainingWeeks)}</strong>
                               </div>
                             </div>
                           </>
@@ -701,7 +701,7 @@ const TaxOptimizer: React.FC = () => {
 
                 {/* Bracket-crossing warning */}
                 {result?.bracketCrossed && (
-                  <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.875rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#a5b4fc', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.875rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1rem' }}>🎯</span>
                     <span><strong>Bracket Drop!</strong> Your contribution crosses a bracket boundary: <strong style={{ color: '#f87171' }}>{(result.currentCombinedRate * 100).toFixed(1)}%</strong> → <strong style={{ color: '#34d399' }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong>. Further contributions shield income at a lower rate.</span>
                   </div>
@@ -714,7 +714,7 @@ const TaxOptimizer: React.FC = () => {
           <div className="tax-panel">
             <div className="tax-panel-header">
               <span className="tax-panel-title"><BarChart3 size={15} /> Tax Layer Cake</span>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
                 Indigo stripes = RRSP Shield
               </span>
             </div>
@@ -743,21 +743,21 @@ const TaxOptimizer: React.FC = () => {
               </div>
               <div className="tax-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#94a3b8' }}>Optimal "bracket drop" contribution</span>
-                  <span style={{ color: '#c7d2fe', fontWeight: 700 }}>{fmt.format(result.sweetSpotContribution)}</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Optimal "bracket drop" contribution</span>
+                  <span className="text-indigo-400" style={{ fontWeight: 700 }}>{fmt.format(result.sweetSpotContribution)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#94a3b8' }}>Room left in current bracket</span>
-                  <span style={{ color: '#fbbf24', fontWeight: 700 }}>{fmt.format(result.remainingRoomInCurrentBracket)}</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Room left in current bracket</span>
+                  <span className="text-amber-400" style={{ fontWeight: 700 }}>{fmt.format(result.remainingRoomInCurrentBracket)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#94a3b8' }}>Refund per $1,000 contributed</span>
-                  <span style={{ color: '#6ee7b7', fontWeight: 700 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Refund per $1,000 contributed</span>
+                  <span className="text-green-400" style={{ fontWeight: 700 }}>
                     {fmt.format((result.totalRefund / Math.max(contribution, 1)) * 1000)}
                   </span>
                 </div>
-                <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', margin: '0.25rem 0' }} />
-                <div style={{ fontSize: '0.74rem', color: '#64748b', lineHeight: 1.6 }}>
+                <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '0.25rem 0' }} />
+                <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
                   The "sweet spot" is the minimum contribution needed to drop your top taxable dollar into the next lower combined bracket, maximizing the refund rate on every dollar contributed.
                 </div>
               </div>
@@ -800,7 +800,7 @@ const TaxOptimizer: React.FC = () => {
           <div className="tax-panel">
             <div className="tax-panel-header">
               <span className="tax-panel-title"><History size={15} /> Scenario History</span>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{scenarios.length} saved</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{scenarios.length} saved</span>
             </div>
             <div className="tax-panel-body" style={{ padding: '0.5rem 0.75rem' }}>
               {!scenariosLoaded && <div className="tax-empty">Loading…</div>}
@@ -810,10 +810,10 @@ const TaxOptimizer: React.FC = () => {
               {scenarios.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
                   {scenarios.slice(0, 10).map(s => (
-                    <div key={s.id} style={{ background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '0.5rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', position: 'relative' }}>
+                    <div key={s.id} style={{ background: 'rgba(var(--color-slate-900), 0.4)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', position: 'relative' }}>
                       
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
                           {new Date(s.savedAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -834,25 +834,25 @@ const TaxOptimizer: React.FC = () => {
                       
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                         <div>
-                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Income</div>
-                          <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>{fmt.format(s.annualIncome)}</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Income</div>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-light)', fontWeight: 600 }}>{fmt.format(s.annualIncome)}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Contribution</div>
-                          <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>{fmt.format(s.rrspContribution)}</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Contribution</div>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-light)', fontWeight: 600 }}>{fmt.format(s.rrspContribution)}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Total Refund</div>
-                          <div style={{ fontSize: '0.9rem', color: '#6ee7b7', fontWeight: 700 }}>{fmt.format(s.totalRefund)}</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Total Refund</div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 700 }} className="text-green-400">{fmt.format(s.totalRefund)}</div>
                           {(s.craRefund != null || s.rqRefund != null) && (
                             <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.65rem', marginTop: '0.15rem' }}>
-                              {s.craRefund != null && <span style={{ color: '#93c5fd' }}>CRA: {fmt.format(s.craRefund)}</span>}
-                              {s.rqRefund != null && <span style={{ color: '#c4b5fd' }}>RQ: {fmt.format(s.rqRefund)}</span>}
+                              {s.craRefund != null && <span className="text-blue-400">CRA: {fmt.format(s.craRefund)}</span>}
+                              {s.rqRefund != null && <span className="text-purple-400">RQ: {fmt.format(s.rqRefund)}</span>}
                             </div>
                           )}
                         </div>
                         <div>
-                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Savings Rate</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Savings Rate</div>
                           <div style={{ fontSize: '0.9rem', fontWeight: 600 }} className={rateClass(s.effectiveRate / 100)}>
                             {s.effectiveRate.toFixed(1)}%
                           </div>

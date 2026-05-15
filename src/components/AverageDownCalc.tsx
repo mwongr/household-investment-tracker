@@ -163,10 +163,9 @@ const AverageDownCalc: React.FC<Props> = ({ assets }) => {
                                         New Purchase Price
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
                                         <input
                                             type="number" min="0" step="0.01"
-                                            className="input input-no-spinner w-full pl-6"
+                                            className="input input-no-spinner w-full"
                                             placeholder={`e.g. ${fmt(selected.currentPrice)}`}
                                             value={newPrice}
                                             onChange={e => setNewPrice(e.target.value)}

@@ -35,8 +35,8 @@
 }
 
 .tax-kpi-card {
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(var(--color-slate-800), 0.8);
+  border: 1px solid var(--glass-border);
   border-radius: 1rem;
   padding: 1.25rem 1.5rem;
   backdrop-filter: blur(12px);
@@ -59,7 +59,7 @@
 
 .tax-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: var(--color-border);
 }
 
 .tax-kpi-label {
@@ -100,8 +100,8 @@
 
 /* ─── Panel / Card Base ────────────────────────────────────── */
 .tax-panel {
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(var(--color-slate-800), 0.7);
+  border: 1px solid var(--glass-border);
   border-radius: 1rem;
   backdrop-filter: blur(12px);
   overflow: hidden;
@@ -109,7 +109,7 @@
 
 .tax-panel-header {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -157,8 +157,8 @@
 }
 
 .tax-input {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--color-slate-900), 0.8);
+  border: 1px solid var(--glass-border);
   border-radius: 0.5rem;
   color: var(--color-text-primary);
   font-family: 'Inter', sans-serif;
@@ -197,8 +197,8 @@
     to right,
     #6366f1 0%,
     #6366f1 var(--slider-pct, 50%),
-    rgba(255, 255, 255, 0.1) var(--slider-pct, 50%),
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(var(--color-slate-500), 0.3) var(--slider-pct, 50%),
+    rgba(var(--color-slate-500), 0.3) 100%
   );
   cursor: pointer;
   outline: none;
@@ -211,7 +211,7 @@
   height: 18px;
   border-radius: 50%;
   background: #6366f1;
-  border: 3px solid #0f172a;
+  border: 3px solid rgb(var(--color-slate-900));
   box-shadow: 0 0 0 2px #6366f1, 0 2px 8px rgba(99, 102, 241, 0.5);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -227,7 +227,7 @@
   height: 18px;
   border-radius: 50%;
   background: #6366f1;
-  border: 3px solid #0f172a;
+  border: 3px solid rgb(var(--color-slate-900));
   cursor: pointer;
 }
 
@@ -373,13 +373,13 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .layer-cake-table td {
   padding: 0.4rem 0.5rem;
   color: var(--color-text-secondary);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--glass-border);
   vertical-align: middle;
 }
 
@@ -454,7 +454,7 @@
 .milestone-bracket-drop {
   margin-top: 0.875rem;
   padding: 0.6rem 0.875rem;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(var(--color-slate-900), 0.5);
   border-radius: 0.5rem;
   font-size: 0.78rem;
   color: var(--color-text-secondary);
@@ -565,19 +565,19 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .scenarios-table td {
   padding: 0.45rem 0.5rem;
   color: var(--color-text-secondary);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .scenarios-table tr:last-child td { border-bottom: none; }
 
 .scenarios-table tr:hover td {
-  background: rgba(255,255,255,0.03);
+  background: var(--table-row-hover);
 }
 
 /* ─── Rate color helpers ────────────────────────────────────── */
@@ -608,7 +608,7 @@
 
 .tax-modal-content {
   background: var(--color-bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: 1rem;
   width: 90%;
   max-width: 600px;
@@ -626,7 +626,7 @@
 
 .tax-modal-header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -693,7 +693,7 @@
 
 .tax-modal-footer {
   padding: 1.25rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--glass-border);
   display: flex;
   justify-content: flex-end;
   gap: 1rem;

@@ -17,10 +17,8 @@ export type Account = {
   type: AccountType;
   name: string;
   cashBalance: number;
-  // We might calculate "available cash" by taking initial + deposits - withdrawals - net_purchases + net_sales
-  // For simplicity MVP, let's track a current "cashBalance" or just use initial and derive.
-  // Let's store availableCash as a derived or tracked field. For now, user requested "Initial Cash Balance". 
-  // We'll treat cash as a special asset or just a field.
+  targetPcts?: Record<string, number>;
+  extraRows?: { id: string; ticker: string; targetPct: number }[];
 };
 
 export type AssetType = 'Stock' | 'ETF' | 'Crypto' | 'Cash' | 'Other';
