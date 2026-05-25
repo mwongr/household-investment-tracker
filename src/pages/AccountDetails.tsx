@@ -154,15 +154,50 @@ const AccountDetails = () => {
     // Transaction activity summary with year filter
     const accountTxs = transactions.filter(tx => tx.accountId === id);
     const txYears = Array.from(new Set(accountTxs.map(tx => new Date(tx.date).getFullYear()))).sort((a, b) => b - a);
+
+    // Sort transactions chronologically to calculate realized gains properly
+    const sortedTxs = [...accountTxs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const assetCosts: Record<string, { quantity: number, totalCost: number }> = {};
+    const realizedGainsPerTx: Record<string, number> = {};
+
+    sortedTxs.forEach(tx => {
+        if (!tx.ticker) return;
+        const ticker = tx.ticker;
+        if (!assetCosts[ticker]) {
+            assetCosts[ticker] = { quantity: 0, totalCost: 0 };
+        }
+        
+        const state = assetCosts[ticker];
+        
+        if (tx.type === 'Buy' || tx.type === 'DRIP' || tx.type === 'Dividend Reinvested') {
+            state.quantity += (tx.shares || 0);
+            state.totalCost += tx.amount;
+        } else if (tx.type === 'Sell') {
+            const avgCost = state.quantity > 0 ? state.totalCost / state.quantity : 0;
+            const costOfSharesSold = (tx.shares || 0) * avgCost;
+            state.quantity -= (tx.shares || 0);
+            state.totalCost -= costOfSharesSold;
+            
+            const gain = tx.amount - costOfSharesSold;
+            realizedGainsPerTx[tx.id] = gain;
+        } else if (tx.type === 'Stock Split') {
+            state.quantity += (tx.shares || 0);
+        }
+    });
+
     const filteredTxs = selectedYear === 'All' ? accountTxs : accountTxs.filter(tx => new Date(tx.date).getFullYear() === selectedYear);
     const txSummary = filteredTxs.reduce((acc, tx) => {
         if (tx.type === 'Deposit') acc.deposits += tx.amount;
         else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
         else if (tx.type === 'Buy' || tx.type === 'Dividend Reinvested' || tx.type === 'DRIP') acc.buys += tx.amount;
-        else if (tx.type === 'Sell') acc.sells += tx.amount;
+        else if (tx.type === 'Sell') {
+            acc.sells += tx.amount;
+            acc.realizedGains += (realizedGainsPerTx[tx.id] || 0);
+        }
         else if (tx.type === 'Dividend Income' || tx.type === 'Dividend') acc.dividends += tx.amount;
         return acc;
-    }, { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0 });
+    }, { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, realizedGains: 0 });
 
     return (
         <div>
@@ -245,7 +280,7 @@ const AccountDetails = () => {
                         </button>
                     </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div className="bg-slate-800/60 rounded-lg p-3 border border-green-500/10">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Deposits</p>
                         <p className="text-lg font-bold font-mono text-green-400">${txSummary.deposits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -265,6 +300,12 @@ const AccountDetails = () => {
                     <div className="bg-slate-800/60 rounded-lg p-3 border border-yellow-500/10">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Dividends</p>
                         <p className="text-lg font-bold font-mono text-yellow-400">${txSummary.dividends.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className={`bg-slate-800/60 rounded-lg p-3 border ${txSummary.realizedGains >= 0 ? 'border-green-500/10' : 'border-red-500/10'}`}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Realized P/L</p>
+                        <p className={`text-lg font-bold font-mono ${txSummary.realizedGains >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {txSummary.realizedGains >= 0 ? '+' : '-'}${Math.abs(txSummary.realizedGains).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                     </div>
                 </div>
             </div>
