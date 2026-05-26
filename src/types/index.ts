@@ -278,3 +278,9 @@ export interface CompareApiResponse {
   range:     CompareRange;
   fetchedAt: string;
 }
+
+export type UserPreferences = {
+  enableNetWorth: boolean;
+  enableTaxOptimizer: boolean;
+  enableAcbTracker: boolean;
+};

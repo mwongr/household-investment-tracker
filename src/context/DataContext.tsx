@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type {
     Member, Institution, Account, Asset, Transaction, NetWorthSnapshot, WatchlistItem,
     AcbAccount, AcbTransaction,
-    BankAccount, Liability, MonthlyExpense
+    BankAccount, Liability, MonthlyExpense, UserPreferences
 } from '../types';
 
 interface DataContextType {
@@ -69,6 +69,9 @@ interface DataContextType {
     addMonthlyExpense: (expense: Omit<MonthlyExpense, 'id'>) => void;
     updateMonthlyExpense: (id: string, expense: Omit<MonthlyExpense, 'id'>) => void;
     deleteMonthlyExpense: (id: string) => void;
+
+    preferences: UserPreferences;
+    updatePreferences: (updates: Partial<UserPreferences>) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -179,6 +182,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? (JSON.parse(saved).monthlyExpenses || []) : [];
     });
 
+    const [preferences, setPreferences] = useState<UserPreferences>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const defaults = { enableNetWorth: true, enableTaxOptimizer: true, enableAcbTracker: true };
+        return saved && JSON.parse(saved).preferences ? { ...defaults, ...JSON.parse(saved).preferences } : defaults;
+    });
+
     // Track if we need to auto-refresh after adding new asset
     const pendingRefreshRef = useRef(false);
 
@@ -199,7 +208,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             acbTransactions,
             bankAccounts,
             liabilities,
-            monthlyExpenses
+            monthlyExpenses,
+            preferences
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -212,7 +222,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses]);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -819,7 +829,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             monthlyExpenses,
             addMonthlyExpense,
             updateMonthlyExpense,
-            deleteMonthlyExpense
+            deleteMonthlyExpense,
+            preferences,
+            updatePreferences: (updates) => setPreferences(prev => ({ ...prev, ...updates }))
         }}>
             {children}
         </DataContext.Provider>

@@ -1,5 +1,5 @@
 import { useState, useRef, type ChangeEvent } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Check, Settings as SettingsIcon, Folder, Users, Building, Plus, Save, X, Pencil, Sun, Moon, Monitor } from 'lucide-react';
+import { Download, Upload, Trash2, AlertTriangle, Check, Settings as SettingsIcon, Folder, Users, Building, Plus, Save, X, Pencil, Sun, Moon, Monitor, ToggleRight, TrendingUp, Calculator, Percent } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
 import type { Member, Institution } from '../types';
@@ -189,6 +189,63 @@ const InstitutionsSection = () => {
     );
 };
 
+// ─── Features Sub-Section ─────────────────────────────────────────────────────
+
+const FeaturesSection = () => {
+    const { preferences, updatePreferences } = useData();
+
+    const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
+        <button
+            onClick={onChange}
+            className={`w-12 h-6 rounded-full flex items-center transition-colors p-1 ${enabled ? 'bg-blue-500' : 'bg-slate-700'}`}
+        >
+            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-0'}`} />
+        </button>
+    );
+
+    return (
+        <div>
+            <SectionHeader
+                icon={<ToggleRight size={22} className="text-purple-400" />}
+                title="Features & Modules"
+                description="Enable or disable specific tracking modules to reduce clutter."
+            />
+            <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><TrendingUp size={20} /></div>
+                        <div>
+                            <h3 className="font-semibold text-white">Net Worth Tracker</h3>
+                            <p className="text-xs text-slate-400">Track external assets and liabilities</p>
+                        </div>
+                    </div>
+                    <Toggle enabled={preferences.enableNetWorth} onChange={() => updatePreferences({ enableNetWorth: !preferences.enableNetWorth })} />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-green-500/10 text-green-400 rounded-lg"><Percent size={20} /></div>
+                        <div>
+                            <h3 className="font-semibold text-white">Tax Optimizer</h3>
+                            <p className="text-xs text-slate-400">Plan RRSP/FHSA contributions</p>
+                        </div>
+                    </div>
+                    <Toggle enabled={preferences.enableTaxOptimizer} onChange={() => updatePreferences({ enableTaxOptimizer: !preferences.enableTaxOptimizer })} />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Calculator size={20} /></div>
+                        <div>
+                            <h3 className="font-semibold text-white">ACB Tracker</h3>
+                            <p className="text-xs text-slate-400">Track Adjusted Cost Base for taxes</p>
+                        </div>
+                    </div>
+                    <Toggle enabled={preferences.enableAcbTracker} onChange={() => updatePreferences({ enableAcbTracker: !preferences.enableAcbTracker })} />
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 
 const Settings = () => {
@@ -254,7 +311,7 @@ const Settings = () => {
                 <h1 className="text-3xl font-bold text-white">Settings</h1>
             </div>
 
-            <div className="space-y-6">
+            <div className="max-w-4xl space-y-16 pb-12">
 
                 {/* ── Status Banner ── */}
                 {importStatus && (
@@ -264,131 +321,120 @@ const Settings = () => {
                     </div>
                 )}
 
-                {/* ── Appearance Section ── */}
-                <div className="card">
+                {/* ── Section 1: Members ── */}
+                <section>
+                    <SectionHeader
+                        icon={<Users size={22} className="text-blue-400" />}
+                        title="Household Members"
+                        description="Manage individuals in your household."
+                    />
+                    <MembersSection />
+                </section>
+
+                {/* ── Section 2: Institutions ── */}
+                <section>
+                    <SectionHeader
+                        icon={<Building size={22} className="text-emerald-400" />}
+                        title="Financial Institutions"
+                        description="Manage banks and brokerages."
+                    />
+                    <InstitutionsSection />
+                </section>
+
+                {/* ── Section 3: Features ── */}
+                <section>
+                    <FeaturesSection />
+                </section>
+
+                {/* ── Section 4: Appearance ── */}
+                <section>
                     <SectionHeader
                         icon={<Monitor size={22} className="text-blue-400" />}
                         title="Appearance"
                         description="Choose your preferred colour theme for the application."
                     />
-                    <div className="grid grid-cols-2 gap-4 max-w-sm">
+                    <div className="flex gap-4">
                         <button
                             onClick={() => setTheme('dark')}
-                            className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                            className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 transition-all ${
                                 theme === 'dark'
                                     ? 'border-blue-500 bg-blue-500/10'
-                                    : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'
+                                    : 'border-slate-700/50 hover:border-slate-600'
                             }`}
                         >
-                            <div className={`p-3 rounded-full ${ theme === 'dark' ? 'bg-blue-500/20' : 'bg-slate-700/40'}`}>
-                                <Moon size={22} className={theme === 'dark' ? 'text-blue-400' : 'text-slate-400'} />
-                            </div>
-                            <div className="text-center">
-                                <p className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-400'}`}>Dark</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Default</p>
-                            </div>
-                            {theme === 'dark' && (
-                                <span className="text-[10px] font-bold uppercase tracking-wide text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-full">Active</span>
-                            )}
+                            <Moon size={18} className={theme === 'dark' ? 'text-blue-400' : 'text-slate-400'} />
+                            <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-400'}`}>Dark Mode</span>
                         </button>
-
                         <button
                             onClick={() => setTheme('light')}
-                            className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                            className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 transition-all ${
                                 theme === 'light'
                                     ? 'border-blue-500 bg-blue-500/10'
-                                    : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'
+                                    : 'border-slate-700/50 hover:border-slate-600'
                             }`}
                         >
-                            <div className={`p-3 rounded-full ${ theme === 'light' ? 'bg-blue-500/20' : 'bg-slate-700/40'}`}>
-                                <Sun size={22} className={theme === 'light' ? 'text-blue-400' : 'text-slate-400'} />
-                            </div>
-                            <div className="text-center">
-                                <p className={`font-semibold text-sm ${theme === 'light' ? 'text-white' : 'text-slate-400'}`}>Light</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Clean & bright</p>
-                            </div>
-                            {theme === 'light' && (
-                                <span className="text-[10px] font-bold uppercase tracking-wide text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-full">Active</span>
-                            )}
+                            <Sun size={18} className={theme === 'light' ? 'text-blue-400' : 'text-slate-400'} />
+                            <span className={`font-semibold ${theme === 'light' ? 'text-white' : 'text-slate-400'}`}>Light Mode</span>
                         </button>
                     </div>
-                </div>
+                </section>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-
-                    {/* ── Section 1: People & Organizations ── */}
-                    <div className="card">
-                        <SectionHeader
-                            icon={<Users size={22} className="text-blue-400" />}
-                            title="People & Organizations"
-                            description="Manage household members and financial institutions."
-                        />
-                        <div className="space-y-6">
-                            <MembersSection />
-                            <div className="border-t border-slate-700/50 pt-6">
-                                <InstitutionsSection />
+                {/* ── Section 5: Data Management ── */}
+                <section>
+                    <SectionHeader
+                        icon={<Folder size={22} className="text-slate-400" />}
+                        title="Data Management"
+                        description="Export, restore, and manage your application data."
+                    />
+                    <div className="divide-y divide-slate-700/50 border border-slate-700/50 rounded-xl p-6 bg-slate-900/20">
+                        {/* Backup */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 first:pt-0">
+                            <div>
+                                <h3 className="font-semibold text-white">Backup Data</h3>
+                                <p className="text-slate-400 text-sm mt-0.5">Download a complete JSON copy of all your financial data.</p>
                             </div>
+                            <button onClick={handleExport} className="btn btn-primary whitespace-nowrap">
+                                <Download size={16} /> Export Backup
+                            </button>
+                        </div>
+
+                        {/* Restore */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
+                            <div>
+                                <h3 className="font-semibold text-white">Restore Data</h3>
+                                <p className="text-slate-400 text-sm mt-0.5">Upload a previously exported backup. <span className="text-amber-400 font-medium">Replaces all current data.</span></p>
+                            </div>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+                            <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary whitespace-nowrap">
+                                <Upload size={16} /> Import Backup
+                            </button>
+                        </div>
+
+                        {/* Auto Backup Path */}
+                        <div className="py-4">
+                            <h3 className="font-semibold text-white">Automated Backup Location</h3>
+                            <p className="text-slate-400 text-sm mt-0.5 mb-3">Folder path the startup script uses to save automatic backups.</p>
+                            <input
+                                type="text"
+                                value={backupPath}
+                                onChange={e => setBackupPath(e.target.value)}
+                                placeholder="e.g. D:\Backups"
+                                className="input w-full max-w-md"
+                            />
+                        </div>
+
+                        {/* Danger Zone */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
+                            <div>
+                                <h3 className="font-semibold text-white">Reset All Data</h3>
+                                <p className="text-slate-400 text-sm mt-0.5">Permanently delete all data and reset to factory defaults.</p>
+                            </div>
+                            <button onClick={handleReset} className="btn btn-danger whitespace-nowrap">
+                                <Trash2 size={16} /> Reset All Data
+                            </button>
                         </div>
                     </div>
-
-                    {/* ── Section 2: Data Management ── */}
-                    <div className="card">
-                        <SectionHeader
-                            icon={<Folder size={22} className="text-slate-400" />}
-                            title="Data Management"
-                            description="Export, restore, and manage your application data."
-                        />
-                        <div className="divide-y divide-slate-700/50">
-                            {/* Backup */}
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 first:pt-0">
-                                <div>
-                                    <h3 className="font-semibold text-white">Backup Data</h3>
-                                    <p className="text-slate-400 text-sm mt-0.5">Download a complete JSON copy of all your financial data.</p>
-                                </div>
-                                <button onClick={handleExport} className="btn btn-primary whitespace-nowrap">
-                                    <Download size={16} /> Export Backup
-                                </button>
-                            </div>
-
-                            {/* Restore */}
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
-                                <div>
-                                    <h3 className="font-semibold text-white">Restore Data</h3>
-                                    <p className="text-slate-400 text-sm mt-0.5">Upload a previously exported backup. <span className="text-amber-400 font-medium">Replaces all current data.</span></p>
-                                </div>
-                                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
-                                <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary whitespace-nowrap">
-                                    <Upload size={16} /> Import Backup
-                                </button>
-                            </div>
-
-                            {/* Auto Backup Path */}
-                            <div className="py-4">
-                                <h3 className="font-semibold text-white">Automated Backup Location</h3>
-                                <p className="text-slate-400 text-sm mt-0.5 mb-3">Folder path the startup script uses to save automatic backups.</p>
-                                <input
-                                    type="text"
-                                    value={backupPath}
-                                    onChange={e => setBackupPath(e.target.value)}
-                                    placeholder="e.g. D:\Backups"
-                                    className="input w-full"
-                                />
-                            </div>
-
-                            {/* Danger Zone */}
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
-                                <div>
-                                    <h3 className="font-semibold text-white">Reset All Data</h3>
-                                    <p className="text-slate-400 text-sm mt-0.5">Permanently delete all data and reset to factory defaults.</p>
-                                </div>
-                                <button onClick={handleReset} className="btn btn-danger whitespace-nowrap">
-                                    <Trash2 size={16} /> Reset All Data
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
+                </section>
 
             </div>
         </div>

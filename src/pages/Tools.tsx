@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { Wrench, Target, Shield, PieChart, Leaf, Plus, Trash2, TrendingUp, AlertTriangle, CheckCircle, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Wrench, Target, Shield, PieChart, Leaf, Plus, Trash2, TrendingUp, AlertTriangle, CheckCircle, RotateCcw, ShoppingCart } from 'lucide-react';
+import { useData } from '../context/DataContext';
 import '../styles/shared.css';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -78,6 +79,291 @@ const CardShell: React.FC<{ icon: React.ReactNode; title: string; subtitle: stri
         <div className="p-5 flex-1 flex flex-col gap-5">{children}</div>
     </div>
 );
+
+// ─── 0. Stock Buying Planner ───────────────────────────────────────────────
+
+interface PlannedBuy {
+    id: string;
+    ticker: string;
+    price: string;
+    shares: string;
+    currentPrice?: number;
+    isLoadingPrice?: boolean;
+}
+
+interface AccountGroup {
+    id: string;
+    accountId: string;
+    buys: PlannedBuy[];
+}
+
+const StockBuyingPlanner: React.FC = () => {
+    const { accounts, getAssetsByAccount } = useData();
+    const [groups, setGroups] = useState<AccountGroup[]>(() => {
+        try {
+            const saved = localStorage.getItem('stockPlannerGroups');
+            if (saved) return JSON.parse(saved);
+        } catch (e) {}
+        return [
+            { id: '1', accountId: accounts[0]?.id || '', buys: [{ id: 'b1', ticker: '', price: '', shares: '' }] }
+        ];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('stockPlannerGroups', JSON.stringify(groups));
+    }, [groups]);
+
+    const addGroup = () => {
+        setGroups([...groups, { id: Date.now().toString(), accountId: accounts[0]?.id || '', buys: [{ id: Date.now().toString() + 'b', ticker: '', price: '', shares: '' }] }]);
+    };
+
+    const removeGroup = (groupId: string) => {
+        setGroups(groups.filter(g => g.id !== groupId));
+    };
+
+    const updateGroupAccount = (groupId: string, accountId: string) => {
+        setGroups(groups.map(g => g.id === groupId ? { ...g, accountId } : g));
+    };
+
+    const addBuy = (groupId: string) => {
+        setGroups(groups.map(g => g.id === groupId ? { ...g, buys: [...g.buys, { id: Date.now().toString(), ticker: '', price: '', shares: '' }] } : g));
+    };
+
+    const removeBuy = (groupId: string, buyId: string) => {
+        setGroups(groups.map(g => g.id === groupId ? { ...g, buys: g.buys.filter(b => b.id !== buyId) } : g));
+    };
+
+    const updateBuy = (groupId: string, buyId: string, field: keyof PlannedBuy, value: string) => {
+        setGroups(groups.map(g => g.id === groupId ? {
+            ...g,
+            buys: g.buys.map(b => b.id === buyId ? { ...b, [field]: field === 'ticker' ? value.toUpperCase() : value } : b)
+        } : g));
+    };
+
+    const handleClear = () => {
+        setGroups([{ id: '1', accountId: accounts[0]?.id || '', buys: [{ id: 'b1', ticker: '', price: '', shares: '' }] }]);
+    };
+
+    const handleTickerBlur = async (groupId: string, buyId: string, ticker: string) => {
+        if (!ticker.trim()) return;
+        const upperTicker = ticker.toUpperCase();
+        
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+        
+        const assets = getAssetsByAccount(group.accountId);
+        const existingAsset = assets.find(a => a.ticker === upperTicker);
+        
+        if (existingAsset && existingAsset.currentPrice) {
+            setGroups(prev => prev.map(g => g.id === groupId ? {
+                ...g,
+                buys: g.buys.map(b => b.id === buyId ? {
+                    ...b,
+                    currentPrice: existingAsset.currentPrice,
+                    price: b.price === '' ? existingAsset.currentPrice.toFixed(2) : b.price
+                } : b)
+            } : g));
+            return;
+        }
+
+        setGroups(prev => prev.map(g => g.id === groupId ? { ...g, buys: g.buys.map(b => b.id === buyId ? { ...b, isLoadingPrice: true } : b) } : g));
+        try {
+            const res = await fetch(`/api/quote?symbol=${upperTicker}`);
+            if (res.ok) {
+                const data = await res.json();
+                const currentPrice = data.regularMarketPrice;
+                if (currentPrice !== undefined) {
+                    setGroups(prev => prev.map(g => g.id === groupId ? {
+                        ...g,
+                        buys: g.buys.map(b => b.id === buyId ? { 
+                            ...b, 
+                            currentPrice, 
+                            isLoadingPrice: false,
+                            price: b.price === '' ? currentPrice.toFixed(2) : b.price 
+                        } : b)
+                    } : g));
+                    return;
+                }
+            }
+        } catch (e) {}
+        
+        setGroups(prev => prev.map(g => g.id === groupId ? { ...g, buys: g.buys.map(b => b.id === buyId ? { ...b, isLoadingPrice: false } : b) } : g));
+    };
+
+    const grandTotal = groups.reduce((sum, g) => sum + g.buys.reduce((s, b) => s + (parseFloat(b.price) || 0) * (parseFloat(b.shares) || 0), 0), 0);
+
+    return (
+        <CardShell
+            icon={<ShoppingCart size={20} className="text-white" />}
+            title="Stock Buying Planner"
+            subtitle="Plan your stock purchases, track total spend, and preview your new average costs"
+            accentColor="from-emerald-900/80 to-teal-900/60"
+            onClear={handleClear}
+        >
+            <div className="flex flex-col gap-6">
+                {groups.map((group, groupIdx) => {
+                    const selectedAccount = accounts.find(a => a.id === group.accountId);
+                    const availableCash = selectedAccount?.cashBalance || 0;
+                    const assets = selectedAccount ? getAssetsByAccount(group.accountId) : [];
+                    
+                    const groupTotal = group.buys.reduce((sum, b) => sum + (parseFloat(b.price) || 0) * (parseFloat(b.shares) || 0), 0);
+                    const remainingCash = availableCash - groupTotal;
+                    const isOverdrawn = remainingCash < 0;
+
+                    return (
+                        <div key={group.id} className="flex flex-col gap-3 bg-slate-900/40 p-4 rounded-xl border border-slate-700/50 relative">
+                            {groups.length > 1 && (
+                                <button
+                                    onClick={() => removeGroup(group.id)}
+                                    className="absolute -top-3 -right-3 p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-colors z-10 border border-red-500/30 shadow-lg"
+                                    title="Remove Account Group"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            )}
+                            
+                            {/* Account Selection & Cash Summary */}
+                            <div className="flex items-center gap-4 bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Account {groupIdx + 1}</label>
+                                    <select 
+                                        className="input w-full bg-slate-900/80 text-sm font-bold border-slate-700/60"
+                                        value={group.accountId}
+                                        onChange={e => updateGroupAccount(group.id, e.target.value)}
+                                    >
+                                        <option value="" disabled>Select an Account</option>
+                                        {accounts.map(a => (
+                                            <option key={a.id} value={a.id}>{a.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Available Cash</p>
+                                    <p className="font-mono font-bold text-lg text-emerald-400">${fmtCurrency(availableCash)}</p>
+                                </div>
+                            </div>
+
+                            {/* Planned Buys */}
+                            <div className="flex flex-col gap-2 pl-2 border-l-2 border-slate-700/50">
+                                {group.buys.map(buy => {
+                                    const p = parseFloat(buy.price) || 0;
+                                    const s = parseFloat(buy.shares) || 0;
+                                    const cost = p * s;
+                                    const existingAsset = assets.find(a => a.ticker === buy.ticker && buy.ticker !== '');
+                                    
+                                    let newAvgCostMsg = '';
+                                    if (existingAsset && p > 0 && s > 0) {
+                                        const oldTotalCost = existingAsset.quantity * existingAsset.averageCost;
+                                        const newTotalCost = oldTotalCost + cost;
+                                        const newTotalQty = existingAsset.quantity + s;
+                                        const newAvg = newTotalCost / newTotalQty;
+                                        newAvgCostMsg = `Avg: $${fmtCurrency(existingAsset.averageCost)} → $${fmtCurrency(newAvg)} (${newTotalQty} shs)`;
+                                    }
+
+                                    return (
+                                        <div key={buy.id} className="flex flex-col gap-2 p-2 bg-slate-900/60 rounded-lg border border-slate-700/30">
+                                            <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
+                                                <input
+                                                    type="text"
+                                                    className="input flex-1 min-w-[90px] text-sm font-bold uppercase py-1.5"
+                                                    placeholder="TICKER"
+                                                    value={buy.ticker}
+                                                    onChange={e => updateBuy(group.id, buy.id, 'ticker', e.target.value)}
+                                                    onBlur={e => handleTickerBlur(group.id, buy.id, e.target.value)}
+                                                    maxLength={15}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    className="input input-no-spinner flex-1 min-w-[90px] text-sm font-mono py-1.5"
+                                                    placeholder="Price ($)"
+                                                    value={buy.price}
+                                                    onChange={e => updateBuy(group.id, buy.id, 'price', e.target.value)}
+                                                />
+                                                <span className="text-slate-600 text-xs hidden md:block">×</span>
+                                                <input
+                                                    type="number"
+                                                    className="input input-no-spinner flex-1 min-w-[90px] text-sm font-mono py-1.5"
+                                                    placeholder="Shares"
+                                                    value={buy.shares}
+                                                    onChange={e => updateBuy(group.id, buy.id, 'shares', e.target.value)}
+                                                />
+                                                <div className="flex-1 min-w-[100px] text-right">
+                                                    <span className="font-mono font-bold text-sm text-slate-200">${fmtCurrency(cost)}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => removeBuy(group.id, buy.id)}
+                                                    className="p-1.5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded transition-colors"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                            {(buy.isLoadingPrice || buy.currentPrice !== undefined || newAvgCostMsg) && (
+                                                <div className="flex flex-wrap items-center gap-2 ml-1">
+                                                    {buy.isLoadingPrice && (
+                                                        <span className="text-[10px] text-slate-500 italic">Fetching...</span>
+                                                    )}
+                                                    {!buy.isLoadingPrice && buy.currentPrice !== undefined && (
+                                                        <button 
+                                                            onClick={() => updateBuy(group.id, buy.id, 'price', buy.currentPrice!.toFixed(2))}
+                                                            className="text-[10px] text-emerald-400/80 hover:text-emerald-300 transition-colors px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 font-mono"
+                                                            title="Click to use current price"
+                                                        >
+                                                            Market: ${buy.currentPrice.toFixed(2)}
+                                                        </button>
+                                                    )}
+                                                    {newAvgCostMsg && (
+                                                        <div className="text-[10px] text-blue-400/80 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 font-mono">
+                                                            {newAvgCostMsg}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                onClick={() => addBuy(group.id)}
+                                className="flex items-center gap-1.5 justify-center py-1.5 text-xs font-bold text-slate-400 hover:text-emerald-400 border border-dashed border-slate-700 hover:border-emerald-500/50 rounded-lg transition-colors ml-2"
+                            >
+                                <Plus size={12} /> Add Stock to Account {groupIdx + 1}
+                            </button>
+
+                            {/* Account Footer Totals */}
+                            <div className="flex justify-between items-center mt-2 p-3 bg-slate-800/40 rounded-lg border border-slate-700/40 ml-2">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Account Spend</p>
+                                    <p className="font-mono font-bold text-sm text-white">${fmtCurrency(groupTotal)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Remaining Cash</p>
+                                    <p className={`font-mono font-bold text-sm ${isOverdrawn ? 'text-red-400' : 'text-emerald-400'}`}>
+                                        ${fmtCurrency(remainingCash)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                <button
+                    onClick={addGroup}
+                    className="flex items-center gap-2 justify-center py-2.5 text-sm font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl shadow transition-colors"
+                >
+                    <Plus size={16} /> Add Another Account
+                </button>
+
+                {groups.length > 1 && (
+                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-emerald-900/40 to-teal-900/40 rounded-xl border border-emerald-500/30">
+                        <span className="text-sm font-bold text-emerald-400 uppercase tracking-widest">Grand Total Spend</span>
+                        <span className="font-mono font-bold text-2xl text-emerald-400">${fmtCurrency(grandTotal)}</span>
+                    </div>
+                )}
+            </div>
+        </CardShell>
+    );
+};
 
 // ─── 1. Profit / Loss & Risk-Reward Calculator ───────────────────────────────
 
@@ -691,6 +977,9 @@ const Tools: React.FC = () => (
 
         {/* 2×2 Responsive Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="lg:col-span-2">
+                <StockBuyingPlanner />
+            </div>
             <ProfitLossCalc />
             <PositionSizingCalc />
             <PortfolioSplitter />

@@ -5,15 +5,11 @@ import { useTheme } from '../context/ThemeContext';
 import '../styles/navbar.css';
 
 const Navbar = () => {
-    const { assets, accounts, bankAccounts, liabilities } = useData();
+    const { assets, accounts, preferences } = useData();
     const { theme, toggleTheme } = useTheme();
 
-    const totalAssetValue = assets.reduce((sum, a) => sum + (a.marketValue || 0), 0)
+    const totalPortfolioValue = assets.reduce((sum, a) => sum + (a.marketValue || 0), 0)
         + accounts.reduce((sum, a) => sum + (a.cashBalance || 0), 0);
-    const totalCash = bankAccounts ? bankAccounts.reduce((sum, b) => sum + (b.balance || 0), 0) : 0;
-    const totalLiabilities = liabilities ? liabilities.reduce((sum, l) => sum + (l.balance || 0), 0) : 0;
-
-    const totalValue = totalAssetValue + totalCash - totalLiabilities;
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -21,9 +17,9 @@ const Navbar = () => {
         { icon: Search, label: 'Research', path: '/research' },
         { icon: Wrench, label: 'Tools', path: '/tools' },
         { icon: FileBarChart, label: 'Reports', path: '/reports' },
-        { icon: Calculator, label: 'ACB Tracker', path: '/acb' },
-        { icon: Percent, label: 'Tax Optimizer', path: '/tax' },
-        { icon: TrendingUp, label: 'Net Worth', path: '/networth' },
+        ...(preferences.enableAcbTracker ? [{ icon: Calculator, label: 'ACB Tracker', path: '/acb' }] : []),
+        ...(preferences.enableTaxOptimizer ? [{ icon: Percent, label: 'Tax Optimizer', path: '/tax' }] : []),
+        ...(preferences.enableNetWorth ? [{ icon: TrendingUp, label: 'Net Worth', path: '/networth' }] : []),
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 
@@ -50,8 +46,8 @@ const Navbar = () => {
 
             <div className="navbar-right">
                 <div className="net-worth-summary">
-                    <span className="label">Total Net Worth</span>
-                    <span className="value">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="label">Total Portfolio</span>
+                    <span className="value">${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
                 {/* Theme toggle button */}

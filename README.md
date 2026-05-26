@@ -1,28 +1,61 @@
 # Household Investment Tracker
 
-A personal finance application designed to track household investments, analyze portfolio performance, and manage assets across multiple family members and institutions. Built with React, TypeScript, Tailwind CSS, and a local Express backend.
+A comprehensive personal finance and investment analysis application designed to track household investments, analyze portfolio performance, manage assets across multiple family members and institutions, and optimize tax strategies. Built with React 19, TypeScript, Tailwind CSS, lightweight-charts, and a local Express backend.
 
 ## 🚀 Features
 
-*   **Portfolio Dashboard**: Real-time overview of net worth, daily performance, and asset allocation.
-*   **Multi-Member Support**: Track investments for multiple family members separately or aggregately.
-*   **Asset Management**: detailed tracking for Stocks, ETFs, Mutual Funds, and Cash.
-*   **Live Market Data**: Integrates with Yahoo Finance API for real-time price updates and sparkline charts.
-*   **Reports & Screeners**: Generate PDF reports and discover new investment opportunities.
-*   **Data Privacy**: All data is stored locally on your machine (`server/database.json`).
-*   **Automated Backups**: Configurable flexible backup system to keep your data safe.
+### 📊 Portfolio Dashboard & Management
+*   **Household Overview**: Real-time tracking of net worth, daily performance, and asset allocation.
+*   **Multi-Member Support**: Track investments for multiple family members separately or aggregately. Member and institution management is integrated into the settings panel.
+*   **Asset Management**: Detailed tracking for Stocks, ETFs, Mutual Funds, and Cash with support for custom book costs.
+*   **Live Market Data**: Yahoo Finance integration for real-time price quotes, daily changes, and sparkline charts.
+*   **Watchlist**: Keep tabs on key securities with detailed metrics (volume, average volume, 52-week high/low) and technical indicators.
+*   **Theme Toggle**: Sleek, harmonious dark and light modes accessible from the navigation bar.
+
+### 🛡️ Tax Bracket Optimizer (Quebec/Federal)
+*   **Bracket Drop Optimization**: Custom tax engine reflecting combined Federal & Quebec brackets, including the 16.5% Quebec provincial tax abatement.
+*   **"Sweet Spot" Analysis**: Calculates the exact RRSP contribution needed to drop taxable income into the next lower combined tax bracket, maximizing refund rates.
+*   **Interactive Simulation**: RRSP contribution slider with live feedback on estimated refunds (CRA & RQ), effective savings rate, top marginal rate, and final taxable income.
+*   **Funding Schedule Widget**: Link to a specific RRSP account, track year-to-date deposits, and calculate required monthly, bi-weekly, or weekly contributions to meet tax goals before the March 1st deadline.
+*   **Scenario Snapshots**: Save, load, or delete optimized tax scenario snapshots stored in your local database. Customizable tax brackets are adjustable via settings.
+
+### 🧮 Adjusted Cost Base (ACB) Tracker
+*   **Capital Gains Calculation**: Dedicated tracker for non-registered investment accounts to calculate capital gains/losses for tax reporting.
+*   **Comprehensive Transaction Types**: Supports Buy, Sell, Return of Capital (RoC), Capital Gains Dividend, Reinvested Dividend (DRIP), Reinvested Capital Gains Distribution, and Stock Splits.
+*   **Running Log**: Computes running share counts, adjusted cost base changes, total ACB, ACB per share, and realized capital gains/losses on every transaction.
+*   **Data Portability**: Filter tracking history by year and export detailed ACB transaction ledgers to CSV.
+
+### 📈 Advanced Stock Research & Analytics
+*   **Interactive Candlestick Charts**: Render interactive OHLCV data using high-performance Lightweight Charts (`lightweight-charts`).
+*   **Trend & Volatility Indicators**: Overlaid EMA 50/200 lines, RSI (14) gauge with oversold (<30) and overbought (>70) alert zones, MACD (12, 26, 9) histogram panels, and Bollinger Band metrics.
+*   **Target Entry Levels**: Display suggested buy zones (lower Bollinger Band), sell zones (upper Bollinger Band), and Fibonacci 61.8% entry levels alongside 52-week high/low overlays.
+*   **Multi-Ticker Comparison**: Compare historical normalized returns starting at 0% for up to 8 tickers simultaneously across multiple timeframes (`1M`, `6M`, `1Y`, `5Y`, `YTD`).
+
+### 💰 Net Worth & Cashflow Dashboard
+*   **Full Balance Sheet**: Record bank account balances (checking/savings) and liabilities (mortgages, credit cards, loans) alongside investment holdings.
+*   **Debt-to-Asset Analysis**: Visual distribution bar showing the percentage split of investments, cash, and debt.
+*   **Passive Income & Cashflow Projections**: Estimates a monthly income stream using the 4% safe withdrawal rate rule of thumb and compares it to household expenses for a passive net cashflow projection.
+*   **Exportable Reports**: Generate print-ready PDF reports (via `html2canvas` and `jspdf`) or export comprehensive financial balance sheets to CSV (via `papaparse`).
+
+### 🧰 Investment Tools Suite
+*   **Stock Buying Planner**: Select accounts, fetch live market prices, input purchase plans, and preview how new buys will impact cash balances and average cost bases.
+*   **Profit/Loss & Risk-Reward Calculator**: Model entry, target, and stop-loss levels to compute risk-reward ratios with a quick "Auto 1:2" stop-loss helper.
+*   **Position Sizing Calculator**: Determine recommended shares and total position size based on portfolio risk tolerance. Integrates ATR (Average True Range) volatility lookups to dynamically establish stop-loss levels.
+*   **Portfolio Allocation Splitter**: Divide cash sums across custom asset weights with instant dollar calculations.
+*   **DRIP Calculator**: Simulates wealth compound differentials of reinvesting dividends vs. taking them as cash over up to 50 years.
 
 ## 🛠️ Technology Stack
 
-*   **Frontend**: React 19, TypeScript, Vite
+*   **Frontend**: React 19, TypeScript, Vite, Recharts, Lightweight Charts (by TradingView)
+*   **Reporting & Data**: jsPDF, html2canvas, PapaParse
 *   **Styling**: Tailwind CSS, Lucide Icons
-*   **Backend**: Node.js, Express (Local proxy server for API requests)
-*   **Data Storage**: Local JSON file system
+*   **Backend**: Node.js, Express, Yahoo Finance API integration (`yahoo-finance2`), Technical Indicators API (`technicalindicators`)
+*   **Data Storage**: Local JSON database (`server/database.json`) with auto-sync and local file system backup logic.
 
 ## 📋 Prerequisites
 
 *   [Node.js](https://nodejs.org/) (Version 18 or higher recommended)
-*   Windows OS (for the batch script) - *App runs on Mac/Linux via terminal commands.*
+*   Windows OS (for the easy start batch script) - *App runs on Mac/Linux via terminal commands.*
 
 ## 💿 Installation
 
@@ -41,7 +74,7 @@ A personal finance application designed to track household investments, analyze 
 
 ### **Option 1: Windows Easy Start (Recommended)**
 Double-click the included `Start App.bat` file in the root directory.
-*   This will launch the local server and the frontend application automatically.
+*   This will launch the local backend server and the frontend application concurrently.
 *   It also handles the automated backup process when you exit.
 
 ### **Option 2: Manual Start (Command Line)**
@@ -56,11 +89,12 @@ Access the application at `http://localhost:5173`.
 ### **Automated Backups**
 1.  Go to the **Settings** page in the application.
 2.  Enter a local folder path in the **Automated Backup Location** field (e.g., `D:\MyBackups`).
-3.  When you use `Start App.bat` to run the app, closing the terminal window (Ctrl+C) will prompt you to creating a timestamped backup of your data.
+3.  When you use `Start App.bat` to run the app, closing the terminal window (Ctrl+C) will prompt you to create a timestamped backup of your data.
 
 ### **Manual Import/Export**
-*   **Export**: specific "Export Backup" in Settings to download a JSON snapshot.
+*   **Export**: Click "Export Backup" in Settings to download a JSON snapshot.
 *   **Restore**: Use "Import Backup" to load a previously saved JSON file (either from the automated system or a manual export).
 
 ## 🔒 Security Note
 This application runs locally. Your financial data is stored in `server/database.json` and is **not** uploaded to any cloud service by the application itself. Ensure you include `server/database.json` in your `.gitignore` if you fork this repository (already configured by default).
+
