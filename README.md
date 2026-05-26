@@ -12,12 +12,13 @@ A comprehensive personal finance and investment analysis application designed to
 *   **Watchlist**: Keep tabs on key securities with detailed metrics (volume, average volume, 52-week high/low) and technical indicators.
 *   **Theme Toggle**: Sleek, harmonious dark and light modes accessible from the navigation bar.
 
-### 🛡️ Tax Bracket Optimizer (Quebec/Federal)
-*   **Bracket Drop Optimization**: Custom tax engine reflecting combined Federal & Quebec brackets, including the 16.5% Quebec provincial tax abatement.
-*   **"Sweet Spot" Analysis**: Calculates the exact RRSP contribution needed to drop taxable income into the next lower combined tax bracket, maximizing refund rates.
-*   **Interactive Simulation**: RRSP contribution slider with live feedback on estimated refunds (CRA & RQ), effective savings rate, top marginal rate, and final taxable income.
-*   **Funding Schedule Widget**: Link to a specific RRSP account, track year-to-date deposits, and calculate required monthly, bi-weekly, or weekly contributions to meet tax goals before the March 1st deadline.
-*   **Scenario Snapshots**: Save, load, or delete optimized tax scenario snapshots stored in your local database. Customizable tax brackets are adjustable via settings.
+### 🛡️ Tax Bracket Optimizer
+*   **Bracket Drop Optimization**: Custom tax engine that models combined Federal & Provincial/State brackets, with support for customizable tax rates and regional abatements.
+*   **"Sweet Spot" Analysis**: Calculates the exact retirement account (e.g., RRSP) contribution needed to drop taxable income into the next lower combined tax bracket to maximize refund rates.
+*   **Interactive Simulation**: Contribution slider with live feedback on estimated refunds (Federal & Provincial/State), effective savings rate, top marginal rate, and final taxable income.
+*   **Funding Schedule Widget**: Link to a specific retirement account, track year-to-date contributions, and calculate the required monthly, bi-weekly, or weekly savings needed to meet your tax target before the deadline.
+*   **Scenario Snapshots**: Save, load, or delete optimized tax scenario snapshots stored in your local database. Tax brackets and parameters are fully customizable via the Settings interface.
+
 
 ### 🧮 Adjusted Cost Base (ACB) Tracker
 *   **Capital Gains Calculation**: Dedicated tracker for non-registered investment accounts to calculate capital gains/losses for tax reporting.
