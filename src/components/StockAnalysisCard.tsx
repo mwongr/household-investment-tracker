@@ -8,10 +8,11 @@ interface StockAnalysisCardProps {
 }
 
 // ─── RSI Gauge ────────────────────────────────────────────────────────────────
-const RsiGauge = ({ rsi }: { rsi: number }) => {
-    const pct = Math.min(100, Math.max(0, rsi));
-    const isOversold = rsi < 30;
-    const isOverbought = rsi > 70;
+const RsiGauge = ({ rsi }: { rsi: number | null | undefined }) => {
+    const val = rsi ?? 0;
+    const pct = Math.min(100, Math.max(0, val));
+    const isOversold = val < 30;
+    const isOverbought = val > 70;
 
     const trackColor = isOversold
         ? 'from-green-500 to-emerald-400'
@@ -30,7 +31,7 @@ const RsiGauge = ({ rsi }: { rsi: number }) => {
             <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">RSI (14)</span>
                 <span className={`text-2xl font-bold font-mono ${labelColor}`}>
-                    {rsi.toFixed(1)}
+                    {(rsi ?? 0).toFixed(1)}
                 </span>
             </div>
 
@@ -77,8 +78,8 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
     goldenCross: boolean;
     rsi: number | null;
 }) => {
-    const isOversold = rsi !== null && rsi < 30;
-    const isOverbought = rsi !== null && rsi > 70;
+    const isOversold = rsi != null && rsi < 30;
+    const isOverbought = rsi != null && rsi > 70;
 
     if (goldenCross) {
         return (
@@ -134,9 +135,9 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
 // ─── MACD Panel ───────────────────────────────────────────────────────────────
 const MacdPanel = ({ macd }: { macd: AnalysisData['indicators']['macd'] }) => {
     const { MACD: macdLine, signal, histogram } = macd;
-    const isPos = histogram !== null && histogram >= 0;
+    const isPos = histogram != null && histogram >= 0;
 
-    const fmt = (v: number | null) => (v !== null ? v.toFixed(4) : '—');
+    const fmt = (v: number | null | undefined) => (v != null ? v.toFixed(4) : '—');
 
     return (
         <div className="space-y-3">
@@ -144,19 +145,19 @@ const MacdPanel = ({ macd }: { macd: AnalysisData['indicators']['macd'] }) => {
             <div className="grid grid-cols-3 gap-3">
                 <div className="text-center bg-slate-800/60 rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 mb-1">MACD Line</div>
-                    <div className={`font-mono font-bold text-sm ${macdLine !== null && macdLine >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`font-mono font-bold text-sm ${macdLine != null && macdLine >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {fmt(macdLine)}
                     </div>
                 </div>
                 <div className="text-center bg-slate-800/60 rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 mb-1">Signal</div>
-                    <div className={`font-mono font-bold text-sm ${signal !== null && signal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`font-mono font-bold text-sm ${signal != null && signal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {fmt(signal)}
                     </div>
                 </div>
                 <div className="text-center bg-slate-800/60 rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 mb-1">Histogram</div>
-                    <div className={`font-mono font-bold text-sm ${isPos ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`font-mono font-bold text-sm ${isPos && histogram != null ? 'text-green-400' : 'text-red-400'}`}>
                         {fmt(histogram)}
                     </div>
                 </div>
@@ -170,10 +171,10 @@ const TargetLevels = ({ targets, currentPrice }: {
     targets: AnalysisData['priceTargets'];
     currentPrice: number;
 }) => {
-    const fmt = (v: number | null) => v !== null ? `$${v.toFixed(2)}` : '—';
+    const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
 
-    const distPct = (target: number | null): string | null => {
-        if (target === null || currentPrice === 0) return null;
+    const distPct = (target: number | null | undefined): string | null => {
+        if (target == null || currentPrice === 0) return null;
         const pct = ((currentPrice - target) / target) * 100;
         const abs = Math.abs(pct).toFixed(1);
         if (pct > 0) return `${abs}% above`;
@@ -186,7 +187,7 @@ const TargetLevels = ({ targets, currentPrice }: {
     const fibDist  = distPct(targets.fibEntry);
 
     // BB bandwidth as % of middle, for the width bar
-    const bbWidth = (targets.bollingerUpper !== null && targets.bollingerMiddle !== null && targets.suggestedBuyPrice !== null)
+    const bbWidth = (targets.bollingerUpper != null && targets.bollingerMiddle != null && targets.suggestedBuyPrice != null)
         ? ((targets.bollingerUpper - targets.suggestedBuyPrice) / targets.bollingerMiddle) * 100
         : null;
 
@@ -239,7 +240,7 @@ const TargetLevels = ({ targets, currentPrice }: {
             </div>
 
             {/* 52W range bar with BB bands overlaid */}
-            {targets.high52w !== null && targets.low52w !== null && (
+            {targets.high52w != null && targets.low52w != null && (
                 <div className="space-y-1.5">
                     <div className="flex justify-between text-[10px] text-slate-500 font-medium">
                         <span>52W Low: <span className="text-white font-mono">{fmt(targets.low52w)}</span></span>
@@ -250,12 +251,12 @@ const TargetLevels = ({ targets, currentPrice }: {
                         {(() => {
                             const range = (targets.high52w ?? 0) - (targets.low52w ?? 0);
                             const pricePct = range > 0 ? ((currentPrice - (targets.low52w ?? 0)) / range) * 100 : 50;
-                            const buyPct   = range > 0 && targets.suggestedBuyPrice  ? ((targets.suggestedBuyPrice  - (targets.low52w ?? 0)) / range) * 100 : null;
-                            const sellPct  = range > 0 && targets.suggestedSellPrice ? ((targets.suggestedSellPrice - (targets.low52w ?? 0)) / range) * 100 : null;
+                            const buyPct   = range > 0 && targets.suggestedBuyPrice != null ? ((targets.suggestedBuyPrice  - (targets.low52w ?? 0)) / range) * 100 : null;
+                            const sellPct  = range > 0 && targets.suggestedSellPrice != null ? ((targets.suggestedSellPrice - (targets.low52w ?? 0)) / range) * 100 : null;
                             return (
                                 <>
                                     {/* BB band fill */}
-                                    {buyPct !== null && sellPct !== null && (
+                                    {buyPct != null && sellPct != null && (
                                         <div className="absolute top-0 h-full bg-slate-600/50 rounded-full"
                                             style={{ left: `${Math.max(0, buyPct)}%`, width: `${Math.min(100, sellPct) - Math.max(0, buyPct)}%` }} />
                                     )}
@@ -273,7 +274,7 @@ const TargetLevels = ({ targets, currentPrice }: {
                             );
                         })()}
                     </div>
-                    {bbWidth !== null && (
+                    {bbWidth != null && (
                         <div className="text-[10px] text-slate-500 text-center">
                             BB Width: <span className="text-slate-300 font-mono">{bbWidth.toFixed(1)}%</span>
                             <span className="ml-1 text-slate-600">— {bbWidth > 5 ? 'High volatility' : 'Low volatility / squeeze'}</span>
@@ -342,7 +343,7 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
         });
         ema50Series.setData(
             data.emaSeries
-                .filter(e => e.ema50 !== null)
+                .filter(e => e.ema50 != null)
                 .map(e => ({ time: e.time as any, value: e.ema50! }))
         );
 
@@ -356,7 +357,7 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
         });
         ema200Series.setData(
             data.emaSeries
-                .filter(e => e.ema200 !== null)
+                .filter(e => e.ema200 != null)
                 .map(e => ({ time: e.time as any, value: e.ema200! }))
         );
 
@@ -480,7 +481,7 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
                                         <span className="text-sm text-slate-300">EMA 50</span>
                                     </div>
                                     <span className="font-mono font-bold text-white">
-                                        {data.indicators.ema50 !== null
+                                        {data.indicators.ema50 != null
                                             ? `$${data.indicators.ema50.toFixed(2)}`
                                             : '—'}
                                     </span>
@@ -491,12 +492,12 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
                                         <span className="text-sm text-slate-300">EMA 200</span>
                                     </div>
                                     <span className="font-mono font-bold text-white">
-                                        {data.indicators.ema200 !== null
+                                        {data.indicators.ema200 != null
                                             ? `$${data.indicators.ema200.toFixed(2)}`
                                             : '—'}
                                     </span>
                                 </div>
-                                {data.indicators.ema50 !== null && data.indicators.ema200 !== null && (
+                                {data.indicators.ema50 != null && data.indicators.ema200 != null && (
                                     <div className={`text-xs text-center py-1.5 rounded-lg font-medium ${data.indicators.ema50 > data.indicators.ema200
                                             ? 'bg-green-500/10 text-green-400'
                                             : 'bg-red-500/10 text-red-400'
@@ -511,7 +512,7 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
 
                         {/* RSI Gauge */}
                         <div>
-                            {data.indicators.rsi !== null ? (
+                            {data.indicators.rsi != null ? (
                                 <RsiGauge rsi={data.indicators.rsi} />
                             ) : (
                                 <p className="text-slate-500 text-sm">RSI data unavailable</p>

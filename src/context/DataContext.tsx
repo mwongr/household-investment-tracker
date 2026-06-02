@@ -240,7 +240,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (response.ok) {
                     const data = await response.json();
                     if (data) {
-                        newAssetDataMap.set(ticker, data);
+                        try {
+                            const resAnalysis = await fetch(`/api/stocks/${ticker}/analysis`);
+                            const dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
+                            newAssetDataMap.set(ticker, { ...data, analysis: dataAnalysis });
+                        } catch (e) {
+                            newAssetDataMap.set(ticker, { ...data, analysis: {} });
+                        }
                     }
                 }
             } catch (error) {
@@ -274,7 +280,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 todayChangePercent: todayChangePercent,
                 todayChangeDollar: todayChangeDollar,
                 sparkline: marketData.sparkline,
-                chartRange: range // store the fetch range context if needed
+                chartRange: range,
+                signal: marketData.analysis?.signal,
+                rsi: marketData.analysis?.indicators?.rsi,
+                goldenCross: marketData.analysis?.indicators?.goldenCross
             };
         }));
 
@@ -293,6 +302,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (response.ok) {
                 const data = await response.json();
                 if (data) {
+                    let dataAnalysis = {};
+                    try {
+                        const resAnalysis = await fetch(`/api/stocks/${asset.ticker}/analysis`);
+                        dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
+                    } catch(e) {}
+                    
                     setAssets(prev => prev.map(a => {
                         if (a.id !== assetId) return a;
 
@@ -316,7 +331,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             todayChangePercent: todayChangePercent,
                             todayChangeDollar: todayChangeDollar,
                             sparkline: data.sparkline,
-                            chartRange: range
+                            chartRange: range,
+                            signal: dataAnalysis.signal,
+                            rsi: dataAnalysis.indicators?.rsi,
+                            goldenCross: dataAnalysis.indicators?.goldenCross
                         };
                     }));
                 }
@@ -506,6 +524,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     high52Week: existingAsset?.high52Week,
                     low52Week: existingAsset?.low52Week,
                     sparkline: existingAsset?.sparkline,
+                    signal: existingAsset?.signal,
+                    rsi: existingAsset?.rsi,
+                    goldenCross: existingAsset?.goldenCross,
                 });
             }
 

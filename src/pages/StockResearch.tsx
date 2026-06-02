@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import StockSearch from '../components/StockSearch';
 import StockDetails from '../components/StockDetails';
 import StockComparison from '../components/StockComparison';
@@ -31,6 +32,16 @@ const StockResearch = () => {
             setLoading(false);
         }
     };
+
+    const [searchParams] = useSearchParams();
+    const urlTicker = searchParams.get('ticker');
+
+    useEffect(() => {
+        if (urlTicker) {
+            handleSearch(urlTicker);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [urlTicker]);
 
     const handleClose = () => {
         setSearchData(null);
@@ -203,8 +214,8 @@ const StockResearch = () => {
                                         <td className="p-4 font-mono text-slate-200">
                                             ${item.price?.toFixed(2) || '-'}
                                         </td>
-                                        <td className={`p-4 font-bold ${item.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {item.changePercent >= 0 ? '+' : ''}{item.changePercent?.toFixed(2)}%
+                                        <td className={`p-4 font-bold ${(item.changePercent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {item.changePercent != null ? `${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%` : '-'}
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center">

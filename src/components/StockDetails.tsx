@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ArrowUp, ArrowDown, X, Plus, Check } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import StockAnalysisCard from './StockAnalysisCard';
@@ -40,10 +40,44 @@ interface StockDetailsProps {
 // Le's just assume we want to display the quote data first for this step.
 // Update: I will add a fetch for chart data here.
 
+const Candlestick = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    if (!payload) return null;
+    
+    // Fallbacks if OHLC is missing (using price from sparkline)
+    const c = payload.close ?? payload.price;
+    const o = payload.open ?? c;
+    const h = payload.high ?? c;
+    const l = payload.low ?? c;
+
+    const isPositive = c >= o;
+    const fill = isPositive ? '#22c55e' : '#ef4444';
+    
+    const valueRange = h - l;
+    const pixelPerValue = valueRange > 0 ? height / valueRange : 0;
+    
+    const yOpen = y + (h - o) * pixelPerValue;
+    const yClose = y + (h - c) * pixelPerValue;
+    
+    const bodyTop = Math.min(yOpen, yClose) || y;
+    const bodyBottom = Math.max(yOpen, yClose) || y;
+    const bodyHeight = Math.max(bodyBottom - bodyTop, 1);
+    
+    const midX = x + width / 2;
+    
+    return (
+        <g>
+            <line x1={midX} y1={y || 0} x2={midX} y2={(y || 0) + (height || 0)} stroke={fill} strokeWidth={1} />
+            <rect x={x || 0} y={bodyTop} width={width || 0} height={bodyHeight} fill={fill} stroke={fill} />
+        </g>
+    );
+};
+
 const StockDetails = ({ data, onClose }: StockDetailsProps) => {
-    const isPositive = data.change >= 0;
+    const isPositive = (data.change ?? 0) >= 0;
     const [chartData, setChartData] = useState<any[]>([]);
     const [range, setRange] = useState('1mo'); // 1d, 5d, 1mo, 6mo, 1y, 5y
+    const [chartType, setChartType] = useState<'area' | 'candle'>('area');
     const [loadingChart, setLoadingChart] = useState(false);
     const { watchlist, addToWatchlist } = useData();
     const [isAdded, setIsAdded] = useState(false);
@@ -66,7 +100,11 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                 if (res.ok) {
                     const result = await res.json();
                     if (result.sparkline) {
-                        setChartData(result.sparkline);
+                        const formatted = result.sparkline.map((item: any) => ({
+                            ...item,
+                            candleData: [item.low ?? item.price, item.high ?? item.price]
+                        }));
+                        setChartData(formatted);
                     }
                 }
             } catch (e) {
@@ -122,10 +160,10 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                     </button>
 
                     <div className="text-right">
-                        <div className="text-4xl font-bold text-white">${data.price.toFixed(2)}</div>
+                        <div className="text-4xl font-bold text-white">${data.price != null ? data.price.toFixed(2) : '—'}</div>
                         <div className={`flex items-center justify-end gap-2 text-lg font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
                             {isPositive ? <ArrowUp size={24} /> : <ArrowDown size={24} />}
-                            {data.change.toFixed(2)} ({data.changePercent.toFixed(2)}%)
+                            {data.change != null ? data.change.toFixed(2) : '—'} ({data.changePercent != null ? `${data.changePercent.toFixed(2)}%` : '—'})
                         </div>
                     </div>
                 </div>
@@ -154,16 +192,28 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                 <div className="glass-panel p-6 lg:col-span-2 flex flex-col min-h-[400px]">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-semibold text-white">Price Chart</h3>
-                        <div className="flex gap-2">
-                            {['1d', '5d', '1mo', '6mo', '1y', '5y'].map(r => (
+                        <div className="flex gap-4">
+                            <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
                                 <button
-                                    key={r}
-                                    onClick={() => setRange(r)}
-                                    className={`px-3 py-1 rounded text-sm transition-colors ${range === r ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                                >
-                                    {r}
-                                </button>
-                            ))}
+                                    onClick={() => setChartType('area')}
+                                    className={`px-3 py-1 rounded text-sm transition-colors ${chartType === 'area' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                                >Line</button>
+                                <button
+                                    onClick={() => setChartType('candle')}
+                                    className={`px-3 py-1 rounded text-sm transition-colors ${chartType === 'candle' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                                >Candle</button>
+                            </div>
+                            <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
+                                {['1d', '5d', '1mo', '6mo', '1y', '5y'].map(r => (
+                                    <button
+                                        key={r}
+                                        onClick={() => setRange(r)}
+                                        className={`px-3 py-1 rounded text-sm transition-colors ${range === r ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                                    >
+                                        {r}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -172,40 +222,56 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                             <div className="h-full flex items-center justify-center text-slate-500">Loading chart...</div>
                         ) : chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
-                                    <defs>
-                                        <linearGradient id="chartColor" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis
-                                        dataKey="date"
-                                        hide
-                                    />
-                                    <YAxis
-                                        domain={['auto', 'auto']}
-                                        orientation="right"
-                                        tick={{ fill: '#64748b', fontSize: 12 }}
-                                        tickFormatter={(val) => val.toFixed(2)}
-                                        axisLine={false}
-                                        tickLine={false}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                        itemStyle={{ color: '#f8fafc' }}
-                                        labelStyle={{ display: 'none' }}
-                                        formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Price']}
-                                    />
-                                    <CartesianGrid vertical={false} stroke="#334155" strokeDasharray="3 3" opacity={0.3} />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="price"
-                                        stroke={isPositive ? "#22c55e" : "#ef4444"}
-                                        fill="url(#chartColor)"
-                                        strokeWidth={2}
-                                    />
-                                </AreaChart>
+                                {chartType === 'area' ? (
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="chartColor" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis dataKey="date" hide />
+                                        <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(val) => val.toFixed(2)} axisLine={false} tickLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                            itemStyle={{ color: '#f8fafc' }}
+                                            labelStyle={{ color: '#94a3b8', marginBottom: '4px', fontWeight: 'bold' }}
+                                            formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Price']}
+                                            labelFormatter={(label) => {
+                                                if (!label) return '';
+                                                const d = new Date(label);
+                                                return isNaN(d.getTime()) ? label : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                            }}
+                                        />
+                                        <CartesianGrid vertical={false} stroke="#334155" strokeDasharray="3 3" opacity={0.3} />
+                                        <Area type="monotone" dataKey="price" stroke={isPositive ? "#22c55e" : "#ef4444"} fill="url(#chartColor)" strokeWidth={2} />
+                                    </AreaChart>
+                                ) : (
+                                    <BarChart data={chartData}>
+                                        <XAxis dataKey="date" hide />
+                                        <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(val) => val.toFixed(2)} axisLine={false} tickLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', cursor: 'crosshair' }}
+                                            itemStyle={{ color: '#f8fafc' }}
+                                            labelStyle={{ color: '#94a3b8', marginBottom: '4px', fontWeight: 'bold' }}
+                                            formatter={(value: any, name: any, props: any) => {
+                                                const payload = props.payload;
+                                                if (payload) {
+                                                    return [`$${Number(payload.price || payload.close).toFixed(2)}`, 'Price'];
+                                                }
+                                                return [value, name];
+                                            }}
+                                            labelFormatter={(label) => {
+                                                if (!label) return '';
+                                                const d = new Date(label);
+                                                return isNaN(d.getTime()) ? label : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                            }}
+                                            cursor={{ fill: '#334155', opacity: 0.4 }}
+                                        />
+                                        <CartesianGrid vertical={false} stroke="#334155" strokeDasharray="3 3" opacity={0.3} />
+                                        <Bar dataKey="candleData" shape={<Candlestick />} />
+                                    </BarChart>
+                                )}
                             </ResponsiveContainer>
                         ) : (
                             <div className="h-full flex items-center justify-center text-slate-500">No chart data available</div>

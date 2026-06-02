@@ -7,7 +7,7 @@ import EventsTable from '../components/EventsTable';
 import '../styles/shared.css';
 
 const Dashboard = () => {
-    const { assets, accounts, members, institutions, refreshPrices, netWorthHistory, lastUpdated } = useData();
+    const { assets, accounts, members, institutions, refreshPrices, netWorthHistory, lastUpdated, transactions } = useData();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handleRefresh = async () => {
@@ -57,9 +57,31 @@ const Dashboard = () => {
     }).filter(d => d.value > 0);
 
     // 3. Member Details for individual cards
+    const currentYear = new Date().getFullYear().toString();
+
     const memberDetails = members.map(member => {
         const memberAccounts = accounts.filter(a => a.memberId === member.id);
         const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
+
+        const memberTransactions = transactions.filter(t => memberAccounts.find(acc => acc.id === t.accountId));
+        
+        const currentYearTransactions = memberTransactions.filter(t => t.date.startsWith(currentYear));
+
+        const depositedThisYear = currentYearTransactions
+            .filter(t => t.type === 'Deposit')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const withdrawnThisYear = currentYearTransactions
+            .filter(t => t.type === 'Withdrawal')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const depositedTfsaThisYear = currentYearTransactions
+            .filter(t => {
+                if (t.type !== 'Deposit') return false;
+                const account = memberAccounts.find(acc => acc.id === t.accountId);
+                return account && account.type === 'TFSA';
+            })
+            .reduce((sum, t) => sum + t.amount, 0);
 
         const totalWorth = memberAssets.reduce((sum, a) => sum + a.marketValue, 0)
             + memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
@@ -75,7 +97,10 @@ const Dashboard = () => {
             invested,
             profit,
             profitPercent,
-            cash
+            cash,
+            depositedThisYear,
+            withdrawnThisYear,
+            depositedTfsaThisYear
         };
     });
 
@@ -495,50 +520,72 @@ const Dashboard = () => {
                     <Users size={24} className="text-blue-400" />
                     Member Overview
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {memberDetails.map((member) => (
-                        <div key={member.id} className="card border-l-4 border-blue-400">
+                        <div key={member.id} className="card border-l-4 border-blue-400 flex flex-col justify-between">
                             <h3 className="text-xl font-bold text-white mb-4">{member.name}</h3>
 
-                            {/* Total Worth */}
-                            <div className="mb-3">
-                                <p className="text-slate-400 text-xs font-medium uppercase mb-1">Total Worth</p>
-                                <p className="text-2xl font-bold text-white">
-                                    ${member.totalWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
-                            </div>
-
-                            {/* Invested */}
-                            <div className="mb-3">
-                                <p className="text-slate-400 text-xs font-medium uppercase mb-1">Invested</p>
-                                <p className="text-lg font-semibold text-slate-300">
-                                    ${member.invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
-                            </div>
-
-                            {/* Profit/Loss */}
-                            <div className="mb-3">
-                                <p className="text-slate-400 text-xs font-medium uppercase mb-1">Profit/Loss</p>
-                                <div className="flex items-center gap-2">
-                                    <p className={`text-lg font-bold ${member.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {member.profit >= 0 ? '+' : '-'}${Math.abs(member.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Total Worth */}
+                                <div>
+                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Total Worth</p>
+                                    <p className="text-2xl font-bold text-white">
+                                        ${member.totalWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </p>
-                                    {member.profit >= 0 ?
-                                        <TrendingUp size={18} className="text-green-400" /> :
-                                        <TrendingDown size={18} className="text-red-400" />
-                                    }
                                 </div>
-                                <p className={`text-sm font-semibold ${member.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    {member.profitPercent >= 0 ? '+' : ''}{member.profitPercent.toFixed(2)}%
-                                </p>
-                            </div>
 
-                            {/* Cash Available */}
-                            <div className="pt-3 border-t border-slate-700">
-                                <p className="text-slate-400 text-xs font-medium uppercase mb-1">Cash Available</p>
-                                <p className="text-lg font-semibold text-slate-300">
-                                    ${member.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
+                                {/* Invested */}
+                                <div>
+                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Invested</p>
+                                    <p className="text-xl font-semibold text-slate-300">
+                                        ${member.invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                </div>
+
+                                {/* Profit/Loss */}
+                                <div>
+                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Profit/Loss</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className={`text-lg font-bold ${member.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {member.profit >= 0 ? '+' : '-'}${Math.abs(member.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                        {member.profit >= 0 ?
+                                            <TrendingUp size={18} className="text-green-400" /> :
+                                            <TrendingDown size={18} className="text-red-400" />
+                                        }
+                                    </div>
+                                    <p className={`text-sm font-semibold ${member.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {member.profitPercent >= 0 ? '+' : ''}{member.profitPercent.toFixed(2)}%
+                                    </p>
+                                </div>
+
+                                {/* Cash Available */}
+                                <div>
+                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Cash Available</p>
+                                    <p className="text-lg font-semibold text-slate-300">
+                                        ${member.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-4 pt-3 border-t border-slate-700 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Deposited This Year</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-lg font-semibold text-blue-400">
+                                            ${member.depositedThisYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                        <p className="text-xs text-slate-400 font-medium" title="To TFSA accounts">
+                                            (TFSA: ${member.depositedTfsaThisYear.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})
+                                        </p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Withdrawn This Year</p>
+                                    <p className="text-lg font-semibold text-amber-400">
+                                        ${member.withdrawnThisYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     ))}

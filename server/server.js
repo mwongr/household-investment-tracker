@@ -77,13 +77,21 @@ app.get('/api/quote', async (req, res) => {
             const result = data.chart?.result?.[0];
             if (result) {
                 const timestamps = result.timestamp;
-                const closeData = result.indicators?.quote?.[0]?.close;
+                const quote = result.indicators?.quote?.[0];
+                const closeData = quote?.close;
+                const openData = quote?.open;
+                const highData = quote?.high;
+                const lowData = quote?.low;
 
                 if (timestamps && closeData) {
                     sparklineData = closeData.map((price, index) => {
                         if (price === null || price === undefined) return null;
                         return {
                             price: parseFloat(price.toFixed(2)),
+                            open: openData?.[index] != null ? parseFloat(openData[index].toFixed(2)) : parseFloat(price.toFixed(2)),
+                            high: highData?.[index] != null ? parseFloat(highData[index].toFixed(2)) : parseFloat(price.toFixed(2)),
+                            low: lowData?.[index] != null ? parseFloat(lowData[index].toFixed(2)) : parseFloat(price.toFixed(2)),
+                            close: parseFloat(price.toFixed(2)),
                             date: new Date(timestamps[index] * 1000).toISOString()
                         };
                     }).filter(item => item !== null);
@@ -484,13 +492,13 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
             low: lowPrices,
             close: closePrices,
         });
-        const currentATR = atrValues.length > 0 ? atrValues[atrValues.length - 1] : null;
+        const currentATR = (atrValues.length > 0 && atrValues[atrValues.length - 1] !== undefined) ? atrValues[atrValues.length - 1] : null;
 
         // ── EMA 50 & 200 ──────────────────────────────────────────────────────
         const ema50Values = technicalindicators.EMA.calculate({ period: 50, values: closePrices });
         const ema200Values = technicalindicators.EMA.calculate({ period: 200, values: closePrices });
-        const ema50 = ema50Values.length > 0 ? ema50Values[ema50Values.length - 1] : null;
-        const ema200 = ema200Values.length > 0 ? ema200Values[ema200Values.length - 1] : null;
+        const ema50 = (ema50Values.length > 0 && ema50Values[ema50Values.length - 1] !== undefined) ? ema50Values[ema50Values.length - 1] : null;
+        const ema200 = (ema200Values.length > 0 && ema200Values[ema200Values.length - 1] !== undefined) ? ema200Values[ema200Values.length - 1] : null;
 
         // Build EMA series aligned to OHLCV timestamps for charting
         const ema50Offset = closePrices.length - ema50Values.length;
@@ -503,7 +511,7 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
 
         // ── RSI (14) ──────────────────────────────────────────────────────────
         const rsiValues = technicalindicators.RSI.calculate({ period: 14, values: closePrices });
-        const rsi = rsiValues.length > 0 ? rsiValues[rsiValues.length - 1] : null;
+        const rsi = (rsiValues.length > 0 && rsiValues[rsiValues.length - 1] !== undefined) ? rsiValues[rsiValues.length - 1] : null;
 
         // ── MACD (12, 26, 9) ──────────────────────────────────────────────────
         const macdResult = technicalindicators.MACD.calculate({
@@ -516,7 +524,11 @@ app.get('/api/stocks/:ticker/analysis', async (req, res) => {
         });
         const lastMacd = macdResult.length > 0 ? macdResult[macdResult.length - 1] : null;
         const macd = lastMacd
-            ? { MACD: lastMacd.MACD, signal: lastMacd.signal, histogram: lastMacd.histogram }
+            ? { 
+                MACD: lastMacd.MACD !== undefined ? lastMacd.MACD : null, 
+                signal: lastMacd.signal !== undefined ? lastMacd.signal : null, 
+                histogram: lastMacd.histogram !== undefined ? lastMacd.histogram : null 
+              }
             : { MACD: null, signal: null, histogram: null };
 
         // ── Golden Cross detection ─────────────────────────────────────────────

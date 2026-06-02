@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, TrendingUp, RefreshCw, X, Pencil, Trash2, Save, RotateCcw, Calculator, Wallet } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
@@ -8,9 +8,11 @@ import type { Transaction, TransactionType } from '../types';
 import '../styles/shared.css';
 import PortfolioBalancer from '../components/PortfolioBalancer';
 import AverageDownCalc from '../components/AverageDownCalc';
+import StockDetails from '../components/StockDetails';
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { accounts, getAssetsByAccount, addTransaction, updateTransaction, deleteTransaction, transactions, refreshPrices, refreshAsset, updateAssetCustomBookCost } = useData();
     const account = accounts.find(a => a.id === id);
     const assets = getAssetsByAccount(id || '');
@@ -32,6 +34,7 @@ const AccountDetails = () => {
     // Simulators State
     const [simSellPrice, setSimSellPrice] = useState<Record<string, string>>({});
     const [simSellShares, setSimSellShares] = useState<Record<string, string>>({});
+    const [simTargetPrice, setSimTargetPrice] = useState<Record<string, string>>({});
     const [simBuyAmount, setSimBuyAmount] = useState<Record<string, string>>({});
     const [simBuyShares, setSimBuyShares] = useState<Record<string, string>>({});
 
@@ -39,7 +42,26 @@ const AccountDetails = () => {
     const [editingBookCostId, setEditingBookCostId] = useState<string | null>(null);
     const [customBookCostInput, setCustomBookCostInput] = useState<Record<string, string>>({});
 
+    // Inline Research State
+    const [researchData, setResearchData] = useState<any>(null);
+    const [loadingResearch, setLoadingResearch] = useState(false);
+
     if (!account) return <div>Account not found</div>;
+
+    const handleResearchClick = async (symbol: string) => {
+        setLoadingResearch(true);
+        try {
+            const res = await fetch(`http://localhost:3001/api/quote-detailed?symbol=${symbol}`);
+            if (res.ok) {
+                const data = await res.json();
+                setResearchData(data);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingResearch(false);
+        }
+    };
 
     const handleTransaction = (e: React.FormEvent) => {
         e.preventDefault();
@@ -475,6 +497,17 @@ const AccountDetails = () => {
                                         <div>
                                             <h3 className="text-2xl font-bold text-white leading-none">{asset.ticker}</h3>
                                             <p className="text-sm text-slate-300 font-medium mt-1">{asset.quantity.toLocaleString()} shares</p>
+                                            <div className="mt-2 flex items-center gap-1 flex-wrap">
+                                                {asset.goldenCross ? (
+                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 uppercase border border-blue-500/30 whitespace-nowrap">Golden Cross</span>
+                                                ) : (asset.signal === 'buy' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30)) ? (
+                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/20 text-green-400 uppercase border border-green-500/30 whitespace-nowrap">Buy Signal</span>
+                                                ) : (asset.signal === 'sell' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70)) ? (
+                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 uppercase border border-red-500/30 whitespace-nowrap">Sell Signal</span>
+                                                ) : typeof asset.signal === 'string' ? (
+                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-700/50 text-slate-400 uppercase border border-slate-600/50 whitespace-nowrap">Neutral</span>
+                                                ) : null}
+                                            </div>
                                         </div>
 
                                         {/* 2. Avg. Cost */}
@@ -639,6 +672,18 @@ const AccountDetails = () => {
                                             {/* Sell Simulator */}
                                             <div>
                                                 <h4 className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><Calculator size={12} /> Sell Simulator</h4>
+                                                
+                                                <div className="relative mb-3">
+                                                    <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                    <input
+                                                        type="number"
+                                                        className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                        placeholder={`Target Price (Cur: $${asset.currentPrice.toFixed(2)})`}
+                                                        value={simTargetPrice[asset.id] || ''}
+                                                        onChange={(e) => setSimTargetPrice({ ...simTargetPrice, [asset.id]: e.target.value })}
+                                                    />
+                                                </div>
+
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
                                                         <div className="relative mb-2">
@@ -654,10 +699,13 @@ const AccountDetails = () => {
                                                         {sPrice && (() => {
                                                             const amountVal = parseFloat(sPrice);
                                                             if (isNaN(amountVal) || amountVal <= 0) return null;
-                                                            const sharesNum = amountVal / (asset.currentPrice || 1);
+                                                            const targetPriceVal = simTargetPrice[asset.id] ? parseFloat(simTargetPrice[asset.id]) : NaN;
+                                                            const sellPriceUsed = !isNaN(targetPriceVal) && targetPriceVal > 0 ? targetPriceVal : (asset.currentPrice || 1);
+                                                            const sharesNum = amountVal / sellPriceUsed;
                                                             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
                                                             const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
-                                                            const profit = (asset.currentPrice - impliedAvgCost) * sharesNum;
+                                                            const profit = (sellPriceUsed - impliedAvgCost) * sharesNum;
+                                                            const profitPercent = impliedAvgCost > 0 ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100 : 0;
 
                                                             const newQuantity = asset.quantity - sharesNum;
                                                             const newBookCost = effectiveBookCost - (sharesNum * impliedAvgCost);
@@ -671,7 +719,7 @@ const AccountDetails = () => {
                                                                     <div className="flex justify-between">
                                                                         <p className="text-slate-400">Sells: <span className="text-white font-mono">{sharesNum.toFixed(2)} sh</span></p>
                                                                         <p className={`font-bold font-mono ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%)
                                                                         </p>
                                                                     </div>
                                                                     <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
@@ -685,20 +733,31 @@ const AccountDetails = () => {
                                                         })()}
                                                     </div>
                                                     <div>
-                                                        <input
-                                                            type="number"
-                                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner mb-2"
-                                                            placeholder="Shares"
-                                                            value={simSellShares[asset.id] || ''}
-                                                            onChange={(e) => setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })}
-                                                        />
+                                                        <div className="relative mb-2">
+                                                            <input
+                                                                type="number"
+                                                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                                placeholder="Shares"
+                                                                value={simSellShares[asset.id] || ''}
+                                                                onChange={(e) => setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })}
+                                                            />
+                                                            <button
+                                                                className="absolute right-1 top-1 text-[9px] bg-slate-800 text-slate-400 hover:text-white px-1.5 py-0.5 rounded transition-colors"
+                                                                onClick={() => setSimSellShares({ ...simSellShares, [asset.id]: asset.quantity.toString() })}
+                                                            >
+                                                                All
+                                                            </button>
+                                                        </div>
                                                         {simSellShares[asset.id] && (() => {
                                                             const sharesVal = parseFloat(simSellShares[asset.id]);
                                                             if (isNaN(sharesVal) || sharesVal <= 0) return null;
-                                                            const proceeds = sharesVal * asset.currentPrice;
+                                                            const targetPriceVal = simTargetPrice[asset.id] ? parseFloat(simTargetPrice[asset.id]) : NaN;
+                                                            const sellPriceUsed = !isNaN(targetPriceVal) && targetPriceVal > 0 ? targetPriceVal : (asset.currentPrice || 1);
+                                                            const proceeds = sharesVal * sellPriceUsed;
                                                             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
                                                             const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
-                                                            const profit = (asset.currentPrice - impliedAvgCost) * sharesVal;
+                                                            const profit = (sellPriceUsed - impliedAvgCost) * sharesVal;
+                                                            const profitPercent = impliedAvgCost > 0 ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100 : 0;
 
                                                             const newQuantity = asset.quantity - sharesVal;
                                                             const newBookCost = effectiveBookCost - (sharesVal * impliedAvgCost);
@@ -712,7 +771,7 @@ const AccountDetails = () => {
                                                                     <div className="flex justify-between">
                                                                         <p className="text-slate-400">Proc: <span className="text-white font-mono">${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
                                                                         <p className={`font-bold font-mono ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%)
                                                                         </p>
                                                                     </div>
                                                                     <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
@@ -836,10 +895,14 @@ const AccountDetails = () => {
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="w-full h-24">
+                                        <div 
+                                            className="w-full h-24 cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => handleResearchClick(asset.ticker)}
+                                            title="Click to view detailed chart and research"
+                                        >
                                             {asset.sparkline && asset.sparkline.length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart data={asset.sparkline}>
+                                                    <AreaChart data={asset.sparkline} style={{ cursor: 'pointer' }}>
                                                         <defs>
                                                             <linearGradient id={`grad-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
                                                                 <stop offset="5%" stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'} stopOpacity={0.4} />
@@ -955,6 +1018,24 @@ const AccountDetails = () => {
 
             {/* Average Down Calculator */}
             <AverageDownCalc assets={assets} />
+
+            {/* Stock Research Modal */}
+            {researchData && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="w-full max-w-5xl my-auto relative">
+                        <StockDetails data={researchData} onClose={() => setResearchData(null)} />
+                    </div>
+                </div>
+            )}
+            
+            {loadingResearch && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-slate-800 text-white p-6 rounded-xl flex items-center gap-3">
+                        <RefreshCw size={24} className="animate-spin text-blue-500" />
+                        <span className="font-semibold">Loading research...</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
