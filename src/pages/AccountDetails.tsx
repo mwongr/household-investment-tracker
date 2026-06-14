@@ -30,6 +30,8 @@ const AccountDetails = () => {
     const [shares, setShares] = useState('');
     const [price, setPrice] = useState('');
     const [commission, setCommission] = useState('0');
+    const [splitFrom, setSplitFrom] = useState('');
+    const [splitTo, setSplitTo] = useState('');
 
     // Simulators State
     const [simSellPrice, setSimSellPrice] = useState<Record<string, string>>({});
@@ -74,11 +76,11 @@ const AccountDetails = () => {
         // - Asset/DRIP: ticker + shares + price
         // - Dividend (Cash): ticker + price (Amount)
         // - Deposit/Withdrawal: price (Amount)
-        // - Stock Split: ticker + shares
+        // - Stock Split: ticker + splitFrom & splitTo
         if (
             (isCashTx && price) ||
             (isDividendCash && ticker && price) ||
-            (isStockSplit && ticker && shares) ||
+            (isStockSplit && ticker && splitFrom && splitTo) ||
             (!isCashTx && !isDividendCash && !isStockSplit && ticker && shares && price)
         ) {
             const qty = shares ? parseFloat(shares) : 0;
@@ -102,16 +104,21 @@ const AccountDetails = () => {
                 finalPricePerShare = priceVal;
             }
 
-            const txData = {
+            const txData: any = {
                 accountId: account.id,
                 ticker: isCashTx ? '' : ticker.toUpperCase(),
                 date,
                 type,
-                shares: qty,
+                shares: isStockSplit ? 0 : qty,
                 pricePerShare: finalPricePerShare,
                 commission: commVal,
                 amount: amount
             };
+
+            if (isStockSplit) {
+                txData.splitFrom = parseFloat(splitFrom);
+                txData.splitTo = parseFloat(splitTo);
+            }
 
             if (editingTxId) {
                 updateTransaction(editingTxId, txData);
@@ -141,6 +148,8 @@ const AccountDetails = () => {
             setPrice(tx.amount.toString());
         } else if (tx.type === 'Stock Split') {
             setPrice('0');
+            setSplitFrom(tx.splitFrom?.toString() || '');
+            setSplitTo(tx.splitTo?.toString() || '');
         } else {
             setPrice(tx.pricePerShare?.toString() || '');
         }
@@ -161,6 +170,8 @@ const AccountDetails = () => {
         setShares('');
         setPrice('');
         setCommission('0');
+        setSplitFrom('');
+        setSplitTo('');
         setEditingTxId(null);
     };
 
@@ -204,7 +215,11 @@ const AccountDetails = () => {
             const gain = tx.amount - costOfSharesSold;
             realizedGainsPerTx[tx.id] = gain;
         } else if (tx.type === 'Stock Split') {
-            state.quantity += (tx.shares || 0);
+            if (tx.splitFrom && tx.splitTo) {
+                state.quantity = (state.quantity * tx.splitTo) / tx.splitFrom;
+            } else {
+                state.quantity += (tx.shares || 0);
+            }
         }
     });
 
@@ -437,16 +452,23 @@ const AccountDetails = () => {
                                     </div>
                                 </>
                             ) : type === 'Stock Split' ? (
-                                /* Stock Split Fields: Ticker + New Additional Shares */
+                                /* Stock Split Fields: Ticker + Ratio */
                                 <>
-                                    <div className="col-span-full md:col-span-1">
+                                    <div className="col-span-full">
                                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Ticker Symbol</label>
                                         <input type="text" className="input" placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} required autoFocus />
                                     </div>
                                     <div className="col-span-full md:col-span-1">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Additional Shares Received</label>
-                                        <input type="number" step="any" className="input" placeholder="0" value={shares} onChange={e => setShares(e.target.value)} required />
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Old Shares (From)</label>
+                                        <input type="number" step="any" min="0.0001" className="input" placeholder="e.g. 3" value={splitFrom} onChange={e => setSplitFrom(e.target.value)} required />
                                     </div>
+                                    <div className="col-span-full md:col-span-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">New Shares (To)</label>
+                                        <input type="number" step="any" min="0.0001" className="input" placeholder="e.g. 1" value={splitTo} onChange={e => setSplitTo(e.target.value)} required />
+                                    </div>
+                                    <p className="col-span-full text-xs text-slate-500 italic mt-1">
+                                        Example: For a 2-for-1 split, Old Shares = 1, New Shares = 2. For a 1-for-3 reverse split, Old Shares = 3, New Shares = 1.
+                                    </p>
                                 </>
                             ) : (
                                 /* Asset Transaction Fields (Buy, Sell, DRIP) */
@@ -991,7 +1013,9 @@ const AccountDetails = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">
-                                            {tx.shares ? (tx.type === 'Sell' ? '-' : '+') + tx.shares.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '-'}
+                                            {tx.type === 'Stock Split' && tx.splitFrom && tx.splitTo ? (
+                                                `${tx.splitTo} : ${tx.splitFrom}`
+                                            ) : tx.shares ? (tx.type === 'Sell' ? '-' : '+') + tx.shares.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '-'}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">${tx.pricePerShare ? tx.pricePerShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
                                         <td className="px-6 py-4 text-sm text-right font-mono text-white font-bold">${tx.amount ? tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>

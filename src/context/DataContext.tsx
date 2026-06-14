@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setTransactions(prev => {
             const updatedInfo = [...prev, newTx];
-            recalculateAssets(updatedInfo);
+            recalculateAssets(updatedInfo, newTx.type === 'Stock Split');
             return updatedInfo;
         });
 
@@ -458,7 +458,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setTransactions(prev => {
             const updated = prev.map(t => t.id === id ? { ...tx, id } : t);
-            recalculateAssets(updated);
+            recalculateAssets(updated, tx.type === 'Stock Split' || oldTx.type === 'Stock Split');
             return updated;
         });
 
@@ -481,7 +481,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setTransactions(prev => {
             const updated = prev.filter(t => t.id !== id);
-            recalculateAssets(updated);
+            recalculateAssets(updated, txToDelete?.type === 'Stock Split');
             return updated;
         });
 
@@ -494,7 +494,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // Completely rebuild assets from transactions to ensure consistency on edits/deletes
-    const recalculateAssets = (currentTransactions: Transaction[]) => {
+    const recalculateAssets = (currentTransactions: Transaction[], ignoreCustomBookCostAdjustment: boolean = false) => {
         const newAssetsMap = new Map<string, Asset>();
 
         // Sort by date asc
@@ -559,10 +559,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Custom book cost logic removed to prevent double-counting on recalculation
 
             } else if (tx.type === 'Stock Split') {
-                const newQty = asset.quantity + (tx.shares || 0);
-
-                asset.quantity = newQty;
-                asset.averageCost = newQty > 0 ? asset.totalCost / newQty : 0;
+                if (tx.splitFrom && tx.splitTo) {
+                    const newQty = (asset.quantity * tx.splitTo) / tx.splitFrom;
+                    asset.quantity = newQty;
+                } else {
+                    const newQty = asset.quantity + (tx.shares || 0);
+                    asset.quantity = newQty;
+                }
+                asset.averageCost = asset.quantity > 0 ? asset.totalCost / asset.quantity : 0;
             }
 
             asset.marketValue = asset.quantity * asset.currentPrice;
@@ -592,6 +596,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             // Only adjust if there was a pre-existing Custom Book Cost
             if (existingAsset?.customBookCost !== undefined && existingAsset.customBookCost !== null) {
+                if (ignoreCustomBookCostAdjustment) {
+                    return {
+                        ...asset,
+                        customBookCost: existingAsset.customBookCost,
+                        profit: asset.marketValue - existingAsset.customBookCost,
+                        profitPercent: existingAsset.customBookCost > 0 ? ((asset.marketValue - existingAsset.customBookCost) / existingAsset.customBookCost) * 100 : 0
+                    };
+                }
+
                 const existingQty = existingAsset.quantity;
                 const newQty = asset.quantity;
                 const qtyChange = newQty - existingQty;

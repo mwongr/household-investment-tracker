@@ -79,7 +79,7 @@ const Reports = () => {
             tx.date,
             tx.type,
             tx.ticker || '-',
-            tx.shares || 0,
+            tx.type === 'Stock Split' && tx.splitFrom && tx.splitTo ? `${tx.splitTo}-for-${tx.splitFrom}` : (tx.shares || 0),
             tx.pricePerShare || 0,
             tx.amount,
             tx.accountName,
@@ -323,8 +323,10 @@ const Reports = () => {
                                                 </span>
                                             </td>
                                             <td className="font-bold text-white">{tx.ticker || '-'}</td>
-                                            <td className="text-sm text-slate-400">
-                                                {tx.shares ? `${tx.shares} @ $${tx.pricePerShare?.toFixed(2)}` : '-'}
+                                            <td className="text-sm text-slate-400 font-mono">
+                                                {tx.type === 'Stock Split' && tx.splitFrom && tx.splitTo ? (
+                                                    `${tx.splitTo}-for-${tx.splitFrom} Split`
+                                                ) : tx.shares ? `${tx.shares} @ $${tx.pricePerShare?.toFixed(2)}` : '-'}
                                             </td>
                                             <td className="text-right font-mono text-white">
                                                 ${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

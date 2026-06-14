@@ -58,6 +58,8 @@ export type Transaction = {
   pricePerShare?: number; // For buy/sell
   amount: number; // Total value of transaction (shares * price + comms)
   commission: number;
+  splitFrom?: number;
+  splitTo?: number;
 };
 
 export type NetWorthSnapshot = {
