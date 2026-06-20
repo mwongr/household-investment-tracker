@@ -70,6 +70,7 @@ export function buildLayerCakeData(
 ): LayerCakeSegment[] {
   if (federalTaxableIncome <= 0) return [];
   const { federalBrackets, provincialBrackets, abatement } = settings;
+  const effectiveAbatement = settings.applyAbatement !== false ? abatement : 0;
 
   // Build breakpoints from both bracket sets within income range
   const pointSet = new Set<number>([0, federalTaxableIncome]);
@@ -85,7 +86,7 @@ export function buildLayerCakeData(
     const from = breakpoints[i];
     const to   = breakpoints[i + 1];
     const mid  = (from + to) / 2;
-    const fedRate  = getMarginalRate(mid, federalBrackets) * (1 - abatement);
+    const fedRate  = getMarginalRate(mid, federalBrackets) * (1 - effectiveAbatement);
     const provRate = getMarginalRate(mid, provincialBrackets);
     bands.push({
       label: `$${Math.round(from).toLocaleString('en-CA')} – $${Math.round(to).toLocaleString('en-CA')}`,
@@ -138,13 +139,14 @@ export function calculateOptimization(
   settings: TaxSettings
 ): OptimizationResult {
   const { federalBrackets, provincialBrackets, abatement } = settings;
+  const effectiveAbatement = settings.applyAbatement !== false ? abatement : 0;
   const contribution    = Math.max(0, currentRRSPContribution);
   const newFedTaxable   = Math.max(0, federalTaxableIncome - contribution);
   const newQcTaxable    = Math.max(0, quebecTaxableIncome  - contribution);
 
   // === Step A: Effective rates & cascade ===
   // CRA refund: federal cascade with abatement applied
-  const craRefund = cascadeRefund(federalTaxableIncome, newFedTaxable, federalBrackets, 1 - abatement);
+  const craRefund = cascadeRefund(federalTaxableIncome, newFedTaxable, federalBrackets, 1 - effectiveAbatement);
   // RQ refund: provincial cascade (no abatement multiplier needed here)
   const rqRefund  = cascadeRefund(quebecTaxableIncome,  newQcTaxable,  provincialBrackets, 1);
 
@@ -152,12 +154,12 @@ export function calculateOptimization(
   const effectiveTaxSavingsPercentage = contribution > 0 ? (totalRefund / contribution) * 100 : 0;
 
   // === Current top combined rate (BEFORE RRSP) ===
-  const topFedRate  = getMarginalRate(federalTaxableIncome, federalBrackets) * (1 - abatement);
+  const topFedRate  = getMarginalRate(federalTaxableIncome, federalBrackets) * (1 - effectiveAbatement);
   const topProvRate = getMarginalRate(quebecTaxableIncome,  provincialBrackets);
   const currentCombinedRate = topFedRate + topProvRate;
 
   // === New top combined rate (AFTER RRSP) ===
-  const newFedRate  = getMarginalRate(newFedTaxable, federalBrackets) * (1 - abatement);
+  const newFedRate  = getMarginalRate(newFedTaxable, federalBrackets) * (1 - effectiveAbatement);
   const newProvRate = getMarginalRate(newQcTaxable,  provincialBrackets);
   const newCombinedRate = newFedRate + newProvRate;
 
@@ -183,7 +185,7 @@ export function calculateOptimization(
   for (const candidate of sortedCandidates) {
     const testFed  = Math.max(0, federalTaxableIncome - candidate);
     const testQc   = Math.max(0, quebecTaxableIncome  - candidate);
-    const testCombined = getMarginalRate(testFed, federalBrackets) * (1 - abatement)
+    const testCombined = getMarginalRate(testFed, federalBrackets) * (1 - effectiveAbatement)
                        + getMarginalRate(testQc,  provincialBrackets);
     if (testCombined < currentCombinedRate - 0.001) {
       sweetSpotContribution = candidate;
@@ -203,7 +205,7 @@ export function calculateOptimization(
     for (const candidate of nextCandidates) {
       const testFed  = Math.max(0, federalTaxableIncome - candidate);
       const testQc   = Math.max(0, quebecTaxableIncome  - candidate);
-      const testCombined = getMarginalRate(testFed, federalBrackets) * (1 - abatement)
+      const testCombined = getMarginalRate(testFed, federalBrackets) * (1 - effectiveAbatement)
                          + getMarginalRate(testQc,  provincialBrackets);
       if (testCombined < newCombinedRate - 0.001) {
         sweetSpotContribution = candidate;

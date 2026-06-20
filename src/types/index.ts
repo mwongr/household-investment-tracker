@@ -260,6 +260,7 @@ export interface TaxSettings {
   federalBrackets: TaxBracket[];
   provincialBrackets: TaxBracket[];
   abatement: number;
+  applyAbatement?: boolean;
 }
 
 // ─── Stock Comparison Tool ────────────────────────────────────────────────────

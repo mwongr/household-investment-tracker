@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Target, TrendingDown, ShieldCheck, Zap, Save, Check, AlertTriangle, BarChart3, ChevronRight, History, Settings, Trash2, Eye } from 'lucide-react';
+import { Target, TrendingDown, ShieldCheck, Zap, Save, Check, AlertTriangle, BarChart3, ChevronRight, History, Settings, Trash2, Eye, Plus } from 'lucide-react';
 import {
   calculateOptimization,
-  buildLayerCakeData,
   DEFAULT_QUEBEC_ABATEMENT,
   defaultFederalBrackets,
   defaultProvincialBrackets
@@ -125,7 +124,7 @@ const LayerCakeBar: React.FC<{ layers: LayerCakeSegment[]; income: number }> = (
             <span className="lc-legend-dot" style={{ background: rateColor(layer.combinedRate) }} />
             <span>{(layer.combinedRate * 100).toFixed(1)}%</span>
           </div>
-        )).filter((_, i, arr) => {
+        )).filter((_, i) => {
           // dedupe by combinedRate label
           const rates = layers.map(l => (l.combinedRate * 100).toFixed(1));
           return rates.indexOf(rates[i]) === i;
@@ -414,21 +413,38 @@ const TaxOptimizer: React.FC = () => {
       setAdvancedMode(true);
     }
     setContribution(scenario.rrspContribution);
-    setIsSpousal(scenario.isSpousal ?? false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const saveSettings = async (newSettings: TaxSettings) => {
     try {
+      // Sort and heal brackets to ensure database/logic consistency
+      const cleanBrackets = (brackets: TaxBracket[]) => {
+        if (brackets.length === 0) return [];
+        const sorted = [...brackets].sort((a, b) => a.minIncome - b.minIncome);
+        // Force bounds to match consecutively
+        for (let i = 0; i < sorted.length - 1; i++) {
+          sorted[i].maxIncome = sorted[i + 1].minIncome;
+        }
+        sorted[sorted.length - 1].maxIncome = Infinity;
+        return sorted;
+      };
+
+      const sanitizedSettings = {
+        ...newSettings,
+        federalBrackets: cleanBrackets(newSettings.federalBrackets),
+        provincialBrackets: cleanBrackets(newSettings.provincialBrackets),
+      };
+
       await fetch(`${API_BASE}/api/tax-settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSettings),
+        body: JSON.stringify(sanitizedSettings),
       });
-      setSettings(newSettings);
+      setSettings(sanitizedSettings);
       setShowSettingsModal(false);
     } catch (e) {
-      console.error('Failed to save settings');
+      console.error('Failed to save settings', e);
     }
   };
 
@@ -444,8 +460,10 @@ const TaxOptimizer: React.FC = () => {
             Tax Bracket Optimizer
           </h1>
           <p className="page-subtitle">
-            Quebec RRSP optimization — shave your highest combined brackets first.
-            Federal abatement of {(settings.abatement * 100).toFixed(1)}% applied.
+            RRSP optimization — shave your highest combined brackets first.
+            {settings.applyAbatement !== false 
+              ? ` Federal abatement of ${(settings.abatement * 100).toFixed(1)}% applied.` 
+              : ' No federal abatement applied.'}
           </p>
         </div>
         <button 
@@ -889,6 +907,52 @@ const SettingsModal: React.FC<{ settings: TaxSettings, onSave: (s: TaxSettings) 
     } else {
       bracket[field] = value;
     }
+
+    // Sync bounds to keep bracket chain contiguous
+    if (field === 'maxIncome' && index < updated[type].length - 1) {
+      updated[type][index + 1].minIncome = value;
+    } else if (field === 'minIncome' && index > 0) {
+      updated[type][index - 1].maxIncome = value;
+    }
+
+    setDraft(updated);
+  };
+
+  const handleAddBracket = (type: 'federalBrackets' | 'provincialBrackets') => {
+    const updated = { ...draft };
+    const brackets = updated[type];
+    if (brackets.length === 0) {
+      brackets.push({ minIncome: 0, maxIncome: Infinity, rate: 0.1 });
+    } else {
+      const last = brackets[brackets.length - 1];
+      if (last.maxIncome === Infinity) {
+        // If last bracket goes to Infinity, split it logically by setting a numeric ceiling
+        last.maxIncome = last.minIncome > 0 ? Math.round(last.minIncome * 1.5) : 50000;
+      }
+      brackets.push({
+        minIncome: last.maxIncome,
+        maxIncome: Infinity,
+        rate: Math.min(0.5, last.rate + 0.02)
+      });
+    }
+    setDraft(updated);
+  };
+
+  const handleDeleteBracket = (type: 'federalBrackets' | 'provincialBrackets', index: number) => {
+    const updated = { ...draft };
+    const brackets = updated[type];
+    if (brackets.length <= 1) return; // Prevent deleting the last remaining bracket
+
+    const deleted = brackets[index];
+    if (index > 0) {
+      // Extend the previous bracket's max to cover the deleted gap
+      brackets[index - 1].maxIncome = deleted.maxIncome;
+    } else if (brackets.length > 1) {
+      // If deleting the first bracket, start the next one at 0
+      brackets[1].minIncome = 0;
+    }
+
+    brackets.splice(index, 1);
     setDraft(updated);
   };
 
@@ -907,34 +971,86 @@ const SettingsModal: React.FC<{ settings: TaxSettings, onSave: (s: TaxSettings) 
           <div className="tax-settings-section">
             <h3>Federal Brackets</h3>
             <div className="tax-settings-grid header">
-              <span>Min Income</span><span>Max Income</span><span>Rate %</span>
+              <span>Min Income</span><span>Max Income</span><span>Rate %</span><span></span>
             </div>
             {draft.federalBrackets.map((b, i) => (
               <div key={i} className="tax-settings-grid">
                 <FormattedNumberInput value={b.minIncome} onChange={(v: number) => handleBracketChange('federalBrackets', i, 'minIncome', v)} className="tax-input" />
                 <FormattedNumberInput value={b.maxIncome} emptyIsInfinity={true} placeholder="Infinity" onChange={(v: number) => handleBracketChange('federalBrackets', i, 'maxIncome', v)} className="tax-input" />
                 <input type="number" step="0.1" value={+(b.rate * 100).toFixed(2)} onChange={(e) => handleBracketChange('federalBrackets', i, 'rate', Number(e.target.value))} className="tax-input" />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteBracket('federalBrackets', i)}
+                  className="delete-bracket-btn"
+                  title="Delete Bracket"
+                  disabled={draft.federalBrackets.length <= 1}
+                  style={{ opacity: draft.federalBrackets.length <= 1 ? 0.4 : 1, cursor: draft.federalBrackets.length <= 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={() => handleAddBracket('federalBrackets')}
+              className="add-bracket-btn"
+            >
+              <Plus size={14} /> Add Federal Bracket
+            </button>
           </div>
 
           <div className="tax-settings-section">
             <h3>Provincial Brackets</h3>
             <div className="tax-settings-grid header">
-              <span>Min Income</span><span>Max Income</span><span>Rate %</span>
+              <span>Min Income</span><span>Max Income</span><span>Rate %</span><span></span>
             </div>
             {draft.provincialBrackets.map((b, i) => (
               <div key={i} className="tax-settings-grid">
                 <FormattedNumberInput value={b.minIncome} onChange={(v: number) => handleBracketChange('provincialBrackets', i, 'minIncome', v)} className="tax-input" />
                 <FormattedNumberInput value={b.maxIncome} emptyIsInfinity={true} placeholder="Infinity" onChange={(v: number) => handleBracketChange('provincialBrackets', i, 'maxIncome', v)} className="tax-input" />
                 <input type="number" step="0.1" value={+(b.rate * 100).toFixed(2)} onChange={(e) => handleBracketChange('provincialBrackets', i, 'rate', Number(e.target.value))} className="tax-input" />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteBracket('provincialBrackets', i)}
+                  className="delete-bracket-btn"
+                  title="Delete Bracket"
+                  disabled={draft.provincialBrackets.length <= 1}
+                  style={{ opacity: draft.provincialBrackets.length <= 1 ? 0.4 : 1, cursor: draft.provincialBrackets.length <= 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={() => handleAddBracket('provincialBrackets')}
+              className="add-bracket-btn"
+            >
+              <Plus size={14} /> Add Provincial Bracket
+            </button>
           </div>
 
           <div className="tax-settings-section abatement">
-            <label>Provincial Abatement Rate %</label>
-            <input type="number" step="0.1" value={+(draft.abatement * 100).toFixed(2)} onChange={(e) => handleAbatementChange(Number(e.target.value))} className="tax-input" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <input
+                id="apply-abatement-checkbox"
+                type="checkbox"
+                checked={draft.applyAbatement ?? true}
+                onChange={(e) => setDraft({ ...draft, applyAbatement: e.target.checked })}
+                style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--color-indigo-500)' }}
+              />
+              <label htmlFor="apply-abatement-checkbox" style={{ margin: 0, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                Apply Federal Abatement (Quebec only)
+              </label>
+            </div>
+            {(draft.applyAbatement ?? true) && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--color-text-muted)' }}>
+                  Provincial Abatement Rate %
+                </label>
+                <input type="number" step="0.1" value={+(draft.abatement * 100).toFixed(2)} onChange={(e) => handleAbatementChange(Number(e.target.value))} className="tax-input" />
+              </div>
+            )}
           </div>
 
         </div>
