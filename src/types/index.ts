@@ -34,6 +34,7 @@ export type Asset = {
   currentPrice: number;
   marketValue: number;
   totalCost: number;
+  cadTotalCost?: number;
   customBookCost?: number; // Manual override for book cost
   profit: number; // $
   profitPercent: number; // %
@@ -43,6 +44,12 @@ export type Asset = {
   low52Week?: number; // Mock data for now
   sparkline?: { price: number; date?: string }[];
   chartRange?: string; // e.g. '1mo', '3mo', '1y', '5y'
+  currency?: 'CAD' | 'USD';
+  cadMarketValue: number;
+  signal?: TaSignal;
+  rsi?: number | null;
+  goldenCross?: boolean;
+  previousTicker?: string;
 };
 
 export type TransactionType = 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal' | 'Dividend' | 'Dividend Income' | 'DRIP' | 'Dividend Reinvested' | 'Stock Split';
@@ -57,7 +64,10 @@ export type Transaction = {
   shares?: number; // For buy/sell
   pricePerShare?: number; // For buy/sell
   amount: number; // Total value of transaction (shares * price + comms)
-  commission: number;
+  commission?: number;
+  currency?: 'CAD' | 'USD';
+  previousTicker?: string;
+  ignoreCashImpact?: boolean;
   splitFrom?: number;
   splitTo?: number;
 };

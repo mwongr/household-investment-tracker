@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import technicalindicators from 'technicalindicators';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +45,101 @@ app.post('/api/sync', (req, res) => {
     } catch (e) {
         console.error('Sync failed:', e);
         res.status(500).json({ error: 'Failed to write to disk' });
+    }
+});
+
+app.get('/api/exchange-rate', async (req, res) => {
+    try {
+        const quote = await yahooFinance.quote('CAD=X');
+        if (quote && quote.regularMarketPrice) {
+            res.json({ rate: quote.regularMarketPrice });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch exchange rate' });
+        }
+    } catch (e) {
+        console.error('Exchange rate fetch failed:', e);
+        res.status(500).json({ error: 'Failed to fetch exchange rate' });
+    }
+});
+
+app.post('/api/portfolio/migrate-currency', async (req, res) => {
+    try {
+        const { originalTicker, newTicker, conversionDate, newUsdCostBasis, shares, accountId } = req.body;
+
+        if (!originalTicker || !newTicker || !conversionDate || !newUsdCostBasis || !shares || !accountId) {
+            return res.status(400).json({ error: 'Missing required parameters' });
+        }
+
+        // 1. Fetch historical close price for originalTicker on conversionDate
+        // period2 must be at least 1 day after period1 for yahoo-finance2
+        // We fetch 7 days prior to ensure we catch the last trading day if conversionDate is a weekend/holiday.
+        const targetDate = new Date(conversionDate);
+        const period1 = new Date(targetDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const period2 = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+        
+        let closePrice = 0;
+        try {
+            const hist = await yahooFinance.chart(originalTicker, {
+                period1: period1,
+                period2: period2,
+                interval: '1d'
+            });
+            if (hist && hist.quotes && hist.quotes.length > 0) {
+                // Find the closest quote on or before the conversionDate
+                const validQuotes = hist.quotes.filter(q => new Date(q.date) <= targetDate);
+                if (validQuotes.length > 0) {
+                    closePrice = validQuotes[validQuotes.length - 1].close;
+                } else {
+                    throw new Error('No historical data found for that date');
+                }
+            } else {
+                throw new Error('No historical data found for that date');
+            }
+        } catch (e) {
+            console.error('Failed to fetch historical price for migration:', e);
+            return res.status(500).json({ error: 'Failed to fetch historical closing price for the conversion date.' });
+        }
+
+        // 2. Create the Sell transaction for the original asset
+        const sellTx = {
+            id: crypto.randomUUID(),
+            accountId: accountId,
+            ticker: originalTicker,
+            date: targetDate.toISOString().split('T')[0],
+            type: 'Sell',
+            shares: Number(shares),
+            pricePerShare: closePrice,
+            amount: Number(shares) * closePrice,
+            commission: 0,
+            currency: 'CAD',
+            ignoreCashImpact: true
+        };
+
+        // 3. Create the Buy transaction for the new USD asset
+        const buyAmount = Number(newUsdCostBasis);
+        const buyPricePerShare = buyAmount / Number(shares);
+
+        const buyTx = {
+            id: crypto.randomUUID(),
+            accountId: accountId,
+            ticker: newTicker,
+            date: targetDate.toISOString().split('T')[0],
+            type: 'Buy',
+            shares: Number(shares),
+            pricePerShare: buyPricePerShare,
+            amount: buyAmount,
+            commission: 0,
+            currency: 'USD',
+            previousTicker: originalTicker,
+            ignoreCashImpact: true
+        };
+
+        // Return the transactions so frontend can append them
+        res.json({ success: true, transactions: [sellTx, buyTx] });
+
+    } catch (e) {
+        console.error('Migration failed:', e);
+        res.status(500).json({ error: 'Migration failed' });
     }
 });
 

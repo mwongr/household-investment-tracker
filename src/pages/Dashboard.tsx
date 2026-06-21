@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Users, Wallet, Award, AlertTriangle, ArrowUpDown, Eye, Settings, Pencil, Check, X, RefreshCw, Layers } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Users, Wallet, Award, AlertTriangle, ArrowUpDown, Eye, Settings, Pencil, Check, X, RefreshCw, Layers, ArrowRightLeft } from 'lucide-react';
 import EventsTable from '../components/EventsTable';
+import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 import '../styles/shared.css';
 
 const Dashboard = () => {
     const { assets, accounts, members, institutions, refreshPrices, netWorthHistory, lastUpdated, transactions } = useData();
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showMigrationModal, setShowMigrationModal] = useState(false);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -17,12 +19,12 @@ const Dashboard = () => {
     };
 
     // 1. Global Metrics
-    const totalValue = assets.reduce((sum, a) => sum + a.marketValue, 0)
+    const totalValue = assets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
         + accounts.reduce((sum, a) => sum + a.cashBalance, 0); // Adding cash
 
     // Total Cost only for assets
-    const totalInvested = assets.reduce((sum, a) => sum + (a.customBookCost ?? a.totalCost), 0);
-    const totalProfit = assets.reduce((sum, a) => sum + (a.marketValue - (a.customBookCost ?? a.totalCost)), 0);
+    const totalInvested = assets.reduce((sum, a) => sum + (a.cadTotalCost || a.totalCost || 0), 0);
+    const totalProfit = assets.reduce((sum, a) => sum + ((a.cadMarketValue || a.marketValue || 0) - (a.cadTotalCost || a.totalCost || 0)), 0);
     const totalProfitPercent = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
 
     // Cash Available
@@ -32,7 +34,7 @@ const Dashboard = () => {
     const allocationByPerson = members.map(member => {
         const memberAccounts = accounts.filter(a => a.memberId === member.id);
         const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
-        const value = memberAssets.reduce((sum, a) => sum + a.marketValue, 0)
+        const value = memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
             + memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
         return { name: member.name, value };
     }).filter(d => d.value > 0);
@@ -42,7 +44,7 @@ const Dashboard = () => {
     const allocationByAccountType = accountTypes.map(type => {
         const typeAccounts = accounts.filter(a => a.type === type);
         const typeAssets = assets.filter(a => typeAccounts.find(acc => acc.id === a.accountId));
-        const value = typeAssets.reduce((sum, a) => sum + a.marketValue, 0)
+        const value = typeAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
             + typeAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
         return { name: type, value };
     }).filter(d => d.value > 0);
@@ -51,7 +53,7 @@ const Dashboard = () => {
     const allocationByInstitution = institutions.map(inst => {
         const instAccounts = accounts.filter(a => a.institutionId === inst.id);
         const instAssets = assets.filter(a => instAccounts.find(acc => acc.id === a.accountId));
-        const value = instAssets.reduce((sum, a) => sum + a.marketValue, 0)
+        const value = instAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
             + instAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
         return { name: inst.name, value };
     }).filter(d => d.value > 0);
@@ -83,10 +85,10 @@ const Dashboard = () => {
             })
             .reduce((sum, t) => sum + t.amount, 0);
 
-        const totalWorth = memberAssets.reduce((sum, a) => sum + a.marketValue, 0)
+        const totalWorth = memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
             + memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
         const invested = memberAssets.reduce((sum, a) => sum + a.totalCost, 0);
-        const profit = memberAssets.reduce((sum, a) => sum + (a.marketValue - a.totalCost), 0);
+        const profit = memberAssets.reduce((sum, a) => sum + ((a.cadMarketValue || a.marketValue || 0) - a.totalCost), 0);
         const profitPercent = invested > 0 ? (profit / invested) * 100 : 0;
         const cash = memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
 
@@ -193,8 +195,8 @@ const Dashboard = () => {
         const member = members.find(m => m.id === account.memberId);
         const institution = institutions.find(i => i.id === account.institutionId);
 
-        const bookCost = accountAssets.reduce((sum, a) => sum + (a.customBookCost || a.totalCost), 0);
-        const marketValue = accountAssets.reduce((sum, a) => sum + a.marketValue, 0);
+        const bookCost = accountAssets.reduce((sum, a) => sum + (a.cadTotalCost || a.totalCost || 0), 0);
+        const marketValue = accountAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
         const profitDollar = marketValue - bookCost;
         const profitPercent = bookCost > 0 ? (profitDollar / bookCost) * 100 : 0;
 
@@ -304,7 +306,7 @@ const Dashboard = () => {
                         if (accountAssets.length === 0 && account.cashBalance === 0) return null;
 
                         const bookCost = accountAssets.reduce((sum, a) => sum + (a.customBookCost || a.totalCost), 0);
-                        const marketValue = accountAssets.reduce((sum, a) => sum + a.marketValue, 0);
+                        const marketValue = accountAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
                         const profit = marketValue - bookCost;
                         const profitPercent = bookCost > 0 ? (profit / bookCost) * 100 : 0;
 
@@ -320,7 +322,7 @@ const Dashboard = () => {
 
         // Member Totals
         const totalBookCost = memberAssets.reduce((sum, a) => sum + (a.customBookCost || a.totalCost), 0);
-        const totalMarketValue = memberAssets.reduce((sum, a) => sum + a.marketValue, 0);
+        const totalMarketValue = memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
         const totalProfit = totalMarketValue - totalBookCost;
         const totalProfitPercent = totalBookCost > 0 ? (totalProfit / totalBookCost) * 100 : 0;
         const totalCash = memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
@@ -339,22 +341,24 @@ const Dashboard = () => {
         totalInvested: number;
         totalMarketValue: number;
         accounts: Set<string>;
+        currency: string;
     }>();
 
     assetsWithAccountInfo.forEach(asset => {
         const existing = aggregatedStocksMap.get(asset.ticker);
         if (existing) {
             existing.totalShares += asset.quantity;
-            existing.totalInvested += (asset.customBookCost || asset.totalCost);
-            existing.totalMarketValue += asset.marketValue;
+            existing.totalInvested += (asset.cadTotalCost || asset.totalCost || 0);
+            existing.totalMarketValue += (asset.cadMarketValue || asset.marketValue || 0);
             existing.accounts.add(asset.accountName);
         } else {
             aggregatedStocksMap.set(asset.ticker, {
                 ticker: asset.ticker,
                 totalShares: asset.quantity,
-                totalInvested: (asset.customBookCost || asset.totalCost),
-                totalMarketValue: asset.marketValue,
-                accounts: new Set([asset.accountName])
+                totalInvested: (asset.cadTotalCost || asset.totalCost || 0),
+                totalMarketValue: (asset.cadMarketValue || asset.marketValue || 0),
+                accounts: new Set([asset.accountName]),
+                currency: asset.currency || 'CAD'
             });
         }
     });
@@ -439,6 +443,14 @@ const Dashboard = () => {
                     >
                         <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                         {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
+                    </button>
+                    <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors border border-slate-600"
+                        title="Migrate CAD asset to USD"
+                    >
+                        <ArrowRightLeft size={18} />
+                        Migrate Currency
                     </button>
                 </div>
             </div>
@@ -1417,7 +1429,10 @@ const Dashboard = () => {
                             {sortedAssetPerformance.map((asset) => (
                                 <tr key={asset.id} className="hover:bg-slate-700/30 transition-colors">
                                     <td className="p-2 text-white font-medium">#{asset.rank}</td>
-                                    <td className="p-2 text-white font-bold">{asset.ticker}</td>
+                                    <td className="p-2 text-white font-bold flex items-center gap-1.5">
+                                        {asset.ticker}
+                                        {asset.currency === 'USD' && <span title="USD Asset" className="text-xs">🇺🇸</span>}
+                                    </td>
                                     <td className="p-2 text-right text-slate-300 font-medium">
                                         ${asset.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
@@ -1575,7 +1590,10 @@ const Dashboard = () => {
                                                         <tbody className="divide-y divide-slate-800 text-sm">
                                                             {accGroup.assets.map((asset) => (
                                                                 <tr key={asset.id} className="hover:bg-slate-800/50 transition-colors">
-                                                                    <td className="px-4 py-2 text-white font-bold">{asset.ticker}</td>
+                                                                    <td className="px-4 py-2 text-white font-bold flex items-center gap-1.5">
+                                                                        {asset.ticker}
+                                                                        {asset.currency === 'USD' && <span title="USD Asset" className="text-xs">🇺🇸</span>}
+                                                                    </td>
                                                                     <td className="px-4 py-2 text-right text-slate-300 tabular-nums">{asset.quantity}</td>
                                                                     <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${asset.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                                     <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -1698,6 +1716,10 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {showMigrationModal && (
+                <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />
+            )}
         </div >
     );
 };

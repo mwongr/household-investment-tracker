@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Sliders, AlertTriangle, CheckCircle, RotateCcw, Plus, Trash2 } from 'lucide-react';
 import type { Asset, Account } from '../types';
 import { useData } from '../context/DataContext';
@@ -32,7 +32,7 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
         if (account.targetPcts) return account.targetPcts;
         const init: Record<string, number> = {};
         assets.forEach(a => {
-            const pct = totalInvested > 0 ? (a.marketValue / totalInvested) * 100 : 0;
+            const pct = totalInvested > 0 ? ((a.cadMarketValue || a.marketValue || 0) / totalInvested) * 100 : 0;
             init[a.id] = Math.round(pct * 10) / 10;
         });
         return init;
@@ -44,8 +44,8 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
         const assetRows: BalancerRow[] = assets.map(a => ({
             id: a.id,
             ticker: a.ticker,
-            currentValue: a.marketValue,
-            currentPct: totalInvested > 0 ? (a.marketValue / totalInvested) * 100 : 0,
+            currentValue: (a.cadMarketValue || a.marketValue || 0),
+            currentPct: totalInvested > 0 ? ((a.cadMarketValue || a.marketValue || 0) / totalInvested) * 100 : 0,
             targetPct: targetPcts[a.id] ?? 0,
         }));
         const custom: BalancerRow[] = extraRows.map(r => ({
@@ -61,7 +61,6 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
     const totalTargetPct = rows.reduce((s, r) => s + r.targetPct, 0);
     const isBalanced = Math.abs(totalTargetPct - 100) < 0.1;
     const overAllocated = totalTargetPct > 100.05;
-    const underAllocated = totalTargetPct < 99.95;
 
     const updateTarget = (id: string, isExtra: boolean, val: string) => {
         const num = parseFloat(val);
@@ -89,7 +88,7 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
     const resetToActual = () => {
         const next: Record<string, number> = {};
         assets.forEach(a => {
-            const pct = totalInvested > 0 ? (a.marketValue / totalInvested) * 100 : 0;
+            const pct = totalInvested > 0 ? ((a.cadMarketValue || a.marketValue || 0) / totalInvested) * 100 : 0;
             next[a.id] = Math.round(pct * 10) / 10;
         });
         updateAccount(account.id, { targetPcts: next, extraRows: [] });

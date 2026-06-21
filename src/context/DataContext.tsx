@@ -45,6 +45,8 @@ interface DataContextType {
     removeFromWatchlist: (id: string) => void;
     refreshWatchlist: (force: boolean) => Promise<void>;
 
+    migrateCurrency: (originalTicker: string, newTicker: string, conversionDate: string, newUsdCostBasis: number, shares: number, accountId: string) => Promise<void>;
+
     // ACB Tracking
     acbAccounts: AcbAccount[];
     acbTransactions: AcbTransaction[];
@@ -72,6 +74,7 @@ interface DataContextType {
 
     preferences: UserPreferences;
     updatePreferences: (updates: Partial<UserPreferences>) => void;
+    exchangeRate: number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -188,6 +191,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved && JSON.parse(saved).preferences ? { ...defaults, ...JSON.parse(saved).preferences } : defaults;
     });
 
+    const [exchangeRate, setExchangeRate] = useState<number>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved && JSON.parse(saved).exchangeRate ? JSON.parse(saved).exchangeRate : 1.0;
+    });
+
     // Track if we need to auto-refresh after adding new asset
     const pendingRefreshRef = useRef(false);
 
@@ -209,7 +217,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             bankAccounts,
             liabilities,
             monthlyExpenses,
-            preferences
+            preferences,
+            exchangeRate
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -222,10 +231,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences]);
+    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences, exchangeRate]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
+        // Fetch exchange rate first
+        try {
+            const exRes = await fetch('/api/exchange-rate');
+            if (exRes.ok) {
+                const exData = await exRes.json();
+                if (exData.rate) {
+                    setExchangeRate(exData.rate);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch exchange rate', e);
+        }
+
         const uniqueTickers = Array.from(new Set(assets.map(a => a.ticker))).filter(Boolean);
 
         // We'll update assets in a batch
@@ -242,7 +264,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (data) {
                         try {
                             const resAnalysis = await fetch(`/api/stocks/${ticker}/analysis`);
-                            const dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
+                            const dataAnalysis: any = resAnalysis.ok ? await resAnalysis.json() : {};
                             newAssetDataMap.set(ticker, { ...data, analysis: dataAnalysis });
                         } catch (e) {
                             newAssetDataMap.set(ticker, { ...data, analysis: {} });
@@ -269,12 +291,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const prevPrice = divisor !== 0 ? currentPrice / divisor : currentPrice; 
             const todayChangeDollar = divisor !== 0 ? (currentPrice - prevPrice) * asset.quantity : 0;
 
+            const currency = marketData.currency || asset.currency || 'CAD';
+            const cadMarketValue = currency === 'USD' ? marketValue * exchangeRate : marketValue;
+            const cadEffectiveBookCost = currency === 'USD' ? effectiveBookCost * exchangeRate : effectiveBookCost;
+
             return {
                 ...asset,
+                currency: currency,
                 currentPrice: currentPrice,
                 marketValue: marketValue,
-                profit: marketValue - effectiveBookCost,
-                profitPercent: effectiveBookCost > 0 ? ((marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0,
+                cadMarketValue: cadMarketValue,
+                cadTotalCost: cadEffectiveBookCost,
+                profit: cadMarketValue - cadEffectiveBookCost,
+                profitPercent: cadEffectiveBookCost > 0 ? ((cadMarketValue - cadEffectiveBookCost) / cadEffectiveBookCost) * 100 : 0,
                 high52Week: marketData.fiftyTwoWeekHigh,
                 low52Week: marketData.fiftyTwoWeekLow,
                 todayChangePercent: todayChangePercent,
@@ -302,7 +331,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (response.ok) {
                 const data = await response.json();
                 if (data) {
-                    let dataAnalysis = {};
+                    let dataAnalysis: any = {};
                     try {
                         const resAnalysis = await fetch(`/api/stocks/${asset.ticker}/analysis`);
                         dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
@@ -415,6 +444,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const calculateCashImpact = (tx: Partial<Transaction>) => {
+        if (tx.ignoreCashImpact) return 0;
         const amount = tx.amount || 0;
         switch (tx.type) {
             case 'Buy': return -amount;
@@ -527,6 +557,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     signal: existingAsset?.signal,
                     rsi: existingAsset?.rsi,
                     goldenCross: existingAsset?.goldenCross,
+                    currency: existingAsset?.currency || 'CAD',
+                    cadMarketValue: 0,
+                    cadTotalCost: 0,
+                    previousTicker: existingAsset?.previousTicker,
                 });
             }
 
@@ -546,6 +580,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 asset.quantity = newQty;
                 asset.totalCost = totalCostNew;
                 asset.averageCost = newQty > 0 ? totalCostNew / newQty : 0;
+                
+                if (tx.previousTicker) {
+                    asset.previousTicker = tx.previousTicker;
+                }
 
                 // Custom book cost logic removed to prevent double-counting on recalculation
 
@@ -572,8 +610,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             asset.marketValue = asset.quantity * asset.currentPrice;
             // Use custom book cost if set, otherwise use calculated totalCost
             const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
-            asset.profit = asset.marketValue - effectiveBookCost;
-            asset.profitPercent = effectiveBookCost > 0 ? (asset.profit / effectiveBookCost) * 100 : 0;
+            asset.cadTotalCost = asset.currency === 'USD' ? effectiveBookCost * exchangeRate : effectiveBookCost;
+            asset.cadMarketValue = asset.currency === 'USD' ? asset.marketValue * exchangeRate : asset.marketValue;
+            
+            asset.profit = asset.cadMarketValue - asset.cadTotalCost;
+            asset.profitPercent = asset.cadTotalCost > 0 ? (asset.profit / asset.cadTotalCost) * 100 : 0;
 
             // Recalculate Day $ Change
             const cp = asset.todayChangePercent || 0;
@@ -600,8 +641,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return {
                         ...asset,
                         customBookCost: existingAsset.customBookCost,
-                        profit: asset.marketValue - existingAsset.customBookCost,
-                        profitPercent: existingAsset.customBookCost > 0 ? ((asset.marketValue - existingAsset.customBookCost) / existingAsset.customBookCost) * 100 : 0
+                        profit: asset.cadMarketValue - (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost),
+                        profitPercent: (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost) > 0 ? ((asset.cadMarketValue - (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost)) / (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost)) * 100 : 0
                     };
                 }
 
@@ -628,13 +669,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Update the asset with the calculate custom cost
                 const effectiveBookCost = newCustomBookCost;
+                const cadEffectiveBookCost = asset.currency === 'USD' ? effectiveBookCost * exchangeRate : effectiveBookCost;
 
                 return {
                     ...asset,
                     customBookCost: newCustomBookCost,
+                    cadTotalCost: cadEffectiveBookCost,
                     // Recalculate profit metadata based on new adjusted custom cost
-                    profit: asset.marketValue - effectiveBookCost,
-                    profitPercent: effectiveBookCost > 0 ? ((asset.marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0
+                    profit: asset.cadMarketValue - cadEffectiveBookCost,
+                    profitPercent: cadEffectiveBookCost > 0 ? ((asset.cadMarketValue - cadEffectiveBookCost) / cadEffectiveBookCost) * 100 : 0
                 };
             }
 
@@ -678,7 +721,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const dataChart = resChart.ok ? await resChart.json() : {};
 
             const resAnalysis = await fetch(`/api/stocks/${upperTicker}/analysis`);
-            const dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
+            const dataAnalysis: any = resAnalysis.ok ? await resAnalysis.json() : {};
 
             if (dataDetailed.error) throw new Error(dataDetailed.error);
 
@@ -708,6 +751,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setWatchlist(prev => prev.filter(w => w.id !== id));
     };
 
+    const migrateCurrency = async (originalTicker: string, newTicker: string, conversionDate: string, newUsdCostBasis: number, shares: number, accountId: string) => {
+        try {
+            const response = await fetch('/api/portfolio/migrate-currency', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ originalTicker, newTicker, conversionDate, newUsdCostBasis, shares, accountId })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.transactions) {
+                    // Update transactions directly. recalculateAssets will be called in the next effect or we can force it
+                    setTransactions(prev => {
+                        const updated = [...prev, ...data.transactions];
+                        recalculateAssets(updated);
+                        return updated;
+                    });
+                }
+            } else {
+                throw new Error('Migration failed');
+            }
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    };
+
     const refreshWatchlist = useCallback(async (force: boolean = false) => {
         // Only refresh if forced, or if data is older than 60 minutes
         const ONE_HOURMs = 60 * 60 * 1000;
@@ -733,7 +802,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 const dataDetailed = resDetailed.ok ? await resDetailed.json() : {};
                 const dataQuote = resQuote.ok ? await resQuote.json() : {};
-                const dataAnalysis = resAnalysis.ok ? await resAnalysis.json() : {};
+                const dataAnalysis: any = resAnalysis.ok ? await resAnalysis.json() : {};
 
                 if (!dataQuote.error || !dataDetailed.error) {
                     newWatchlistDataMap.set(ticker, {
@@ -845,6 +914,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addToWatchlist,
             removeFromWatchlist,
             refreshWatchlist,
+            migrateCurrency,
             acbAccounts,
             acbTransactions,
             addAcbAccount,
@@ -865,7 +935,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateMonthlyExpense,
             deleteMonthlyExpense,
             preferences,
-            updatePreferences: (updates) => setPreferences(prev => ({ ...prev, ...updates }))
+            updatePreferences: (updates) => setPreferences(prev => ({ ...prev, ...updates })),
+            exchangeRate
         }}>
             {children}
         </DataContext.Provider>

@@ -661,7 +661,7 @@ const TaxOptimizer: React.FC = () => {
                       })
                       .reduce((sum, t) => sum + (t.amount || 0), 0);
                       
-                    const totalAssetValue = assets.filter(a => a.accountId === selectedAccountId).reduce((sum, a) => sum + a.marketValue, 0);
+                    const totalAssetValue = assets.filter(a => a.accountId === selectedAccountId).reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
                     const totalValue = totalAssetValue + selectedAcc.cashBalance;
                     
                     const remainingTarget = Math.max(0, contribution - ytdDeposits);

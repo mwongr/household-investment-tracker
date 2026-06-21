@@ -160,7 +160,7 @@ const NetWorth = () => {
             ['Name', 'Type', 'Assets Market Value', 'Cash Balance', 'Total'],
             ...filteredAccounts.map(acc => {
                 const accAssets = filteredAssets.filter(a => a.accountId === acc.id);
-                const accAssetsTotal = accAssets.reduce((sum, a) => sum + (a.marketValue || 0), 0);
+                const accAssetsTotal = accAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
                 return [acc.name, acc.type, accAssetsTotal, acc.cashBalance, accAssetsTotal + acc.cashBalance];
             }),
             [],
@@ -207,7 +207,7 @@ const NetWorth = () => {
     const filteredExpenses = monthlyExpenses; // Always show all expenses for the household
 
     // Computations
-    const investmentMarketValue = filteredAssets.reduce((sum, a) => sum + (a.marketValue || 0), 0);
+    const investmentMarketValue = filteredAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
     const investmentCash = filteredAccounts.reduce((sum, a) => sum + (a.cashBalance || 0), 0);
     const bankCash = filteredBanks.reduce((sum, b) => sum + (b.balance || 0), 0);
 
@@ -477,7 +477,7 @@ const NetWorth = () => {
                                         )}
                                         {filteredAccounts.map(acc => {
                                             const accAssets = filteredAssets.filter(a => a.accountId === acc.id);
-                                            const accAssetsTotal = accAssets.reduce((sum, a) => sum + (a.marketValue || 0), 0);
+                                            const accAssetsTotal = accAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
                                             const total = accAssetsTotal + acc.cashBalance;
                                             return (
                                                 <tr key={acc.id} className="hover:bg-slate-800/30 transition-colors">

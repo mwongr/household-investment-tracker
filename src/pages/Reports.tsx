@@ -108,7 +108,7 @@ const Reports = () => {
             const accountAssets = assets.filter(a => a.accountId === account.id && a.quantity > 0);
             
             const totalInvested = accountAssets.reduce((sum, a) => sum + (a.customBookCost ?? a.totalCost), 0);
-            const totalValue = accountAssets.reduce((sum, a) => sum + a.marketValue, 0);
+            const totalValue = accountAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
             const totalProfit = totalValue - totalInvested;
             
             return {

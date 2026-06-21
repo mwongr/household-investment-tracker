@@ -8,7 +8,7 @@ const Navbar = () => {
     const { assets, accounts, preferences } = useData();
     const { theme, toggleTheme } = useTheme();
 
-    const totalPortfolioValue = assets.reduce((sum, a) => sum + (a.marketValue || 0), 0)
+    const totalPortfolioValue = assets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
         + accounts.reduce((sum, a) => sum + (a.cashBalance || 0), 0);
 
     const navItems = [

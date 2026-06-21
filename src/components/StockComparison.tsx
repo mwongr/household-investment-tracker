@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ReferenceLine,
+  CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts';
 import { Plus, X, TrendingUp, TrendingDown, BarChart2, AlertCircle, Loader2 } from 'lucide-react';
 import type { CompareRange, CompareApiResponse } from '../types';

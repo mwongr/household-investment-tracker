@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, TrendingUp, RefreshCw, X, Pencil, Trash2, Save, RotateCcw, Calculator, Wallet } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Plus, TrendingUp, RefreshCw, X, Pencil, Trash2, Save, RotateCcw, Calculator, Wallet, ArrowRightLeft } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
 import type { Transaction, TransactionType } from '../types';
@@ -9,16 +9,17 @@ import '../styles/shared.css';
 import PortfolioBalancer from '../components/PortfolioBalancer';
 import AverageDownCalc from '../components/AverageDownCalc';
 import StockDetails from '../components/StockDetails';
+import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
     const { accounts, getAssetsByAccount, addTransaction, updateTransaction, deleteTransaction, transactions, refreshPrices, refreshAsset, updateAssetCustomBookCost } = useData();
     const account = accounts.find(a => a.id === id);
     const assets = getAssetsByAccount(id || '');
 
     const [isAdding, setIsAdding] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'assets' | 'transactions'>('assets');
     const [editingTxId, setEditingTxId] = useState<string | null>(null);
     const [selectedYear, setSelectedYear] = useState<number | 'All'>(new Date().getFullYear());
@@ -176,7 +177,7 @@ const AccountDetails = () => {
     };
 
     // Calculations
-    const totalValue = assets.reduce((sum, asset) => sum + asset.marketValue, 0);
+    const totalValue = assets.reduce((sum, asset) => sum + (asset.cadMarketValue || asset.marketValue || 0), 0);
     const totalCost = assets.reduce((sum, asset) => {
         const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
         return sum + effectiveBookCost;
@@ -250,7 +251,7 @@ const AccountDetails = () => {
                         <span>Cash Balance: ${account.cashBalance.toLocaleString()}</span>
                     </div>
                 </div>
-                <div>
+                <div className="flex gap-2">
                     <button
                         onClick={handleRefresh}
                         disabled={isRefreshing}
@@ -258,6 +259,14 @@ const AccountDetails = () => {
                     >
                         <RotateCcw size={18} className="text-white" />
                         {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
+                    </button>
+                    <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors border border-slate-600"
+                        title="Migrate CAD asset to USD"
+                    >
+                        <ArrowRightLeft size={18} />
+                        Migrate Currency
                     </button>
                 </div>
             </div>
@@ -517,7 +526,10 @@ const AccountDetails = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
                                         {/* 1. Stock Symbol/Shares */}
                                         <div>
-                                            <h3 className="text-2xl font-bold text-white leading-none">{asset.ticker}</h3>
+                                            <h3 className="text-2xl font-bold text-white leading-none flex items-center gap-2">
+                                                {asset.ticker}
+                                                {asset.currency === 'USD' && <span title="USD Asset" className="text-sm">🇺🇸</span>}
+                                            </h3>
                                             <p className="text-sm text-slate-300 font-medium mt-1">{asset.quantity.toLocaleString()} shares</p>
                                             <div className="mt-2 flex items-center gap-1 flex-wrap">
                                                 {asset.goldenCross ? (
@@ -1059,6 +1071,11 @@ const AccountDetails = () => {
                         <span className="font-semibold">Loading research...</span>
                     </div>
                 </div>
+            )}
+            {showMigrationModal && (
+                <CurrencyMigrationModal
+                    onClose={() => setShowMigrationModal(false)}
+                />
             )}
         </div>
     );
