@@ -43,7 +43,7 @@ function performBackup() {
         }
 
         const timestamp = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
-        const filename = `backup_${timestamp}.json`;
+        const filename = `investment-tracker-backup-${timestamp}.json`;
         const destPath = path.join(backupDir, filename);
 
         fs.copyFileSync(DB_PATH, destPath);
