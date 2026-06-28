@@ -21,6 +21,8 @@ const CurrencyMigrationModal: React.FC<Props> = ({ onClose, defaultAssetId }) =>
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsManualPrice, setNeedsManualPrice] = useState(false);
+  const [manualClosePrice, setManualClosePrice] = useState('');
 
   const selectedAsset = useMemo(() => activeAssets.find(a => a.id === selectedAssetId), [activeAssets, selectedAssetId]);
   
@@ -53,10 +55,14 @@ const CurrencyMigrationModal: React.FC<Props> = ({ onClose, defaultAssetId }) =>
         conversionDate,
         parseFloat(newUsdCostBasis),
         parseFloat(shares),
-        selectedAsset.accountId
+        selectedAsset.accountId,
+        needsManualPrice && manualClosePrice ? parseFloat(manualClosePrice) : undefined
       );
       onClose();
     } catch (err: any) {
+      if (err.requiresManualPrice) {
+        setNeedsManualPrice(true);
+      }
       setError(err.message || "Failed to migrate currency.");
     } finally {
       setIsSubmitting(false);
@@ -172,6 +178,30 @@ const CurrencyMigrationModal: React.FC<Props> = ({ onClose, defaultAssetId }) =>
                 <p className="text-xs text-slate-500 mt-1.5">Total cost basis, not per-share.</p>
               </div>
             </div>
+            
+            {needsManualPrice && (
+              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl mt-4">
+                <label className="block text-sm font-medium text-blue-300 mb-1.5">Original Close Price (CAD)</label>
+                <p className="text-xs text-slate-400 mb-3">
+                  Historical data could not be fetched for this date automatically. Please provide the closing price of the original asset in CAD on the conversion date.
+                </p>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-slate-500">$</span>
+                  </div>
+                  <input 
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={manualClosePrice}
+                    onChange={e => setManualClosePrice(e.target.value)}
+                    placeholder="e.g. 15.50"
+                    className="w-full bg-slate-800 border border-blue-500/30 rounded-lg pl-8 pr-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
           </form>
         </div>

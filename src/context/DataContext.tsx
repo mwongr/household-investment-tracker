@@ -45,7 +45,7 @@ interface DataContextType {
     removeFromWatchlist: (id: string) => void;
     refreshWatchlist: (force: boolean) => Promise<void>;
 
-    migrateCurrency: (originalTicker: string, newTicker: string, conversionDate: string, newUsdCostBasis: number, shares: number, accountId: string) => Promise<void>;
+    migrateCurrency: (originalTicker: string, newTicker: string, conversionDate: string, newUsdCostBasis: number, shares: number, accountId: string, manualClosePrice?: number) => Promise<void>;
 
     // ACB Tracking
     acbAccounts: AcbAccount[];
@@ -751,12 +751,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setWatchlist(prev => prev.filter(w => w.id !== id));
     };
 
-    const migrateCurrency = async (originalTicker: string, newTicker: string, conversionDate: string, newUsdCostBasis: number, shares: number, accountId: string) => {
+    const migrateCurrency = async (originalTicker: string, newTicker: string, conversionDate: string, newUsdCostBasis: number, shares: number, accountId: string, manualClosePrice?: number) => {
         try {
             const response = await fetch('/api/portfolio/migrate-currency', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ originalTicker, newTicker, conversionDate, newUsdCostBasis, shares, accountId })
+                body: JSON.stringify({ originalTicker, newTicker, conversionDate, newUsdCostBasis, shares, accountId, manualClosePrice })
             });
             if (response.ok) {
                 const data = await response.json();
@@ -769,7 +769,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     });
                 }
             } else {
-                throw new Error('Migration failed');
+                const errorData = await response.json();
+                const error = new Error(errorData.error || 'Migration failed');
+                if (errorData.requiresManualPrice) {
+                    (error as any).requiresManualPrice = true;
+                }
+                throw error;
             }
         } catch (error) {
             console.error(error);

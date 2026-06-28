@@ -64,40 +64,48 @@ app.get('/api/exchange-rate', async (req, res) => {
 
 app.post('/api/portfolio/migrate-currency', async (req, res) => {
     try {
-        const { originalTicker, newTicker, conversionDate, newUsdCostBasis, shares, accountId } = req.body;
+        const { originalTicker, newTicker, conversionDate, newUsdCostBasis, shares, accountId, manualClosePrice } = req.body;
 
         if (!originalTicker || !newTicker || !conversionDate || !newUsdCostBasis || !shares || !accountId) {
             return res.status(400).json({ error: 'Missing required parameters' });
         }
 
-        // 1. Fetch historical close price for originalTicker on conversionDate
-        // period2 must be at least 1 day after period1 for yahoo-finance2
-        // We fetch 7 days prior to ensure we catch the last trading day if conversionDate is a weekend/holiday.
         const targetDate = new Date(conversionDate);
-        const period1 = new Date(targetDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const period2 = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
-        
         let closePrice = 0;
-        try {
-            const hist = await yahooFinance.chart(originalTicker, {
-                period1: period1,
-                period2: period2,
-                interval: '1d'
-            });
-            if (hist && hist.quotes && hist.quotes.length > 0) {
-                // Find the closest quote on or before the conversionDate
-                const validQuotes = hist.quotes.filter(q => new Date(q.date) <= targetDate);
-                if (validQuotes.length > 0) {
-                    closePrice = validQuotes[validQuotes.length - 1].close;
+
+        if (manualClosePrice !== undefined && manualClosePrice !== null && manualClosePrice !== "") {
+            closePrice = Number(manualClosePrice);
+        } else {
+            // 1. Fetch historical close price for originalTicker on conversionDate
+            // period2 must be at least 1 day after period1 for yahoo-finance2
+            // We fetch 7 days prior to ensure we catch the last trading day if conversionDate is a weekend/holiday.
+            const period1 = new Date(targetDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const period2 = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+            
+            try {
+                const hist = await yahooFinance.chart(originalTicker, {
+                    period1: period1,
+                    period2: period2,
+                    interval: '1d'
+                });
+                if (hist && hist.quotes && hist.quotes.length > 0) {
+                    // Find the closest quote on or before the conversionDate
+                    const validQuotes = hist.quotes.filter(q => new Date(q.date) <= targetDate);
+                    if (validQuotes.length > 0) {
+                        closePrice = validQuotes[validQuotes.length - 1].close;
+                    } else {
+                        throw new Error('No historical data found for that date');
+                    }
                 } else {
                     throw new Error('No historical data found for that date');
                 }
-            } else {
-                throw new Error('No historical data found for that date');
+            } catch (e) {
+                console.error('Failed to fetch historical price for migration:', e);
+                return res.status(500).json({ 
+                    error: 'Failed to fetch historical closing price for the conversion date. Please provide the closing price manually.',
+                    requiresManualPrice: true
+                });
             }
-        } catch (e) {
-            console.error('Failed to fetch historical price for migration:', e);
-            return res.status(500).json({ error: 'Failed to fetch historical closing price for the conversion date.' });
         }
 
         // 2. Create the Sell transaction for the original asset
