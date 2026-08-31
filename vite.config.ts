@@ -10,8 +10,12 @@ export default defineConfig({
     include: ['es-toolkit', 'recharts']
   },
   server: {
+    port: 5847,
     proxy: {
       '/api': 'http://localhost:3001'
     }
+  },
+  preview: {
+    port: 5847
   }
 })

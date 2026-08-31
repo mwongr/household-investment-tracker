@@ -82,7 +82,7 @@ Open a terminal in the project directory and run:
 ```bash
 npm run dev
 ```
-Access the application at `http://localhost:5173`.
+Access the application at `http://localhost:5847`.
 
 ## 💾 Backup & Data Management
 
