@@ -29,21 +29,38 @@
 /* ─── KPI Cards Row ────────────────────────────────────────── */
 .tax-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1.65fr 1fr 1fr 1fr;
   gap: 1rem;
   margin: 1.5rem 0;
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .tax-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .tax-kpi-card.tax-kpi-hero {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .tax-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tax-kpi-card {
-  background: rgba(var(--color-slate-800), 0.8);
+  background: rgb(var(--color-slate-800) / 0.85);
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem 1.35rem;
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  transition: border-color 0.2s ease, transform 0.15s ease;
+  justify-content: space-between;
+  gap: 0.35rem;
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -57,14 +74,172 @@
   pointer-events: none;
 }
 
+.tax-kpi-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--kpi-gradient, transparent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
 .tax-kpi-card:hover {
   transform: translateY(-2px);
   border-color: var(--color-border);
 }
 
+/* Featured Estimated Refund Hero Card */
+.tax-kpi-card.tax-kpi-hero {
+  background: linear-gradient(135deg, rgb(var(--color-slate-800) / 0.95), rgb(var(--color-slate-900) / 0.9));
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  padding: 1.35rem 1.5rem;
+  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tax-kpi-card.tax-kpi-hero::before {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(99, 102, 241, 0.26));
+  opacity: 0.45;
+}
+
+.tax-kpi-card.tax-kpi-hero::after {
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #6366f1, #a855f7);
+  opacity: 1;
+}
+
+.tax-kpi-card.tax-kpi-hero:hover {
+  border-color: rgba(129, 140, 248, 0.7);
+  box-shadow: 0 14px 34px -10px rgba(99, 102, 241, 0.42);
+}
+
+.tax-kpi-hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.tax-kpi-hero-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.tax-kpi-hero-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 0.55rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(99, 102, 241, 0.24));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #34d399;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.light .tax-kpi-hero-icon {
+  color: #059669;
+}
+
+.tax-net-cost-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgb(var(--color-slate-900) / 0.55);
+  border: 1px solid var(--glass-border);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-net-cost-pill strong {
+  color: var(--color-text-primary);
+}
+
+.tax-kpi-hero-value {
+  font-size: 2.35rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  margin: 0.35rem 0 0.55rem;
+  color: #34d399;
+  position: relative;
+  z-index: 1;
+}
+
+.light .tax-kpi-hero-value {
+  color: #059669;
+}
+
+.tax-refund-breakdown {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tax-refund-bar {
+  height: 6px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  background: rgb(var(--color-slate-700) / 0.5);
+}
+
+.tax-refund-bar-cra {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  transition: width 0.25s ease;
+}
+
+.tax-refund-bar-rq {
+  background: linear-gradient(90deg, #8b5cf6, #a855f7);
+  transition: width 0.25s ease;
+}
+
+.tax-refund-pills {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tax-refund-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-refund-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tax-kpi-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .tax-kpi-label {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.74rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
@@ -100,7 +275,7 @@
 
 /* ─── Panel / Card Base ────────────────────────────────────── */
 .tax-panel {
-  background: rgba(var(--color-slate-800), 0.7);
+  background: rgb(var(--color-slate-800) / 0.75);
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
   backdrop-filter: blur(12px);
@@ -157,7 +332,7 @@
 }
 
 .tax-input {
-  background: rgba(var(--color-slate-900), 0.8);
+  background: rgb(var(--color-slate-900) / 0.8);
   border: 1px solid var(--glass-border);
   border-radius: 0.5rem;
   color: var(--color-text-primary);
@@ -174,69 +349,361 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-/* ─── Slider ───────────────────────────────────────────────── */
-.tax-slider-wrapper {
+/* ─── Slider Control Card ──────────────────────────────────── */
+.tax-slider-card {
   margin-top: 1.25rem;
+  padding: 1rem 1.125rem;
+  background: rgb(var(--color-slate-900) / 0.55);
+  border: 1px solid rgb(var(--color-slate-700) / 0.8);
+  border-radius: 0.875rem;
 }
 
-.tax-slider-labels {
+.tax-slider-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.tax-slider-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tax-slider-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tax-slider-subtitle {
   font-size: 0.72rem;
   color: var(--color-text-muted);
-  margin-bottom: 0.35rem;
+}
+
+.tax-slider-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 150px;
+}
+
+.tax-slider-currency {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #818cf8;
+  pointer-events: none;
+}
+
+.tax-slider-input {
+  padding-left: 1.65rem;
+  padding-right: 0.75rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.tax-slider-track-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
 }
 
 .tax-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 6px;
+  height: 10px;
   border-radius: 999px;
   background: linear-gradient(
     to right,
     #6366f1 0%,
-    #6366f1 var(--slider-pct, 50%),
-    rgba(var(--color-slate-500), 0.3) var(--slider-pct, 50%),
-    rgba(var(--color-slate-500), 0.3) 100%
+    #8b5cf6 var(--slider-pct, 50%),
+    rgb(var(--color-slate-600) / 0.55) var(--slider-pct, 50%),
+    rgb(var(--color-slate-600) / 0.55) 100%
   );
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   outline: none;
-  transition: background 0.1s ease;
+  position: relative;
+  z-index: 2;
+  transition: box-shadow 0.15s ease;
+}
+
+.tax-slider:focus-visible {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(99, 102, 241, 0.28);
+}
+
+.tax-slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .tax-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #6366f1;
-  border: 3px solid rgb(var(--color-slate-900));
-  box-shadow: 0 0 0 2px #6366f1, 0 2px 8px rgba(99, 102, 241, 0.5);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: #ffffff;
+  border: 4px solid #6366f1;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .tax-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 3px #6366f1, 0 2px 12px rgba(99, 102, 241, 0.6);
+  transform: scale(1.14);
+  border-color: #818cf8;
+  box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.22), 0 3px 14px rgba(99, 102, 241, 0.65);
+}
+
+.tax-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.18);
+  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.3), 0 4px 16px rgba(99, 102, 241, 0.7);
+}
+
+.tax-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgb(var(--color-slate-600) / 0.55);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.tax-slider::-moz-range-progress {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
 }
 
 .tax-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #6366f1;
-  border: 3px solid rgb(var(--color-slate-900));
-  cursor: pointer;
+  background: #ffffff;
+  border: 4px solid #6366f1;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.tax-slider-value {
-  text-align: center;
-  font-size: 1.1rem;
-  font-weight: 700;
+.tax-slider-sweetspot-tick {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.8);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tax-slider-scale {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-slider-pct-badge {
+  font-weight: 600;
   color: #818cf8;
-  margin-top: 0.5rem;
+}
+
+.light .tax-slider-pct-badge {
+  color: #4f46e5;
+}
+
+.tax-slider-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.tax-preset-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: rgb(var(--color-slate-800) / 0.85);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tax-preset-btn:hover:not(:disabled) {
+  border-color: rgba(99, 102, 241, 0.5);
+  color: var(--color-text-primary);
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.tax-preset-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
+.light .tax-preset-btn.active {
+  color: #4338ca;
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.tax-preset-btn.sweetspot {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.light .tax-preset-btn.sweetspot {
+  color: #059669;
+}
+
+.tax-preset-btn.sweetspot:hover:not(:disabled),
+.tax-preset-btn.sweetspot.active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+/* ─── Extra Cash / Funding Schedule ────────────────────────── */
+.tax-schedule-card {
+  margin-top: 1.25rem;
+  background: rgb(var(--color-slate-800) / 0.55);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.tax-schedule-header {
+  padding: 0.75rem 1rem;
+  background: var(--table-row-hover);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tax-extra-cash-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgb(var(--color-slate-900) / 0.35);
+  flex-wrap: wrap;
+}
+
+.tax-extra-cash-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.tax-extra-cash-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tax-extra-cash-hint {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.tax-extra-cash-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tax-extra-cash-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 135px;
+}
+
+.tax-extra-cash-currency {
+  position: absolute;
+  left: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #34d399;
+  pointer-events: none;
+}
+
+.light .tax-extra-cash-currency {
+  color: #059669;
+}
+
+.tax-extra-cash-input {
+  padding: 0.38rem 0.65rem 0.38rem 1.45rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-extra-cash-input.has-value {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.tax-extra-cash-clear {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.25rem;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.tax-extra-cash-clear:hover {
+  color: var(--color-text-primary);
+  background: var(--table-row-hover);
+}
+
+.tax-schedule-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem 0;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -454,7 +921,7 @@
 .milestone-bracket-drop {
   margin-top: 0.875rem;
   padding: 0.6rem 0.875rem;
-  background: rgba(var(--color-slate-900), 0.5);
+  background: rgb(var(--color-slate-900) / 0.5);
   border-radius: 0.5rem;
   font-size: 0.78rem;
   color: var(--color-text-secondary);
