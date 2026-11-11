@@ -1,256 +1,480 @@
 import { useState, useRef, type ChangeEvent } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Check, Settings as SettingsIcon, Folder, Users, Building, Plus, Save, X, Pencil, Sun, Moon, Monitor, ToggleRight, TrendingUp, Calculator, Percent } from 'lucide-react';
+import {
+    Download,
+    Upload,
+    Trash2,
+    AlertTriangle,
+    Check,
+    Settings as SettingsIcon,
+    Folder,
+    Users,
+    Building2,
+    Plus,
+    Save,
+    X,
+    Pencil,
+    Sun,
+    Moon,
+    Monitor,
+    ToggleRight,
+    TrendingUp,
+    Calculator,
+    Percent,
+    ShieldAlert,
+    Database,
+    Tag,
+} from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
-import type { Member, Institution } from '../types';
 import '../styles/shared.css';
 
-// ─── Section Shell ─────────────────────────────────────────────────────────────
+// ─── Reusable Entity Manager Card (Members / Institutions) ────────────────────
 
-const SectionHeader = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
-    <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-700/50">
-        <div className="p-3 bg-slate-700/60 rounded-xl">{icon}</div>
-        <div>
-            <h2 className="text-xl font-bold text-white">{title}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{description}</p>
-        </div>
-    </div>
-);
+interface EntityItem {
+    id: string;
+    name: string;
+}
 
-// ─── Members Sub-Section ──────────────────────────────────────────────────────
+interface EntityManagerCardProps {
+    icon: React.ReactNode;
+    iconTone: string;
+    title: string;
+    description: string;
+    itemLabel: string;
+    placeholder: string;
+    items: EntityItem[];
+    getUsageCount: (id: string) => number;
+    onAdd: (name: string) => void;
+    onUpdate: (id: string, name: string) => void;
+    onDelete: (id: string) => void;
+}
 
-const MembersSection = () => {
-    const { members, addMember, updateMember, deleteMember } = useData();
-    const [isAdding, setIsAdding]   = useState(false);
+const EntityManagerCard: React.FC<EntityManagerCardProps> = ({
+    icon,
+    iconTone,
+    title,
+    description,
+    itemLabel,
+    placeholder,
+    items,
+    getUsageCount,
+    onAdd,
+    onUpdate,
+    onDelete,
+}) => {
+    const [isAdding, setIsAdding] = useState(false);
+    const [newName, setNewName] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [newName, setNewName]     = useState('');
+    const [editName, setEditName] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleAddSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName.trim()) return;
-        if (editingId) {
-            updateMember(editingId, newName.trim());
-        } else {
-            addMember(newName.trim());
-        }
-        reset();
-    };
-
-    const startEdit = (m: Member) => {
-        setEditingId(m.id);
-        setIsAdding(true);
-        setNewName(m.name);
-    };
-
-    const reset = () => {
-        setIsAdding(false);
-        setEditingId(null);
+        const trimmed = newName.trim();
+        if (!trimmed) return;
+        onAdd(trimmed);
         setNewName('');
+        setIsAdding(false);
+    };
+
+    const startEdit = (item: EntityItem) => {
+        setIsAdding(false);
+        setEditingId(item.id);
+        setEditName(item.name);
+    };
+
+    const saveEdit = (id: string) => {
+        const trimmed = editName.trim();
+        if (!trimmed) return;
+        onUpdate(id, trimmed);
+        setEditingId(null);
+        setEditName('');
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditName('');
+    };
+
+    const handleDelete = (item: EntityItem) => {
+        const count = getUsageCount(item.id);
+        const msg =
+            count > 0
+                ? `Delete "${item.name}"? It is currently linked to ${count} account${count === 1 ? '' : 's'}.`
+                : `Delete "${item.name}"?`;
+        if (window.confirm(msg)) {
+            if (editingId === item.id) cancelEdit();
+            onDelete(item.id);
+        }
     };
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                    <Users size={16} className="text-blue-400" /> Members
-                </h3>
+        <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2.5 rounded-xl border shrink-0 ${iconTone}`}>{icon}</div>
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-white tracking-tight truncate">{title}</h2>
+                            <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                                {items.length}
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-300 truncate">{description}</p>
+                    </div>
+                </div>
                 {!isAdding && (
-                    <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
-                        <Plus size={15} /> Add Member
+                    <button
+                        type="button"
+                        onClick={() => {
+                            cancelEdit();
+                            setNewName('');
+                            setIsAdding(true);
+                        }}
+                        style={{ color: '#ffffff' }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold shadow-sm transition-colors shrink-0"
+                    >
+                        <Plus size={14} /> Add {itemLabel}
                     </button>
                 )}
             </div>
 
-            {isAdding && (
-                <form onSubmit={handleSubmit} className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 mb-4 flex gap-3 items-center">
-                    <input
-                        type="text"
-                        placeholder="Member name..."
-                        className="input flex-1 max-w-xs"
-                        value={newName}
-                        onChange={e => setNewName(e.target.value)}
-                        autoFocus
-                    />
-                    <button type="submit" className="btn btn-primary"><Save size={15} /> {editingId ? 'Update' : 'Save'}</button>
-                    <button type="button" className="btn btn-secondary" onClick={reset}><X size={15} /> Cancel</button>
-                </form>
-            )}
+            {/* Body */}
+            <div className="p-5 flex-1 flex flex-col gap-4">
+                {isAdding && (
+                    <form
+                        onSubmit={handleAddSubmit}
+                        className="bg-slate-900/75 p-3.5 rounded-xl border border-blue-500/40 flex flex-wrap sm:flex-nowrap gap-2.5 items-center"
+                    >
+                        <input
+                            type="text"
+                            placeholder={placeholder}
+                            className="flex-1 min-w-[160px] bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                            value={newName}
+                            onChange={e => setNewName(e.target.value)}
+                            autoFocus
+                        />
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="submit"
+                                style={{ color: '#ffffff' }}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold transition-colors"
+                            >
+                                <Save size={14} /> Save
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsAdding(false);
+                                    setNewName('');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold transition-colors"
+                            >
+                                <X size={14} /> Cancel
+                            </button>
+                        </div>
+                    </form>
+                )}
 
-            {members.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-6">No members yet.</p>
-            ) : (
-                <div className="table-container">
-                    <table className="data-table">
-                        <thead><tr><th>Name</th><th className="text-right">Actions</th></tr></thead>
-                        <tbody>
-                            {members.map(m => (
-                                <tr key={m.id}>
-                                    <td className="font-medium text-white">{m.name}</td>
-                                    <td className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button className="btn btn-secondary" onClick={() => startEdit(m)} title="Edit"><Pencil size={14} /></button>
-                                            <button className="btn btn-danger" onClick={() => deleteMember(m.id)} title="Delete"><Trash2 size={14} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    );
-};
+                {items.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-8 px-4 bg-slate-900/50 border border-dashed border-slate-700 rounded-xl text-center">
+                        <p className="text-slate-300 text-sm font-medium">No {title.toLowerCase()} added yet.</p>
+                        <p className="text-slate-400 text-xs mt-1">
+                            Click &ldquo;Add {itemLabel}&rdquo; above to create one.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="bg-slate-900/50 border border-slate-700/80 rounded-xl divide-y divide-slate-700/60 overflow-hidden">
+                        {items.map(item => {
+                            const accountCount = getUsageCount(item.id);
+                            const isRowEditing = editingId === item.id;
 
-// ─── Institutions Sub-Section ─────────────────────────────────────────────────
-
-const InstitutionsSection = () => {
-    const { institutions, addInstitution, updateInstitution, deleteInstitution } = useData();
-    const [isAdding, setIsAdding]   = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [newName, setNewName]     = useState('');
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newName.trim()) return;
-        if (editingId) {
-            updateInstitution(editingId, newName.trim());
-        } else {
-            addInstitution(newName.trim());
-        }
-        reset();
-    };
-
-    const startEdit = (inst: Institution) => {
-        setEditingId(inst.id);
-        setIsAdding(true);
-        setNewName(inst.name);
-    };
-
-    const reset = () => {
-        setIsAdding(false);
-        setEditingId(null);
-        setNewName('');
-    };
-
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                    <Building size={16} className="text-blue-400" /> Institutions
-                </h3>
-                {!isAdding && (
-                    <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
-                        <Plus size={15} /> Add Institution
-                    </button>
+                            return (
+                                <div
+                                    key={item.id}
+                                    className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-800/60 transition-colors"
+                                >
+                                    {isRowEditing ? (
+                                        <>
+                                            <input
+                                                type="text"
+                                                value={editName}
+                                                onChange={e => setEditName(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        saveEdit(item.id);
+                                                    } else if (e.key === 'Escape') {
+                                                        e.preventDefault();
+                                                        cancelEdit();
+                                                    }
+                                                }}
+                                                placeholder={placeholder}
+                                                className="flex-1 min-w-0 bg-slate-800 border border-blue-500 text-white placeholder-slate-400 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                autoFocus
+                                            />
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => saveEdit(item.id)}
+                                                    className="p-1.5 bg-green-500/15 border border-green-500/35 hover:bg-green-500/25 text-green-400 rounded-lg transition-colors"
+                                                    title="Save changes"
+                                                    aria-label={`Save ${item.name}`}
+                                                >
+                                                    <Check size={15} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={cancelEdit}
+                                                    className="p-1.5 bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white rounded-lg transition-colors"
+                                                    title="Cancel editing"
+                                                    aria-label="Cancel editing"
+                                                >
+                                                    <X size={15} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <span className="font-semibold text-sm text-white truncate">
+                                                    {item.name}
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-slate-800 border border-slate-700 text-slate-300 shrink-0">
+                                                    {accountCount} {accountCount === 1 ? 'account' : 'accounts'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => startEdit(item)}
+                                                    className="p-1.5 bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white rounded-lg transition-colors"
+                                                    title={`Edit ${item.name}`}
+                                                    aria-label={`Edit ${item.name}`}
+                                                >
+                                                    <Pencil size={14} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(item)}
+                                                    className="p-1.5 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 text-red-400 rounded-lg transition-colors"
+                                                    title={`Delete ${item.name}`}
+                                                    aria-label={`Delete ${item.name}`}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
-
-            {isAdding && (
-                <form onSubmit={handleSubmit} className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 mb-4 flex gap-3 items-center">
-                    <input
-                        type="text"
-                        placeholder="e.g. Questrade, TD..."
-                        className="input flex-1 max-w-xs"
-                        value={newName}
-                        onChange={e => setNewName(e.target.value)}
-                        autoFocus
-                    />
-                    <button type="submit" className="btn btn-primary"><Save size={15} /> {editingId ? 'Update' : 'Save'}</button>
-                    <button type="button" className="btn btn-secondary" onClick={reset}><X size={15} /> Cancel</button>
-                </form>
-            )}
-
-            {institutions.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-6">No institutions yet.</p>
-            ) : (
-                <div className="table-container">
-                    <table className="data-table">
-                        <thead><tr><th>Name</th><th className="text-right">Actions</th></tr></thead>
-                        <tbody>
-                            {institutions.map(inst => (
-                                <tr key={inst.id}>
-                                    <td className="font-medium text-white flex items-center gap-2">
-                                        <Building size={14} className="text-slate-400" /> {inst.name}
-                                    </td>
-                                    <td className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button className="btn btn-secondary" onClick={() => startEdit(inst)} title="Edit"><Pencil size={14} /></button>
-                                            <button className="btn btn-danger" onClick={() => deleteInstitution(inst.id)} title="Delete"><Trash2 size={14} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+        </section>
     );
 };
 
-// ─── Features Sub-Section ─────────────────────────────────────────────────────
+// ─── Features Card ────────────────────────────────────────────────────────────
 
-const FeaturesSection = () => {
+const FeaturesCard = () => {
     const { preferences, updatePreferences } = useData();
 
-    const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
-        <button
-            onClick={onChange}
-            className={`w-12 h-6 rounded-full flex items-center transition-colors p-1 ${enabled ? 'bg-blue-500' : 'bg-slate-700'}`}
-        >
-            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-0'}`} />
-        </button>
-    );
+    const modules = [
+        {
+            key: 'enableNetWorth' as const,
+            title: 'Net Worth Tracker',
+            description: 'Track external bank cash, liabilities, and living expenses',
+            icon: <TrendingUp size={18} />,
+            tone: 'bg-blue-500/15 border-blue-500/35 text-blue-400',
+            enabled: preferences.enableNetWorth,
+        },
+        {
+            key: 'enableTaxOptimizer' as const,
+            title: 'Tax Optimizer',
+            description: 'Model RRSP contributions and marginal tax bracket refunds',
+            icon: <Percent size={18} />,
+            tone: 'bg-green-500/15 border-green-500/35 text-green-400',
+            enabled: preferences.enableTaxOptimizer,
+        },
+        {
+            key: 'enableAcbTracker' as const,
+            title: 'ACB Tracker',
+            description: 'Track Adjusted Cost Base and capital gains for non-registered accounts',
+            icon: <Calculator size={18} />,
+            tone: 'bg-amber-500/15 border-amber-500/35 text-amber-400',
+            enabled: preferences.enableAcbTracker,
+        },
+    ];
 
     return (
-        <div>
-            <SectionHeader
-                icon={<ToggleRight size={22} className="text-purple-400" />}
-                title="Features & Modules"
-                description="Enable or disable specific tracking modules to reduce clutter."
-            />
-            <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><TrendingUp size={20} /></div>
-                        <div>
-                            <h3 className="font-semibold text-white">Net Worth Tracker</h3>
-                            <p className="text-xs text-slate-400">Track external assets and liabilities</p>
-                        </div>
-                    </div>
-                    <Toggle enabled={preferences.enableNetWorth} onChange={() => updatePreferences({ enableNetWorth: !preferences.enableNetWorth })} />
+        <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-purple-500/15 border border-purple-500/35 text-purple-400 shrink-0">
+                    <ToggleRight size={20} />
                 </div>
-                <div className="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-green-500/10 text-green-400 rounded-lg"><Percent size={20} /></div>
-                        <div>
-                            <h3 className="font-semibold text-white">Tax Optimizer</h3>
-                            <p className="text-xs text-slate-400">Plan RRSP/FHSA contributions</p>
-                        </div>
-                    </div>
-                    <Toggle enabled={preferences.enableTaxOptimizer} onChange={() => updatePreferences({ enableTaxOptimizer: !preferences.enableTaxOptimizer })} />
-                </div>
-                <div className="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Calculator size={20} /></div>
-                        <div>
-                            <h3 className="font-semibold text-white">ACB Tracker</h3>
-                            <p className="text-xs text-slate-400">Track Adjusted Cost Base for taxes</p>
-                        </div>
-                    </div>
-                    <Toggle enabled={preferences.enableAcbTracker} onChange={() => updatePreferences({ enableAcbTracker: !preferences.enableAcbTracker })} />
+                <div>
+                    <h2 className="text-lg font-bold text-white tracking-tight">Features &amp; Modules</h2>
+                    <p className="text-xs text-slate-300">Show or hide optional pages in the navigation bar</p>
                 </div>
             </div>
-        </div>
+
+            <div className="p-5 space-y-3 flex-1">
+                {modules.map(mod => (
+                    <div
+                        key={mod.key}
+                        onClick={() => updatePreferences({ [mod.key]: !mod.enabled })}
+                        className="flex items-center justify-between gap-4 p-4 bg-slate-900/65 hover:bg-slate-900/90 rounded-xl border border-slate-700/80 cursor-pointer transition-colors"
+                    >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                            <div className={`p-2 rounded-xl border shrink-0 ${mod.tone}`}>{mod.icon}</div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-sm text-white">{mod.title}</h3>
+                                    <span
+                                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                                            mod.enabled
+                                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                : 'bg-slate-800 border-slate-700 text-slate-400'
+                                        }`}
+                                    >
+                                        {mod.enabled ? 'Active' : 'Hidden'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-300 mt-0.5">{mod.description}</p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={mod.enabled}
+                            aria-label={`Toggle ${mod.title}`}
+                            onClick={e => {
+                                e.stopPropagation();
+                                updatePreferences({ [mod.key]: !mod.enabled });
+                            }}
+                            className={`w-12 h-6 rounded-full flex items-center transition-colors p-1 shrink-0 border ${
+                                mod.enabled
+                                    ? 'bg-blue-600 border-blue-500'
+                                    : 'bg-slate-700 border-slate-600'
+                            }`}
+                        >
+                            <span
+                                className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                                    mod.enabled ? 'translate-x-6' : 'translate-x-0'
+                                }`}
+                            />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+};
+
+// ─── Appearance Card ──────────────────────────────────────────────────────────
+
+const AppearanceCard = () => {
+    const { theme, setTheme } = useTheme();
+
+    const options = [
+        {
+            value: 'dark' as const,
+            title: 'Dark Mode',
+            description: 'Deep slate background optimized for low-light viewing',
+            icon: <Moon size={18} />,
+        },
+        {
+            value: 'light' as const,
+            title: 'Light Mode',
+            description: 'Crisp high-contrast daylight palette',
+            icon: <Sun size={18} />,
+        },
+    ];
+
+    return (
+        <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400 shrink-0">
+                    <Monitor size={20} />
+                </div>
+                <div>
+                    <h2 className="text-lg font-bold text-white tracking-tight">Appearance</h2>
+                    <p className="text-xs text-slate-300">Select your preferred interface colour theme</p>
+                </div>
+            </div>
+
+            <div className="p-5 space-y-3 flex-1" role="radiogroup" aria-label="Color theme">
+                {options.map(opt => {
+                    const isSelected = theme === opt.value;
+                    return (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            onClick={() => setTheme(opt.value)}
+                            className={`w-full text-left flex items-center justify-between gap-4 p-4 rounded-xl border transition-colors ${
+                                isSelected
+                                    ? 'bg-blue-500/15 border-blue-500/60'
+                                    : 'bg-slate-900/65 hover:bg-slate-900/90 border-slate-700/80'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3.5 min-w-0">
+                                <div
+                                    className={`p-2 rounded-xl border shrink-0 ${
+                                        isSelected
+                                            ? 'bg-blue-500/15 border-blue-500/40 text-blue-400'
+                                            : 'bg-slate-800 border-slate-700 text-slate-300'
+                                    }`}
+                                >
+                                    {opt.icon}
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-sm text-white">{opt.title}</h3>
+                                    <p className="text-xs text-slate-300 mt-0.5">{opt.description}</p>
+                                </div>
+                            </div>
+
+                            {/* Radio indicator */}
+                            <span
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                    isSelected ? 'border-blue-500' : 'border-slate-500'
+                                }`}
+                            >
+                                {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </section>
     );
 };
 
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 
 const Settings = () => {
-    const { backupPath, setBackupPath } = useData();
-    const { theme, setTheme } = useTheme();
+    const {
+        members,
+        institutions,
+        accountTypes,
+        accounts,
+        addMember,
+        updateMember,
+        deleteMember,
+        addInstitution,
+        updateInstitution,
+        deleteInstitution,
+        addAccountType,
+        updateAccountType,
+        deleteAccountType,
+        backupPath,
+        setBackupPath,
+    } = useData();
+    const { theme } = useTheme();
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const STORAGE_KEY = 'wealth-tracker-storage';
@@ -258,10 +482,13 @@ const Settings = () => {
     const handleExport = () => {
         try {
             const data = localStorage.getItem(STORAGE_KEY);
-            if (!data) { setImportStatus({ type: 'error', message: 'No data found to export.' }); return; }
+            if (!data) {
+                setImportStatus({ type: 'error', message: 'No data found to export.' });
+                return;
+            }
             const blob = new Blob([data], { type: 'application/json' });
-            const url  = URL.createObjectURL(blob);
-            const a    = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
             a.href = url;
             a.download = `investment-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(a);
@@ -269,27 +496,33 @@ const Settings = () => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             setImportStatus({ type: 'success', message: 'Backup exported successfully.' });
-        } catch { setImportStatus({ type: 'error', message: 'Failed to export data.' }); }
+        } catch {
+            setImportStatus({ type: 'error', message: 'Failed to export data.' });
+        }
     };
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = ev => {
             try {
                 const content = ev.target?.result as string;
                 if (!content) throw new Error('Empty file');
                 const parsed = JSON.parse(content);
-                if (!parsed.members || !parsed.accounts || !parsed.transactions) throw new Error('Invalid backup format.');
+                if (!parsed.members || !parsed.accounts || !parsed.transactions) {
+                    throw new Error('Invalid backup format.');
+                }
                 if (window.confirm('Restore this backup? Current data will be REPLACED.')) {
                     localStorage.setItem(STORAGE_KEY, content);
                     setImportStatus({ type: 'success', message: 'Data restored. Reloading...' });
                     setTimeout(() => window.location.reload(), 1500);
-                } else {
-                    if (fileInputRef.current) fileInputRef.current.value = '';
+                } else if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
                 }
-            } catch { setImportStatus({ type: 'error', message: 'Invalid JSON or corrupted backup.' }); }
+            } catch {
+                setImportStatus({ type: 'error', message: 'Invalid JSON or corrupted backup.' });
+            }
         };
         reader.readAsText(file);
     };
@@ -305,137 +538,220 @@ const Settings = () => {
     };
 
     return (
-        <div>
-            <div className="flex items-center gap-3 mb-8">
-                <SettingsIcon size={30} className="text-slate-400" />
-                <h1 className="text-3xl font-bold text-white">Settings</h1>
+        <div className="space-y-6 pb-12">
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-blue-500/15 rounded-2xl border border-blue-500/35 text-blue-400 shadow-sm">
+                        <SettingsIcon size={24} />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Settings</h1>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                            Configure household members, financial institutions, enabled modules, theme &amp; backups
+                        </p>
+                    </div>
+                </div>
+
+                {/* Quick Summary Pills */}
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
+                        {members.length} {members.length === 1 ? 'Member' : 'Members'}
+                    </span>
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
+                        {institutions.length} {institutions.length === 1 ? 'Institution' : 'Institutions'}
+                    </span>
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
+                        {accountTypes.length} {accountTypes.length === 1 ? 'Type' : 'Types'}
+                    </span>
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
+                        {accounts.length} {accounts.length === 1 ? 'Account' : 'Accounts'}
+                    </span>
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-blue-400 capitalize">
+                        {theme} Theme
+                    </span>
+                </div>
             </div>
 
-            <div className="max-w-4xl space-y-16 pb-12">
-
-                {/* ── Status Banner ── */}
-                {importStatus && (
-                    <div className={`p-4 rounded-xl flex items-center gap-3 ${importStatus.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+            {/* Status Banner */}
+            {importStatus && (
+                <div
+                    className={`p-4 rounded-xl flex items-center justify-between gap-3 border ${
+                        importStatus.type === 'success'
+                            ? 'bg-green-500/15 text-green-400 border-green-500/35'
+                            : 'bg-red-500/15 text-red-400 border-red-500/35'
+                    }`}
+                >
+                    <div className="flex items-center gap-2.5 text-sm font-semibold">
                         {importStatus.type === 'success' ? <Check size={18} /> : <AlertTriangle size={18} />}
-                        {importStatus.message}
+                        <span>{importStatus.message}</span>
                     </div>
-                )}
+                    <button
+                        onClick={() => setImportStatus(null)}
+                        className="p-1 rounded-lg hover:bg-slate-800/60 transition-colors"
+                        aria-label="Dismiss message"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
 
-                {/* ── Section 1: Members ── */}
-                <section>
-                    <SectionHeader
-                        icon={<Users size={22} className="text-blue-400" />}
-                        title="Household Members"
-                        description="Manage individuals in your household."
-                    />
-                    <MembersSection />
-                </section>
+            {/* Row 1: Household Members, Financial Institutions & Account Types */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <EntityManagerCard
+                    icon={<Users size={20} />}
+                    iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
+                    title="Household Members"
+                    description="Individuals linked to accounts & tax views"
+                    itemLabel="Member"
+                    placeholder="Enter member name..."
+                    items={members}
+                    getUsageCount={id => accounts.filter(a => a.memberId === id).length}
+                    onAdd={addMember}
+                    onUpdate={updateMember}
+                    onDelete={deleteMember}
+                />
 
-                {/* ── Section 2: Institutions ── */}
-                <section>
-                    <SectionHeader
-                        icon={<Building size={22} className="text-emerald-400" />}
-                        title="Financial Institutions"
-                        description="Manage banks and brokerages."
-                    />
-                    <InstitutionsSection />
-                </section>
+                <EntityManagerCard
+                    icon={<Building2 size={20} />}
+                    iconTone="bg-green-500/15 border-green-500/35 text-green-400"
+                    title="Financial Institutions"
+                    description="Brokerages and banks holding your accounts"
+                    itemLabel="Institution"
+                    placeholder="e.g. Questrade, Wealthsimple, TD..."
+                    items={institutions}
+                    getUsageCount={id => accounts.filter(a => a.institutionId === id).length}
+                    onAdd={addInstitution}
+                    onUpdate={updateInstitution}
+                    onDelete={deleteInstitution}
+                />
 
-                {/* ── Section 3: Features ── */}
-                <section>
-                    <FeaturesSection />
-                </section>
+                <EntityManagerCard
+                    icon={<Tag size={20} />}
+                    iconTone="bg-purple-500/15 border-purple-500/35 text-purple-400"
+                    title="Account Types"
+                    description="Account classifications (TFSA, RRSP, FHSA, etc.)"
+                    itemLabel="Type"
+                    placeholder="e.g. FHSA, RESP, Non-Registered..."
+                    items={accountTypes.map(t => ({ id: t, name: t }))}
+                    getUsageCount={name => accounts.filter(a => a.type === name).length}
+                    onAdd={addAccountType}
+                    onUpdate={updateAccountType}
+                    onDelete={deleteAccountType}
+                />
+            </div>
 
-                {/* ── Section 4: Appearance ── */}
-                <section>
-                    <SectionHeader
-                        icon={<Monitor size={22} className="text-blue-400" />}
-                        title="Appearance"
-                        description="Choose your preferred colour theme for the application."
-                    />
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => setTheme('dark')}
-                            className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 transition-all ${
-                                theme === 'dark'
-                                    ? 'border-blue-500 bg-blue-500/10'
-                                    : 'border-slate-700/50 hover:border-slate-600'
-                            }`}
-                        >
-                            <Moon size={18} className={theme === 'dark' ? 'text-blue-400' : 'text-slate-400'} />
-                            <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-400'}`}>Dark Mode</span>
-                        </button>
-                        <button
-                            onClick={() => setTheme('light')}
-                            className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 transition-all ${
-                                theme === 'light'
-                                    ? 'border-blue-500 bg-blue-500/10'
-                                    : 'border-slate-700/50 hover:border-slate-600'
-                            }`}
-                        >
-                            <Sun size={18} className={theme === 'light' ? 'text-blue-400' : 'text-slate-400'} />
-                            <span className={`font-semibold ${theme === 'light' ? 'text-white' : 'text-slate-400'}`}>Light Mode</span>
-                        </button>
+            {/* Row 2: Features & Appearance */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <FeaturesCard />
+                <AppearanceCard />
+            </div>
+
+            {/* Row 3: Data Management & Danger Zone */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Data Management */}
+                <section className="lg:col-span-2 bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                    <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400 shrink-0">
+                            <Database size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-white tracking-tight">Data Management &amp; Backups</h2>
+                            <p className="text-xs text-slate-300">
+                                Export JSON snapshots, restore from a file, or configure the script backup path
+                            </p>
+                        </div>
                     </div>
-                </section>
 
-                {/* ── Section 5: Data Management ── */}
-                <section>
-                    <SectionHeader
-                        icon={<Folder size={22} className="text-slate-400" />}
-                        title="Data Management"
-                        description="Export, restore, and manage your application data."
-                    />
-                    <div className="divide-y divide-slate-700/50 border border-slate-700/50 rounded-xl p-6 bg-slate-900/20">
-                        {/* Backup */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 first:pt-0">
-                            <div>
-                                <h3 className="font-semibold text-white">Backup Data</h3>
-                                <p className="text-slate-400 text-sm mt-0.5">Download a complete JSON copy of all your financial data.</p>
+                    <div className="p-5 space-y-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="bg-slate-900/65 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between gap-4">
+                                <div>
+                                    <h3 className="font-bold text-sm text-white">Backup Data</h3>
+                                    <p className="text-xs text-slate-300 mt-1">
+                                        Download a complete JSON copy of all members, accounts, transactions, and settings.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleExport}
+                                    style={{ color: '#ffffff' }}
+                                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold shadow-sm transition-colors"
+                                >
+                                    <Download size={15} /> Export Backup (.json)
+                                </button>
                             </div>
-                            <button onClick={handleExport} className="btn btn-primary whitespace-nowrap">
-                                <Download size={16} /> Export Backup
-                            </button>
+
+                            <div className="bg-slate-900/65 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between gap-4">
+                                <div>
+                                    <h3 className="font-bold text-sm text-white">Restore Data</h3>
+                                    <p className="text-xs text-slate-300 mt-1">
+                                        Upload a previously exported backup.{' '}
+                                        <span className="text-amber-400 font-semibold">Replaces all current data.</span>
+                                    </p>
+                                </div>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    accept=".json"
+                                    className="hidden"
+                                />
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
+                                >
+                                    <Upload size={15} /> Import Backup (.json)
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Restore */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
-                            <div>
-                                <h3 className="font-semibold text-white">Restore Data</h3>
-                                <p className="text-slate-400 text-sm mt-0.5">Upload a previously exported backup. <span className="text-amber-400 font-medium">Replaces all current data.</span></p>
+                        <div className="bg-slate-900/65 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Folder size={15} className="text-blue-400" />
+                                <h3 className="font-bold text-sm text-white">Automated Backup Location</h3>
                             </div>
-                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
-                            <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary whitespace-nowrap">
-                                <Upload size={16} /> Import Backup
-                            </button>
-                        </div>
-
-                        {/* Auto Backup Path */}
-                        <div className="py-4">
-                            <h3 className="font-semibold text-white">Automated Backup Location</h3>
-                            <p className="text-slate-400 text-sm mt-0.5 mb-3">Folder path the startup script uses to save automatic backups.</p>
+                            <p className="text-xs text-slate-300">
+                                Folder path used by <code className="font-mono text-blue-400">Start App.bat</code> when saving automatic backups.
+                            </p>
                             <input
                                 type="text"
                                 value={backupPath}
                                 onChange={e => setBackupPath(e.target.value)}
                                 placeholder="e.g. D:\Backups"
-                                className="input w-full max-w-md"
+                                className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2 text-sm font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                             />
-                        </div>
-
-                        {/* Danger Zone */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4">
-                            <div>
-                                <h3 className="font-semibold text-white">Reset All Data</h3>
-                                <p className="text-slate-400 text-sm mt-0.5">Permanently delete all data and reset to factory defaults.</p>
-                            </div>
-                            <button onClick={handleReset} className="btn btn-danger whitespace-nowrap">
-                                <Trash2 size={16} /> Reset All Data
-                            </button>
                         </div>
                     </div>
                 </section>
 
+                {/* Danger Zone */}
+                <section className="bg-slate-800/95 border border-red-500/35 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                    <div className="px-5 py-4 bg-red-500/10 border-b border-red-500/30 flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/35 text-red-400 shrink-0">
+                            <ShieldAlert size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-red-400 tracking-tight">Danger Zone</h2>
+                            <p className="text-xs text-slate-300">Irreversible destructive actions</p>
+                        </div>
+                    </div>
+
+                    <div className="p-5 flex-1 flex flex-col justify-between gap-5">
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-sm text-white">Reset All Data</h3>
+                            <p className="text-xs text-slate-300 leading-relaxed">
+                                Permanently deletes all members, accounts, transactions, watchlists, and preferences from local storage and restores factory defaults.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={handleReset}
+                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-400 rounded-xl text-xs font-bold transition-colors"
+                        >
+                            <Trash2 size={15} /> Reset All Data
+                        </button>
+                    </div>
+                </section>
             </div>
         </div>
     );

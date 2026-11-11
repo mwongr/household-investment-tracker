@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
-import { TrendingUp, TrendingDown, Minus, RefreshCw, AlertCircle } from 'lucide-react';
+import { createChart, CandlestickSeries, LineSeries, type UTCTimestamp } from 'lightweight-charts';
+import { TrendingUp, TrendingDown, Minus, RefreshCw, AlertCircle, Activity } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import type { AnalysisData } from '../types';
 
 interface StockAnalysisCardProps {
@@ -27,47 +28,57 @@ const RsiGauge = ({ rsi }: { rsi: number | null | undefined }) => {
         : 'text-blue-400';
 
     return (
-        <div className="space-y-2">
+        <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 space-y-3 h-full flex flex-col justify-between">
             <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">RSI (14)</span>
-                <span className={`text-2xl font-bold font-mono ${labelColor}`}>
+                <div>
+                    <span className="text-xs text-slate-300 uppercase font-bold tracking-wider">RSI (14)</span>
+                    <p className="text-xs text-slate-400 mt-0.5">Relative Strength Index</p>
+                </div>
+                <span className={`text-2xl font-bold font-mono tabular-nums ${labelColor}`}>
                     {(rsi ?? 0).toFixed(1)}
                 </span>
             </div>
 
-            {/* Track */}
-            <div className="relative h-3 bg-slate-700 rounded-full overflow-hidden">
-                {/* Zone markers */}
-                <div className="absolute top-0 left-[30%] w-px h-full bg-slate-500/50" />
-                <div className="absolute top-0 left-[70%] w-px h-full bg-slate-500/50" />
-                {/* Fill */}
-                <div
-                    className={`absolute top-0 left-0 h-full rounded-full bg-gradient-to-r ${trackColor} transition-all duration-700`}
-                    style={{ width: `${pct}%` }}
-                />
-                {/* Thumb */}
-                <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg border-2 border-slate-800 transition-all duration-700"
-                    style={{ left: `calc(${pct}% - 6px)` }}
-                />
+            <div className="space-y-2">
+                {/* Track */}
+                <div className="relative h-3.5 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
+                    {/* Zone markers */}
+                    <div className="absolute top-0 left-[30%] w-0.5 h-full bg-slate-400/50 z-10" />
+                    <div className="absolute top-0 left-[70%] w-0.5 h-full bg-slate-400/50 z-10" />
+                    {/* Fill */}
+                    <div
+                        className={`absolute top-0 left-0 h-full rounded-full bg-gradient-to-r ${trackColor} transition-all duration-700`}
+                        style={{ width: `${pct}%` }}
+                    />
+                    {/* Thumb */}
+                    <div
+                        className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md border-2 border-slate-900 transition-all duration-700 z-20"
+                        style={{ left: `calc(${pct}% - 7px)` }}
+                    />
+                </div>
+
+                <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-green-400">Oversold &lt;30</span>
+                    <span className="text-slate-300">Neutral (30–70)</span>
+                    <span className="text-red-400">&gt;70 Overbought</span>
+                </div>
             </div>
 
-            <div className="flex justify-between text-[10px] text-slate-500 font-medium">
-                <span className="text-green-500">Oversold &lt;30</span>
-                <span>Neutral</span>
-                <span className="text-red-500">&gt;70 Overbought</span>
+            <div className="pt-1">
+                {isOversold ? (
+                    <p className="text-xs text-green-400 font-semibold bg-green-500/15 border border-green-500/30 rounded-lg py-1.5 px-3 text-center">
+                        Potentially oversold — possible bounce zone
+                    </p>
+                ) : isOverbought ? (
+                    <p className="text-xs text-red-400 font-semibold bg-red-500/15 border border-red-500/30 rounded-lg py-1.5 px-3 text-center">
+                        Potentially overbought — possible pullback zone
+                    </p>
+                ) : (
+                    <p className="text-xs text-slate-300 font-medium bg-slate-800/80 border border-slate-700/80 rounded-lg py-1.5 px-3 text-center">
+                        Momentum in neutral territory
+                    </p>
+                )}
             </div>
-
-            {isOversold && (
-                <p className="text-[11px] text-green-400/80 text-center font-medium">
-                    📉 Potentially oversold — possible bounce zone
-                </p>
-            )}
-            {isOverbought && (
-                <p className="text-[11px] text-red-400/80 text-center font-medium">
-                    📈 Potentially overbought — possible pullback zone
-                </p>
-            )}
         </div>
     );
 };
@@ -83,11 +94,11 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
 
     if (goldenCross) {
         return (
-            <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-500/10 border border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-                <TrendingUp className="text-blue-400" size={22} />
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-blue-500/15 border border-blue-500/45 shadow-sm">
+                <TrendingUp className="text-blue-400 shrink-0" size={20} />
                 <div>
-                    <div className="text-blue-300 font-bold text-sm uppercase tracking-widest">Golden Cross</div>
-                    <div className="text-blue-400/70 text-xs">EMA 50 crossed above EMA 200</div>
+                    <div className="text-blue-400 font-bold text-xs uppercase tracking-widest">Golden Cross</div>
+                    <div className="text-slate-300 text-xs">EMA 50 crossed above EMA 200</div>
                 </div>
             </div>
         );
@@ -95,12 +106,12 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
 
     if (isOversold || signal === 'buy') {
         return (
-            <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-green-500/10 border border-green-500/40 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
-                <TrendingUp className="text-green-400" size={22} />
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-green-500/15 border border-green-500/45 shadow-sm">
+                <TrendingUp className="text-green-400 shrink-0" size={20} />
                 <div>
-                    <div className="text-green-300 font-bold text-sm uppercase tracking-widest">Buy Signal</div>
-                    <div className="text-green-400/70 text-xs">
-                        {isOversold ? 'RSI is oversold' : 'Bullish momentum detected'}
+                    <div className="text-green-400 font-bold text-xs uppercase tracking-widest">Buy Signal</div>
+                    <div className="text-slate-300 text-xs">
+                        {isOversold ? 'RSI is oversold (<30)' : 'Bullish momentum detected'}
                     </div>
                 </div>
             </div>
@@ -109,12 +120,12 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
 
     if (isOverbought || signal === 'sell') {
         return (
-            <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-red-500/10 border border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-                <TrendingDown className="text-red-400" size={22} />
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-red-500/15 border border-red-500/45 shadow-sm">
+                <TrendingDown className="text-red-400 shrink-0" size={20} />
                 <div>
-                    <div className="text-red-300 font-bold text-sm uppercase tracking-widest">Sell Signal</div>
-                    <div className="text-red-400/70 text-xs">
-                        {isOverbought ? 'RSI is overbought' : 'Bearish momentum detected'}
+                    <div className="text-red-400 font-bold text-xs uppercase tracking-widest">Sell Signal</div>
+                    <div className="text-slate-300 text-xs">
+                        {isOverbought ? 'RSI is overbought (>70)' : 'Bearish momentum detected'}
                     </div>
                 </div>
             </div>
@@ -122,11 +133,11 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
     }
 
     return (
-        <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-700/40 border border-slate-600/40">
-            <Minus className="text-slate-400" size={22} />
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700">
+            <Minus className="text-slate-300 shrink-0" size={20} />
             <div>
-                <div className="text-slate-300 font-bold text-sm uppercase tracking-widest">Neutral</div>
-                <div className="text-slate-500 text-xs">No strong signal detected</div>
+                <div className="text-white font-bold text-xs uppercase tracking-widest">Neutral</div>
+                <div className="text-slate-300 text-xs">No strong directional signal</div>
             </div>
         </div>
     );
@@ -141,23 +152,26 @@ const MacdPanel = ({ macd }: { macd: AnalysisData['indicators']['macd'] }) => {
 
     return (
         <div className="space-y-3">
-            <h4 className="text-xs text-slate-400 uppercase font-bold tracking-wider">MACD (12, 26, 9)</h4>
-            <div className="grid grid-cols-3 gap-3">
-                <div className="text-center bg-slate-800/60 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-500 mb-1">MACD Line</div>
-                    <div className={`font-mono font-bold text-sm ${macdLine != null && macdLine >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="flex items-center justify-between">
+                <h4 className="text-xs text-slate-300 uppercase font-bold tracking-wider">MACD (12, 26, 9)</h4>
+                <span className="text-xs text-slate-400">Momentum Oscillator</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-3.5 flex sm:flex-col justify-between items-center sm:text-center gap-1">
+                    <div className="text-xs font-medium text-slate-300">MACD Line</div>
+                    <div className={`font-mono tabular-nums font-bold text-base ${macdLine != null ? (macdLine >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
                         {fmt(macdLine)}
                     </div>
                 </div>
-                <div className="text-center bg-slate-800/60 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-500 mb-1">Signal</div>
-                    <div className={`font-mono font-bold text-sm ${signal != null && signal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-3.5 flex sm:flex-col justify-between items-center sm:text-center gap-1">
+                    <div className="text-xs font-medium text-slate-300">Signal Line</div>
+                    <div className={`font-mono tabular-nums font-bold text-base ${signal != null ? (signal >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
                         {fmt(signal)}
                     </div>
                 </div>
-                <div className="text-center bg-slate-800/60 rounded-lg p-3">
-                    <div className="text-[10px] text-slate-500 mb-1">Histogram</div>
-                    <div className={`font-mono font-bold text-sm ${isPos && histogram != null ? 'text-green-400' : 'text-red-400'}`}>
+                <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-3.5 flex sm:flex-col justify-between items-center sm:text-center gap-1">
+                    <div className="text-xs font-medium text-slate-300">Histogram</div>
+                    <div className={`font-mono tabular-nums font-bold text-base ${histogram != null ? (isPos ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
                         {fmt(histogram)}
                     </div>
                 </div>
@@ -186,24 +200,26 @@ const TargetLevels = ({ targets, currentPrice }: {
     const sellDist = distPct(targets.suggestedSellPrice);
     const fibDist  = distPct(targets.fibEntry);
 
-    // BB bandwidth as % of middle, for the width bar
     const bbWidth = (targets.bollingerUpper != null && targets.bollingerMiddle != null && targets.suggestedBuyPrice != null)
         ? ((targets.bollingerUpper - targets.suggestedBuyPrice) / targets.bollingerMiddle) * 100
         : null;
 
     return (
         <div className="space-y-4">
-            <h4 className="text-xs text-slate-400 uppercase font-bold tracking-wider">Price Targets</h4>
+            <div className="flex items-center justify-between">
+                <h4 className="text-xs text-slate-300 uppercase font-bold tracking-wider">Price Targets &amp; Bands</h4>
+                <span className="text-xs text-slate-400">Bollinger &amp; Fibonacci</span>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 {/* Buy Zone */}
-                <div className="bg-green-500/5 border border-green-500/20 rounded-xl p-4 space-y-1">
-                    <div className="text-[10px] text-green-500/70 uppercase font-bold tracking-wider">Buy Zone</div>
-                    <div className="text-green-400 font-mono font-bold text-xl">{fmt(targets.suggestedBuyPrice)}</div>
-                    <div className="text-[10px] text-slate-500">Lower Bollinger Band</div>
+                <div className="bg-green-500/10 border border-green-500/35 rounded-xl p-4 space-y-1.5">
+                    <div className="text-xs text-green-400 uppercase font-bold tracking-wider">Buy Zone</div>
+                    <div className="text-green-400 font-mono tabular-nums font-bold text-2xl">{fmt(targets.suggestedBuyPrice)}</div>
+                    <div className="text-xs text-slate-300">Lower Bollinger Band</div>
                     {buyDist && (
-                        <div className={`text-[11px] font-semibold mt-1 ${
-                            buyDist.includes('above') ? 'text-green-400/70' : 'text-amber-400'
+                        <div className={`text-xs font-semibold pt-1 ${
+                            buyDist.includes('above') ? 'text-green-400' : 'text-amber-400'
                         }`}>
                             Currently {buyDist}
                         </div>
@@ -211,13 +227,13 @@ const TargetLevels = ({ targets, currentPrice }: {
                 </div>
 
                 {/* Sell Zone */}
-                <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 space-y-1">
-                    <div className="text-[10px] text-red-500/70 uppercase font-bold tracking-wider">Sell Zone</div>
-                    <div className="text-red-400 font-mono font-bold text-xl">{fmt(targets.suggestedSellPrice)}</div>
-                    <div className="text-[10px] text-slate-500">Upper Bollinger Band</div>
+                <div className="bg-red-500/10 border border-red-500/35 rounded-xl p-4 space-y-1.5">
+                    <div className="text-xs text-red-400 uppercase font-bold tracking-wider">Sell Zone</div>
+                    <div className="text-red-400 font-mono tabular-nums font-bold text-2xl">{fmt(targets.suggestedSellPrice)}</div>
+                    <div className="text-xs text-slate-300">Upper Bollinger Band</div>
                     {sellDist && (
-                        <div className={`text-[11px] font-semibold mt-1 ${
-                            sellDist.includes('below') ? 'text-red-400/70' : 'text-amber-400'
+                        <div className={`text-xs font-semibold pt-1 ${
+                            sellDist.includes('below') ? 'text-red-400' : 'text-amber-400'
                         }`}>
                             Currently {sellDist}
                         </div>
@@ -225,14 +241,12 @@ const TargetLevels = ({ targets, currentPrice }: {
                 </div>
 
                 {/* Fibonacci Entry */}
-                <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-4 space-y-1">
-                    <div className="text-[10px] text-indigo-400/70 uppercase font-bold tracking-wider">Fib 61.8% Entry</div>
-                    <div className="text-indigo-400 font-mono font-bold text-xl">{fmt(targets.fibEntry)}</div>
-                    <div className="text-[10px] text-slate-500">52W High → Low retracement</div>
+                <div className="bg-indigo-500/10 border border-indigo-500/35 rounded-xl p-4 space-y-1.5">
+                    <div className="text-xs text-indigo-400 uppercase font-bold tracking-wider">Fib 61.8% Entry</div>
+                    <div className="text-indigo-400 font-mono tabular-nums font-bold text-2xl">{fmt(targets.fibEntry)}</div>
+                    <div className="text-xs text-slate-300">52W High → Low retracement</div>
                     {fibDist && (
-                        <div className={`text-[11px] font-semibold mt-1 ${
-                            fibDist.includes('below') ? 'text-indigo-400/70' : 'text-slate-400'
-                        }`}>
+                        <div className="text-xs font-semibold text-indigo-400 pt-1">
                             Currently {fibDist}
                         </div>
                     )}
@@ -241,13 +255,22 @@ const TargetLevels = ({ targets, currentPrice }: {
 
             {/* 52W range bar with BB bands overlaid */}
             {targets.high52w != null && targets.low52w != null && (
-                <div className="space-y-1.5">
-                    <div className="flex justify-between text-[10px] text-slate-500 font-medium">
-                        <span>52W Low: <span className="text-white font-mono">{fmt(targets.low52w)}</span></span>
-                        <span>52W High: <span className="text-white font-mono">{fmt(targets.high52w)}</span></span>
+                <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 space-y-2.5">
+                    <div className="flex flex-wrap justify-between items-center gap-2 text-xs font-medium">
+                        <span className="text-slate-300">
+                            52W Low: <span className="text-white font-mono tabular-nums font-bold">{fmt(targets.low52w)}</span>
+                        </span>
+                        {bbWidth != null && (
+                            <span className="text-slate-300">
+                                BB Width: <span className="text-white font-mono tabular-nums font-bold">{bbWidth.toFixed(1)}%</span>
+                                <span className="ml-1.5 text-slate-400">({bbWidth > 5 ? 'High volatility' : 'Low volatility / squeeze'})</span>
+                            </span>
+                        )}
+                        <span className="text-slate-300">
+                            52W High: <span className="text-white font-mono tabular-nums font-bold">{fmt(targets.high52w)}</span>
+                        </span>
                     </div>
-                    <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden">
-                        {/* Current price position */}
+                    <div className="relative h-2.5 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
                         {(() => {
                             const range = (targets.high52w ?? 0) - (targets.low52w ?? 0);
                             const pricePct = range > 0 ? ((currentPrice - (targets.low52w ?? 0)) / range) * 100 : 50;
@@ -255,31 +278,24 @@ const TargetLevels = ({ targets, currentPrice }: {
                             const sellPct  = range > 0 && targets.suggestedSellPrice != null ? ((targets.suggestedSellPrice - (targets.low52w ?? 0)) / range) * 100 : null;
                             return (
                                 <>
-                                    {/* BB band fill */}
                                     {buyPct != null && sellPct != null && (
-                                        <div className="absolute top-0 h-full bg-slate-600/50 rounded-full"
-                                            style={{ left: `${Math.max(0, buyPct)}%`, width: `${Math.min(100, sellPct) - Math.max(0, buyPct)}%` }} />
+                                        <div
+                                            className="absolute top-0 h-full bg-blue-500/25 rounded-full"
+                                            style={{ left: `${Math.max(0, buyPct)}%`, width: `${Math.max(0, Math.min(100, sellPct) - Math.max(0, buyPct))}%` }}
+                                        />
                                     )}
-                                    {/* Gradient fill up to current price */}
                                     <div
-                                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500 via-amber-400 to-red-500 opacity-60 rounded-full"
+                                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500 via-amber-400 to-red-500 opacity-85 rounded-full"
                                         style={{ width: `${Math.min(100, Math.max(0, pricePct))}%` }}
                                     />
-                                    {/* Current price pin */}
                                     <div
-                                        className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white shadow border border-slate-800"
-                                        style={{ left: `calc(${Math.min(100, Math.max(0, pricePct))}% - 4px)` }}
+                                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow border-2 border-slate-900"
+                                        style={{ left: `calc(${Math.min(100, Math.max(0, pricePct))}% - 6px)` }}
                                     />
                                 </>
                             );
                         })()}
                     </div>
-                    {bbWidth != null && (
-                        <div className="text-[10px] text-slate-500 text-center">
-                            BB Width: <span className="text-slate-300 font-mono">{bbWidth.toFixed(1)}%</span>
-                            <span className="ml-1 text-slate-600">— {bbWidth > 5 ? 'High volatility' : 'Low volatility / squeeze'}</span>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
@@ -289,23 +305,25 @@ const TargetLevels = ({ targets, currentPrice }: {
 // ─── Lightweight Chart with EMA Overlay ───────────────────────────────────────
 const TaChart = ({ data }: { data: AnalysisData }) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
+    const { theme } = useTheme();
 
     useEffect(() => {
         if (!chartContainerRef.current || !data.ohlcv.length) return;
 
+        const isDark = theme === 'dark';
         const chart = createChart(chartContainerRef.current, {
             layout: {
                 background: { color: 'transparent' },
-                textColor: '#94a3b8',
+                textColor: isDark ? '#cbd5e1' : '#334155',
             },
             grid: {
-                vertLines: { color: 'rgba(51,65,85,0.4)' },
-                horzLines: { color: 'rgba(51,65,85,0.4)' },
+                vertLines: { color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.08)' },
+                horzLines: { color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.08)' },
             },
             crosshair: { mode: 1 },
-            rightPriceScale: { borderColor: 'rgba(51,65,85,0.6)' },
+            rightPriceScale: { borderColor: isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.15)' },
             timeScale: {
-                borderColor: 'rgba(51,65,85,0.6)',
+                borderColor: isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.15)',
                 timeVisible: true,
                 secondsVisible: false,
             },
@@ -313,19 +331,18 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
             height: 340,
         });
 
-        // Candlestick series
         const candleSeries = chart.addSeries(CandlestickSeries, {
-            upColor: '#22c55e',
+            upColor: '#10b981',
             downColor: '#ef4444',
-            borderUpColor: '#22c55e',
+            borderUpColor: '#10b981',
             borderDownColor: '#ef4444',
-            wickUpColor: '#22c55e',
+            wickUpColor: '#10b981',
             wickDownColor: '#ef4444',
         });
 
         candleSeries.setData(
             data.ohlcv.map(bar => ({
-                time: bar.time as any,
+                time: bar.time as UTCTimestamp,
                 open: bar.open,
                 high: bar.high,
                 low: bar.low,
@@ -333,10 +350,9 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
             }))
         );
 
-        // EMA 50 line
         const ema50Series = chart.addSeries(LineSeries, {
-            color: '#f59e0b',
-            lineWidth: 1,
+            color: isDark ? '#f59e0b' : '#d97706',
+            lineWidth: 2,
             title: 'EMA 50',
             priceLineVisible: false,
             lastValueVisible: true,
@@ -344,13 +360,12 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
         ema50Series.setData(
             data.emaSeries
                 .filter(e => e.ema50 != null)
-                .map(e => ({ time: e.time as any, value: e.ema50! }))
+                .map(e => ({ time: e.time as UTCTimestamp, value: e.ema50! }))
         );
 
-        // EMA 200 line
         const ema200Series = chart.addSeries(LineSeries, {
-            color: '#a855f7',
-            lineWidth: 1,
+            color: isDark ? '#a855f7' : '#7c3aed',
+            lineWidth: 2,
             title: 'EMA 200',
             priceLineVisible: false,
             lastValueVisible: true,
@@ -358,7 +373,7 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
         ema200Series.setData(
             data.emaSeries
                 .filter(e => e.ema200 != null)
-                .map(e => ({ time: e.time as any, value: e.ema200! }))
+                .map(e => ({ time: e.time as UTCTimestamp, value: e.ema200! }))
         );
 
         chart.timeScale().fitContent();
@@ -368,25 +383,34 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
                 chart.applyOptions({ width: chartContainerRef.current.clientWidth });
             }
         };
+
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(chartContainerRef.current);
         window.addEventListener('resize', handleResize);
 
         return () => {
+            observer.disconnect();
             window.removeEventListener('resize', handleResize);
             chart.remove();
         };
-    }, [data]);
+    }, [data, theme]);
 
     return (
-        <div className="space-y-2">
-            <div className="flex items-center gap-4 text-xs font-medium">
-                <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-5 h-0.5 bg-amber-400 rounded" />
-                    <span className="text-amber-400">EMA 50</span>
+        <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Candlestick &amp; Moving Averages
                 </span>
-                <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-5 h-0.5 bg-purple-400 rounded" />
-                    <span className="text-purple-400">EMA 200</span>
-                </span>
+                <div className="flex items-center gap-4 text-xs font-semibold">
+                    <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-4 h-0.5 bg-amber-400 rounded" />
+                        <span className="text-amber-400">EMA 50</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-4 h-0.5 bg-purple-400 rounded" />
+                        <span className="text-purple-400">EMA 200</span>
+                    </span>
+                </div>
             </div>
             <div ref={chartContainerRef} className="w-full rounded-lg overflow-hidden" />
         </div>
@@ -410,8 +434,8 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
             }
             const json: AnalysisData = await res.json();
             setData(json);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to load analysis');
         } finally {
             setLoading(false);
         }
@@ -423,88 +447,101 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
     }, [ticker]);
 
     return (
-        <div className="glass-panel p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-bold text-white">Technical Analysis</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Last 250 days · EMA, RSI, MACD</p>
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700/80">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
+                        <Activity size={20} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-white tracking-tight">Technical Analysis</h3>
+                        <p className="text-xs text-slate-300">Last 250 trading days · EMA, RSI, MACD &amp; Bollinger Targets</p>
+                    </div>
                 </div>
-                <button
-                    onClick={fetchAnalysis}
-                    disabled={loading}
-                    className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-                    title="Refresh analysis"
-                >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                </button>
+
+                <div className="flex items-center gap-3">
+                    {!loading && data && (
+                        <SignalBadge
+                            signal={data.signal}
+                            goldenCross={data.indicators.goldenCross}
+                            rsi={data.indicators.rsi}
+                        />
+                    )}
+                    <button
+                        onClick={fetchAnalysis}
+                        disabled={loading}
+                        className="p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+                        title="Refresh analysis"
+                        aria-label="Refresh technical analysis"
+                    >
+                        <RefreshCw size={16} className={loading ? 'animate-spin text-blue-400' : ''} />
+                    </button>
+                </div>
             </div>
 
             {/* Loading */}
             {loading && (
-                <div className="flex items-center justify-center gap-3 py-16 text-slate-400">
-                    <RefreshCw size={20} className="animate-spin" />
-                    <span>Calculating indicators…</span>
+                <div className="flex items-center justify-center gap-3 py-16 text-slate-300 text-sm">
+                    <RefreshCw size={20} className="animate-spin text-blue-400" />
+                    <span>Calculating technical indicators…</span>
                 </div>
             )}
 
             {/* Error */}
             {!loading && error && (
-                <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400">
+                <div className="flex items-center gap-3 bg-red-500/15 border border-red-500/35 rounded-xl p-4 text-red-400">
                     <AlertCircle size={18} className="shrink-0" />
-                    <span className="text-sm">{error}</span>
+                    <span className="text-sm font-medium">{error}</span>
                 </div>
             )}
 
             {/* Content */}
             {!loading && data && (
                 <>
-                    {/* Signal Badge */}
-                    <SignalBadge
-                        signal={data.signal}
-                        goldenCross={data.indicators.goldenCross}
-                        rsi={data.indicators.rsi}
-                    />
-
                     {/* Chart */}
                     <TaChart data={data} />
 
                     {/* EMA Values + RSI */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* EMA Values */}
-                        <div className="space-y-3">
-                            <h4 className="text-xs text-slate-400 uppercase font-bold tracking-wider">Trend (EMA)</h4>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center p-3 bg-slate-800/60 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full bg-amber-400" />
-                                        <span className="text-sm text-slate-300">EMA 50</span>
+                        <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-xs text-slate-300 uppercase font-bold tracking-wider">Trend (EMA)</h4>
+                                <span className="text-xs text-slate-400">50 vs 200 Day</span>
+                            </div>
+                            <div className="space-y-2.5">
+                                <div className="flex justify-between items-center p-3 bg-slate-800/90 border border-slate-700/70 rounded-lg">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="w-3 h-3 rounded-full bg-amber-400 shrink-0" />
+                                        <span className="text-sm font-medium text-slate-200">EMA 50</span>
                                     </div>
-                                    <span className="font-mono font-bold text-white">
+                                    <span className="font-mono tabular-nums font-bold text-white">
                                         {data.indicators.ema50 != null
                                             ? `$${data.indicators.ema50.toFixed(2)}`
                                             : '—'}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-slate-800/60 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full bg-purple-400" />
-                                        <span className="text-sm text-slate-300">EMA 200</span>
+                                <div className="flex justify-between items-center p-3 bg-slate-800/90 border border-slate-700/70 rounded-lg">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="w-3 h-3 rounded-full bg-purple-400 shrink-0" />
+                                        <span className="text-sm font-medium text-slate-200">EMA 200</span>
                                     </div>
-                                    <span className="font-mono font-bold text-white">
+                                    <span className="font-mono tabular-nums font-bold text-white">
                                         {data.indicators.ema200 != null
                                             ? `$${data.indicators.ema200.toFixed(2)}`
                                             : '—'}
                                     </span>
                                 </div>
                                 {data.indicators.ema50 != null && data.indicators.ema200 != null && (
-                                    <div className={`text-xs text-center py-1.5 rounded-lg font-medium ${data.indicators.ema50 > data.indicators.ema200
-                                            ? 'bg-green-500/10 text-green-400'
-                                            : 'bg-red-500/10 text-red-400'
-                                        }`}>
+                                    <div className={`text-xs text-center py-2 px-3 rounded-lg font-semibold border ${
+                                        data.indicators.ema50 > data.indicators.ema200
+                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                            : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                    }`}>
                                         {data.indicators.ema50 > data.indicators.ema200
-                                            ? '✦ Bullish trend (EMA 50 > EMA 200)'
-                                            : '✦ Bearish trend (EMA 50 < EMA 200)'}
+                                            ? 'Bullish trend (EMA 50 > EMA 200)'
+                                            : 'Bearish trend (EMA 50 < EMA 200)'}
                                     </div>
                                 )}
                             </div>
@@ -515,7 +552,9 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
                             {data.indicators.rsi != null ? (
                                 <RsiGauge rsi={data.indicators.rsi} />
                             ) : (
-                                <p className="text-slate-500 text-sm">RSI data unavailable</p>
+                                <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 h-full flex items-center justify-center text-slate-400 text-sm">
+                                    RSI data unavailable
+                                </div>
                             )}
                         </div>
                     </div>
@@ -527,9 +566,9 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
                     <TargetLevels targets={data.priceTargets} currentPrice={data.currentPrice} />
 
                     {/* Footer */}
-                    <p className="text-[10px] text-slate-600 text-right">
+                    <p className="text-xs text-slate-400 text-right pt-2 border-t border-slate-700/60">
                         Fetched {new Date(data.fetchedAt).toLocaleTimeString()} · Cached 30 min ·{' '}
-                        <span className="italic">Not financial advice</span>
+                        <span className="italic">Informational only — not financial advice</span>
                     </p>
                 </>
             )}

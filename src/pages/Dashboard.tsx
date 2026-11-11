@@ -1,16 +1,345 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Users, Wallet, Award, AlertTriangle, ArrowUpDown, Eye, Settings, Pencil, Check, X, RefreshCw, Layers, ArrowRightLeft } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import {
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Tooltip,
+    AreaChart,
+    Area,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+} from 'recharts';
+import {
+    DollarSign,
+    TrendingUp,
+    TrendingDown,
+    Users,
+    Wallet,
+    Award,
+    AlertTriangle,
+    ArrowUpDown,
+    Eye,
+    Pencil,
+    Check,
+    X,
+    RefreshCw,
+    Layers,
+    ArrowRightLeft,
+    LayoutDashboard,
+    Building2,
+} from 'lucide-react';
 import EventsTable from '../components/EventsTable';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
+import type { Asset } from '../types';
 import '../styles/shared.css';
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
+
+type AssetWithMeta = Asset & {
+    accountName: string;
+    memberName: string;
+    percentTo52WeekHigh: number;
+};
+
+interface ChartTheme {
+    tickColor: string;
+    gridColor: string;
+    tooltipStyle: React.CSSProperties;
+    tooltipItemStyle: React.CSSProperties;
+    tooltipLabelStyle: React.CSSProperties;
+    cursorFill: string;
+    cursorStroke: string;
+}
+
+interface PerformerCardProps {
+    title: string;
+    mode: 'positive' | 'negative';
+    badgeMode: 'percent' | 'dollar';
+    asset: AssetWithMeta;
+    gradientId: string;
+    chartTheme: ChartTheme;
+}
+
+const fmt2 = (val: number) =>
+    val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const PerformerCard: React.FC<PerformerCardProps> = ({
+    title,
+    mode,
+    badgeMode,
+    asset,
+    gradientId,
+    chartTheme,
+}) => {
+    const isPosMode = mode === 'positive';
+    const badgeVal = badgeMode === 'percent' ? asset.profitPercent : asset.profit;
+    const isBadgePos = badgeVal >= 0;
+    const strokeColor = isPosMode ? '#10b981' : '#ef4444';
+
+    const footerLabel = badgeMode === 'percent' ? 'Total Profit/Loss' : 'Total Return (%)';
+    const footerVal = badgeMode === 'percent' ? asset.profit : asset.profitPercent;
+    const isFooterPos = footerVal >= 0;
+
+    return (
+        <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-4">
+            <div>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            {isPosMode ? (
+                                <Award size={18} className="text-green-400 shrink-0" />
+                            ) : (
+                                <AlertTriangle size={18} className="text-red-400 shrink-0" />
+                            )}
+                            <h3 className={`text-sm font-bold uppercase tracking-wider ${isPosMode ? 'text-green-400' : 'text-red-400'}`}>
+                                {title}
+                            </h3>
+                        </div>
+                        <h4 className="text-xl sm:text-2xl font-bold text-white truncate">
+                            {asset.name || asset.ticker}
+                        </h4>
+                        <p className="text-slate-300 text-xs sm:text-sm mt-0.5 truncate">
+                            <span className="font-mono font-bold text-white">{asset.ticker}</span> • {asset.accountName} ({asset.memberName})
+                        </p>
+                    </div>
+
+                    <div
+                        className={`px-3 py-1.5 rounded-xl border font-mono tabular-nums font-bold text-base shrink-0 ${
+                            isBadgePos
+                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                : 'bg-red-500/15 border-red-500/35 text-red-400'
+                        }`}
+                    >
+                        {badgeMode === 'percent'
+                            ? `${isBadgePos ? '+' : ''}${badgeVal.toFixed(2)}%`
+                            : `${isBadgePos ? '+' : '-'}$${fmt2(Math.abs(badgeVal))}`}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900/65 border border-slate-700/70 rounded-xl p-3.5">
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">Current Price</p>
+                        <p className="text-sm sm:text-base font-mono tabular-nums font-bold text-white">
+                            ${fmt2(asset.currentPrice)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">Shares</p>
+                        <p className="text-sm sm:text-base font-mono tabular-nums font-bold text-white">
+                            {asset.quantity.toLocaleString()}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">Cost / Share</p>
+                        <p className="text-sm sm:text-base font-mono tabular-nums font-bold text-white">
+                            ${fmt2(asset.averageCost)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">Market Value</p>
+                        <p className="text-sm sm:text-base font-mono tabular-nums font-bold text-white">
+                            ${fmt2(asset.marketValue)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">Book Cost</p>
+                        <p className="text-sm sm:text-base font-mono tabular-nums font-bold text-white">
+                            ${fmt2(asset.customBookCost || asset.totalCost)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">52W Low</p>
+                        <p className="text-sm font-mono tabular-nums font-semibold text-slate-300">
+                            {asset.low52Week ? `$${fmt2(asset.low52Week)}` : '—'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">52W High</p>
+                        <p className="text-sm font-mono tabular-nums font-semibold text-slate-300">
+                            {asset.high52Week ? `$${fmt2(asset.high52Week)}` : '—'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-slate-400 text-xs font-semibold uppercase mb-0.5">% to 52W High</p>
+                        <p
+                            className={`text-sm font-mono tabular-nums font-bold ${
+                                asset.percentTo52WeekHigh >= 0 ? 'text-green-400' : 'text-red-400'
+                            }`}
+                        >
+                            {asset.percentTo52WeekHigh >= 0 ? '+' : ''}
+                            {asset.percentTo52WeekHigh.toFixed(2)}%
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <div className="pt-3 border-t border-slate-700/70 flex justify-between items-center">
+                    <span className="text-slate-300 text-xs font-bold uppercase tracking-wider">{footerLabel}</span>
+                    <span
+                        className={`text-lg font-mono tabular-nums font-bold ${
+                            isFooterPos ? 'text-green-400' : 'text-red-400'
+                        }`}
+                    >
+                        {badgeMode === 'percent'
+                            ? `${isFooterPos ? '+' : '-'}$${fmt2(Math.abs(footerVal))}`
+                            : `${isFooterPos ? '+' : ''}${footerVal.toFixed(2)}%`}
+                    </span>
+                </div>
+
+                {asset.sparkline && asset.sparkline.length > 0 && (
+                    <div className="bg-slate-900/50 border border-slate-700/60 rounded-xl p-2.5">
+                        <p className="text-xs text-slate-300 font-semibold uppercase tracking-wider mb-1 text-right">
+                            1 Year Trend
+                        </p>
+                        <div className="h-20">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={asset.sparkline}>
+                                    <defs>
+                                        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor={strokeColor} stopOpacity={0.32} />
+                                            <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <Tooltip
+                                        contentStyle={chartTheme.tooltipStyle}
+                                        itemStyle={chartTheme.tooltipItemStyle}
+                                        formatter={(value) => [`$${fmt2(Number(value))}`, 'Price']}
+                                        labelStyle={{ display: 'none' }}
+                                        cursor={{ stroke: chartTheme.cursorStroke, strokeWidth: 1 }}
+                                    />
+                                    <YAxis domain={['auto', 'auto']} hide />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="price"
+                                        stroke={strokeColor}
+                                        strokeWidth={2}
+                                        fill={`url(#${gradientId})`}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+interface AllocationDonutCardProps {
+    title: string;
+    icon: React.ReactNode;
+    data: { name: string; value: number }[];
+    centerTotal?: number;
+    chartTheme: ChartTheme;
+}
+
+const AllocationDonutCard: React.FC<AllocationDonutCardProps> = ({
+    title,
+    icon,
+    data,
+    centerTotal,
+    chartTheme,
+}) => (
+    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5 pb-3 border-b border-slate-700/70">
+            {icon}
+            <span>{title}</span>
+        </h3>
+        {data.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-slate-300 text-sm">
+                No allocation data available
+            </div>
+        ) : (
+            <>
+                <div className="flex-1 w-full relative min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={76}
+                                outerRadius={112}
+                                paddingAngle={4}
+                                dataKey="value"
+                                stroke="none"
+                            >
+                                {data.map((_entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(value) => `$${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                                contentStyle={chartTheme.tooltipStyle}
+                                itemStyle={chartTheme.tooltipItemStyle}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                    {centerTotal !== undefined && (
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                            <p className="text-slate-300 text-xs uppercase font-bold tracking-wider">Total</p>
+                            <p className="text-xl font-bold font-mono tabular-nums text-white">
+                                ${centerTotal.toLocaleString(undefined, { notation: 'compact', maximumFractionDigits: 1 })}
+                            </p>
+                        </div>
+                    )}
+                </div>
+                <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 pt-3 border-t border-slate-700/60">
+                    {data.map((entry, index) => (
+                        <div key={entry.name} className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                            <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            />
+                            <span>{entry.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </>
+        )}
+    </div>
+);
 
 const Dashboard = () => {
     const { assets, accounts, members, institutions, refreshPrices, netWorthHistory, lastUpdated, transactions } = useData();
+    const { theme } = useTheme();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
+
+    const isDark = theme === 'dark';
+    const chartTheme: ChartTheme = {
+        tickColor: isDark ? '#94a3b8' : '#475569',
+        gridColor: isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(15, 23, 42, 0.08)',
+        tooltipStyle: {
+            backgroundColor: isDark ? '#0f172a' : '#ffffff',
+            borderColor: isDark ? '#334155' : '#cbd5e1',
+            borderRadius: '0.75rem',
+            color: isDark ? '#f8fafc' : '#0f172a',
+            fontSize: '12px',
+            padding: '8px 12px',
+            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
+        },
+        tooltipItemStyle: {
+            color: isDark ? '#f8fafc' : '#0f172a',
+            fontWeight: 700,
+            fontFamily: 'monospace',
+        },
+        tooltipLabelStyle: {
+            color: isDark ? '#cbd5e1' : '#475569',
+            fontWeight: 600,
+            marginBottom: '2px',
+        },
+        cursorFill: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.06)',
+        cursorStroke: isDark ? '#64748b' : '#94a3b8',
+    };
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -19,54 +348,60 @@ const Dashboard = () => {
     };
 
     // 1. Global Metrics
-    const totalValue = assets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
-        + accounts.reduce((sum, a) => sum + a.cashBalance, 0); // Adding cash
+    const totalValue =
+        assets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+        accounts.reduce((sum, a) => sum + a.cashBalance, 0);
 
-    // Total Cost only for assets
     const totalInvested = assets.reduce((sum, a) => sum + (a.cadTotalCost || a.totalCost || 0), 0);
-    const totalProfit = assets.reduce((sum, a) => sum + ((a.cadMarketValue || a.marketValue || 0) - (a.cadTotalCost || a.totalCost || 0)), 0);
+    const totalProfit = assets.reduce(
+        (sum, a) => sum + ((a.cadMarketValue || a.marketValue || 0) - (a.cadTotalCost || a.totalCost || 0)),
+        0
+    );
     const totalProfitPercent = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
-
-    // Cash Available
     const totalCash = accounts.reduce((sum, a) => sum + a.cashBalance, 0);
 
-    // 2. Breakdown by Person (Pie Chart Data)
-    const allocationByPerson = members.map(member => {
-        const memberAccounts = accounts.filter(a => a.memberId === member.id);
-        const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
-        const value = memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
-            + memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
-        return { name: member.name, value };
-    }).filter(d => d.value > 0);
+    // 2. Breakdowns for Pie Charts
+    const allocationByPerson = members
+        .map(member => {
+            const memberAccounts = accounts.filter(a => a.memberId === member.id);
+            const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
+            const value =
+                memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+                memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+            return { name: member.name, value };
+        })
+        .filter(d => d.value > 0);
 
-    // Allocation by Account Type
     const accountTypes = Array.from(new Set(accounts.map(a => a.type)));
-    const allocationByAccountType = accountTypes.map(type => {
-        const typeAccounts = accounts.filter(a => a.type === type);
-        const typeAssets = assets.filter(a => typeAccounts.find(acc => acc.id === a.accountId));
-        const value = typeAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
-            + typeAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
-        return { name: type, value };
-    }).filter(d => d.value > 0);
+    const allocationByAccountType = accountTypes
+        .map(type => {
+            const typeAccounts = accounts.filter(a => a.type === type);
+            const typeAssets = assets.filter(a => typeAccounts.find(acc => acc.id === a.accountId));
+            const value =
+                typeAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+                typeAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+            return { name: type, value };
+        })
+        .filter(d => d.value > 0);
 
-    // Allocation by Institution
-    const allocationByInstitution = institutions.map(inst => {
-        const instAccounts = accounts.filter(a => a.institutionId === inst.id);
-        const instAssets = assets.filter(a => instAccounts.find(acc => acc.id === a.accountId));
-        const value = instAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
-            + instAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
-        return { name: inst.name, value };
-    }).filter(d => d.value > 0);
+    const allocationByInstitution = institutions
+        .map(inst => {
+            const instAccounts = accounts.filter(a => a.institutionId === inst.id);
+            const instAssets = assets.filter(a => instAccounts.find(acc => acc.id === a.accountId));
+            const value =
+                instAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+                instAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+            return { name: inst.name, value };
+        })
+        .filter(d => d.value > 0);
 
-    // 3. Member Details for individual cards
+    // 3. Member Details
     const currentYear = new Date().getFullYear().toString();
 
     const memberDetails = members.map(member => {
         const memberAccounts = accounts.filter(a => a.memberId === member.id);
         const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
-
         const memberTransactions = transactions.filter(t => memberAccounts.find(acc => acc.id === t.accountId));
-        
         const currentYearTransactions = memberTransactions.filter(t => t.date.startsWith(currentYear));
 
         const depositedThisYear = currentYearTransactions
@@ -85,8 +420,9 @@ const Dashboard = () => {
             })
             .reduce((sum, t) => sum + t.amount, 0);
 
-        const totalWorth = memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0)
-            + memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+        const totalWorth =
+            memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+            memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
         const invested = memberAssets.reduce((sum, a) => sum + a.totalCost, 0);
         const profit = memberAssets.reduce((sum, a) => sum + ((a.cadMarketValue || a.marketValue || 0) - a.totalCost), 0);
         const profitPercent = invested > 0 ? (profit / invested) * 100 : 0;
@@ -102,43 +438,40 @@ const Dashboard = () => {
             cash,
             depositedThisYear,
             withdrawnThisYear,
-            depositedTfsaThisYear
+            depositedTfsaThisYear,
         };
     });
 
-    // 4. Best and Worst Performing Assets
-    const assetsWithAccountInfo = assets.map(asset => {
+    // 4. Best & Worst Performing Assets
+    const assetsWithAccountInfo: AssetWithMeta[] = assets.map(asset => {
         const account = accounts.find(acc => acc.id === asset.accountId);
         const member = members.find(m => m.id === account?.memberId);
-        const percentTo52WeekHigh = (asset.high52Week && asset.high52Week !== 0)
-            ? ((asset.currentPrice - asset.high52Week) / asset.high52Week) * 100
-            : 0;
+        const percentTo52WeekHigh =
+            asset.high52Week && asset.high52Week !== 0
+                ? ((asset.currentPrice - asset.high52Week) / asset.high52Week) * 100
+                : 0;
 
         return {
             ...asset,
             accountName: account?.name || 'Unknown',
             memberName: member?.name || 'Unknown',
-            percentTo52WeekHigh
+            percentTo52WeekHigh,
         };
     });
 
-    // Sort by profit percentage to find best and worst
     const sortedByPerformance = [...assetsWithAccountInfo].sort((a, b) => b.profitPercent - a.profitPercent);
     const bestPerformer = sortedByPerformance[0];
     const worstPerformer = sortedByPerformance[sortedByPerformance.length - 1];
 
-    // Sort by profit ($)
     const sortedByProfitDollar = [...assetsWithAccountInfo].sort((a, b) => b.profit - a.profit);
     const highestGainerDollar = sortedByProfitDollar[0];
     const lowestGainerDollar = sortedByProfitDollar[sortedByProfitDollar.length - 1];
 
-    // Top 5 Assets by Profit %
     const top5AssetsPercent = [...assetsWithAccountInfo]
         .sort((a, b) => b.profitPercent - a.profitPercent)
         .slice(0, 5)
         .map(a => ({ name: `${a.ticker} (${a.accountName})`, value: a.profitPercent, ...a }));
 
-    // Top 5 Assets by Profit % (Lowest)
     const bottom5AssetsPercent = [...assetsWithAccountInfo]
         .sort((a, b) => a.profitPercent - b.profitPercent)
         .slice(0, 5)
@@ -185,10 +518,10 @@ const Dashboard = () => {
         setIsEditingGoal(false);
     };
 
-    // totalInvested is already calculated at line 23, reuse it.
-    const totalBasis = totalInvested + (accounts.reduce((sum, a) => sum + a.cashBalance, 0));
+    const totalBasis = totalInvested + accounts.reduce((sum, a) => sum + a.cashBalance, 0);
     const isPositivePerformance = totalValue >= totalBasis;
     const gaugeColor = isPositivePerformance ? 'from-blue-500 to-green-400' : 'from-red-600 to-red-400';
+    const goalProgressPct = financialGoal > 0 ? Math.min(100, Math.max(0, (totalValue / financialGoal) * 100)) : 0;
 
     const baseAccountPerformance = accounts.map(account => {
         const accountAssets = assets.filter(a => a.accountId === account.id);
@@ -201,7 +534,7 @@ const Dashboard = () => {
         const profitPercent = bookCost > 0 ? (profitDollar / bookCost) * 100 : 0;
 
         return {
-            rank: 0, // Placeholder, will be set after sorting
+            rank: 0,
             accountId: account.id,
             accountName: account.name,
             memberName: member?.name || 'Unknown',
@@ -209,29 +542,23 @@ const Dashboard = () => {
             bookCost,
             marketValue,
             profitDollar,
-            profitPercent
+            profitPercent,
         };
     });
 
-    // Assign rank based on profitPercent (descending)
     const rankedAccountPerformance: AccountPerformance[] = [...baseAccountPerformance]
         .sort((a, b) => b.profitPercent - a.profitPercent)
         .map((item, index) => ({ ...item, rank: index + 1 }));
 
-    // Sort for display
     const sortedAccountPerformance = [...rankedAccountPerformance].sort((a, b) => {
         const aVal = a[sortField];
         const bVal = b[sortField];
 
         if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return sortDirection === 'asc'
-                ? aVal.localeCompare(bVal)
-                : bVal.localeCompare(aVal);
+            return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         }
 
-        return sortDirection === 'asc'
-            ? (aVal as number) - (bVal as number)
-            : (bVal as number) - (aVal as number);
+        return sortDirection === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
     });
 
     const handleSort = (field: SortField) => {
@@ -239,12 +566,20 @@ const Dashboard = () => {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
-            setSortDirection(field === 'rank' || field === 'profitPercent' || field === 'profitDollar' || field === 'bookCost' || field === 'marketValue' ? 'desc' : 'asc');
+            setSortDirection(
+                field === 'rank' ||
+                    field === 'profitPercent' ||
+                    field === 'profitDollar' ||
+                    field === 'bookCost' ||
+                    field === 'marketValue'
+                    ? 'desc'
+                    : 'asc'
+            );
         }
     };
 
     // 7. Asset Performance Data for Table
-    type AssetPerformance = typeof assetsWithAccountInfo[0] & { rank: number, effectiveBookCost: number };
+    type AssetPerformance = AssetWithMeta & { rank: number; effectiveBookCost: number };
     type AssetSortField = keyof AssetPerformance;
 
     const [assetSortField, setAssetSortField] = useState<AssetSortField>('profitPercent');
@@ -255,7 +590,7 @@ const Dashboard = () => {
         .map((item, index) => ({
             ...item,
             rank: index + 1,
-            effectiveBookCost: item.customBookCost || item.totalCost
+            effectiveBookCost: item.customBookCost || item.totalCost,
         }));
 
     const sortedAssetPerformance = [...rankedAssetPerformance].sort((a, b) => {
@@ -263,18 +598,13 @@ const Dashboard = () => {
         const bVal = b[assetSortField];
 
         if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return assetSortDirection === 'asc'
-                ? aVal.localeCompare(bVal)
-                : bVal.localeCompare(aVal);
+            return assetSortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         }
 
-        // Specific check because some fields might be undefined (like high52Week)
-        const numA = (typeof aVal === 'number') ? aVal : 0;
-        const numB = (typeof bVal === 'number') ? bVal : 0;
+        const numA = typeof aVal === 'number' ? aVal : 0;
+        const numB = typeof bVal === 'number' ? bVal : 0;
 
-        return assetSortDirection === 'asc'
-            ? numA - numB
-            : numB - numA;
+        return assetSortDirection === 'asc' ? numA - numB : numB - numA;
     });
 
     const handleAssetSort = (field: AssetSortField) => {
@@ -282,83 +612,95 @@ const Dashboard = () => {
             setAssetSortDirection(assetSortDirection === 'asc' ? 'desc' : 'asc');
         } else {
             setAssetSortField(field);
-            // Default sort direction for numbers is usually desc (rank 1, highest profit), strings asc
             setAssetSortDirection(field === 'ticker' || field === 'accountName' ? 'asc' : 'desc');
         }
     };
 
     // 8. Breakdown by Member, Institution & Account
-    const memberBreakdown = members.map(member => {
-        const memberAccounts = accounts.filter(a => a.memberId === member.id);
-        const memberAssets = assetsWithAccountInfo.filter(a => memberAccounts.some(acc => acc.id === a.accountId));
+    const memberBreakdown = members
+        .map(member => {
+            const memberAccounts = accounts.filter(a => a.memberId === member.id);
+            const memberAssets = assetsWithAccountInfo.filter(a => memberAccounts.some(acc => acc.id === a.accountId));
 
-        // Groups by Institution
-        const institutionGroups = institutions
-            .map(inst => {
-                const instAccounts = memberAccounts.filter(acc => acc.institutionId === inst.id);
-                if (instAccounts.length === 0) return null;
+            const institutionGroups = institutions
+                .map(inst => {
+                    const instAccounts = memberAccounts.filter(acc => acc.institutionId === inst.id);
+                    if (instAccounts.length === 0) return null;
 
-                return {
-                    institution: inst,
-                    accounts: instAccounts.map(account => {
-                        const accountAssets = memberAssets.filter(a => a.accountId === account.id);
-                        // Show account if it has assets OR cash
-                        if (accountAssets.length === 0 && account.cashBalance === 0) return null;
+                    return {
+                        institution: inst,
+                        accounts: instAccounts
+                            .map(account => {
+                                const accountAssets = memberAssets.filter(a => a.accountId === account.id);
+                                if (accountAssets.length === 0 && account.cashBalance === 0) return null;
 
-                        const bookCost = accountAssets.reduce((sum, a) => sum + (a.customBookCost || a.totalCost), 0);
-                        const marketValue = accountAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
-                        const profit = marketValue - bookCost;
-                        const profitPercent = bookCost > 0 ? (profit / bookCost) * 100 : 0;
+                                const bookCost = accountAssets.reduce(
+                                    (sum, a) => sum + (a.customBookCost || a.totalCost),
+                                    0
+                                );
+                                const marketValue = accountAssets.reduce(
+                                    (sum, a) => sum + (a.cadMarketValue || a.marketValue || 0),
+                                    0
+                                );
+                                const profit = marketValue - bookCost;
+                                const profitPercent = bookCost > 0 ? (profit / bookCost) * 100 : 0;
 
-                        return {
-                            account,
-                            assets: accountAssets,
-                            stats: { bookCost, marketValue, profit, profitPercent }
-                        };
-                    }).filter((g): g is NonNullable<typeof g> => g !== null)
-                };
-            })
-            .filter((g): g is NonNullable<typeof g> => g !== null && g.accounts.length > 0);
+                                return {
+                                    account,
+                                    assets: accountAssets,
+                                    stats: { bookCost, marketValue, profit, profitPercent },
+                                };
+                            })
+                            .filter((g): g is NonNullable<typeof g> => g !== null),
+                    };
+                })
+                .filter((g): g is NonNullable<typeof g> => g !== null && g.accounts.length > 0);
 
-        // Member Totals
-        const totalBookCost = memberAssets.reduce((sum, a) => sum + (a.customBookCost || a.totalCost), 0);
-        const totalMarketValue = memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0);
-        const totalProfit = totalMarketValue - totalBookCost;
-        const totalProfitPercent = totalBookCost > 0 ? (totalProfit / totalBookCost) * 100 : 0;
-        const totalCash = memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+            const totalBookCost = memberAssets.reduce((sum, a) => sum + (a.customBookCost || a.totalCost), 0);
+            const totalMarketValue = memberAssets.reduce(
+                (sum, a) => sum + (a.cadMarketValue || a.marketValue || 0),
+                0
+            );
+            const totalProfit = totalMarketValue - totalBookCost;
+            const totalProfitPercent = totalBookCost > 0 ? (totalProfit / totalBookCost) * 100 : 0;
+            const totalCash = memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
 
-        return {
-            member,
-            stats: { totalBookCost, totalMarketValue, totalProfit, totalProfitPercent, totalCash },
-            institutionGroups
-        };
-    }).filter(m => m.institutionGroups.length > 0 && (m.institutionGroups as any[]).some(g => g.accounts.length > 0)); // Ensure we have data
+            return {
+                member,
+                stats: { totalBookCost, totalMarketValue, totalProfit, totalProfitPercent, totalCash },
+                institutionGroups,
+            };
+        })
+        .filter(m => m.institutionGroups.length > 0 && m.institutionGroups.some(g => g.accounts.length > 0));
 
-    // 9. Aggregated Stocks (Combined for all accounts)
-    const aggregatedStocksMap = new Map<string, {
-        ticker: string;
-        totalShares: number;
-        totalInvested: number;
-        totalMarketValue: number;
-        accounts: Set<string>;
-        currency: string;
-    }>();
+    // 9. Aggregated Stocks
+    const aggregatedStocksMap = new Map<
+        string,
+        {
+            ticker: string;
+            totalShares: number;
+            totalInvested: number;
+            totalMarketValue: number;
+            accounts: Set<string>;
+            currency: string;
+        }
+    >();
 
     assetsWithAccountInfo.forEach(asset => {
         const existing = aggregatedStocksMap.get(asset.ticker);
         if (existing) {
             existing.totalShares += asset.quantity;
-            existing.totalInvested += (asset.cadTotalCost || asset.totalCost || 0);
-            existing.totalMarketValue += (asset.cadMarketValue || asset.marketValue || 0);
+            existing.totalInvested += asset.cadTotalCost || asset.totalCost || 0;
+            existing.totalMarketValue += asset.cadMarketValue || asset.marketValue || 0;
             existing.accounts.add(asset.accountName);
         } else {
             aggregatedStocksMap.set(asset.ticker, {
                 ticker: asset.ticker,
                 totalShares: asset.quantity,
-                totalInvested: (asset.cadTotalCost || asset.totalCost || 0),
-                totalMarketValue: (asset.cadMarketValue || asset.marketValue || 0),
+                totalInvested: asset.cadTotalCost || asset.totalCost || 0,
+                totalMarketValue: asset.cadMarketValue || asset.marketValue || 0,
                 accounts: new Set([asset.accountName]),
-                currency: asset.currency || 'CAD'
+                currency: asset.currency || 'CAD',
             });
         }
     });
@@ -370,11 +712,11 @@ const Dashboard = () => {
             ...stock,
             profit,
             profitPercent,
-            accountsList: Array.from(stock.accounts).join(', ')
+            accountsList: Array.from(stock.accounts).join(', '),
         };
     });
 
-    type AggregatedSortField = keyof typeof unsortedAggregatedStocks[0];
+    type AggregatedSortField = keyof (typeof unsortedAggregatedStocks)[0];
     const [aggregatedSortField, setAggregatedSortField] = useState<AggregatedSortField>('totalInvested');
     const [aggregatedSortDirection, setAggregatedSortDirection] = useState<SortDirection>('desc');
 
@@ -383,17 +725,13 @@ const Dashboard = () => {
         const bVal = b[aggregatedSortField];
 
         if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return aggregatedSortDirection === 'asc'
-                ? aVal.localeCompare(bVal)
-                : bVal.localeCompare(aVal);
+            return aggregatedSortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         }
 
-        const numA = (typeof aVal === 'number') ? aVal : 0;
-        const numB = (typeof bVal === 'number') ? bVal : 0;
+        const numA = typeof aVal === 'number' ? aVal : 0;
+        const numB = typeof bVal === 'number' ? bVal : 0;
 
-        return aggregatedSortDirection === 'asc'
-            ? numA - numB
-            : numB - numA;
+        return aggregatedSortDirection === 'asc' ? numA - numB : numB - numA;
     });
 
     const handleAggregatedSort = (field: AggregatedSortField) => {
@@ -405,868 +743,504 @@ const Dashboard = () => {
         }
     };
 
-    // 6. Portfolio History (Persisted Net Worth)
-    // Use stored history from netWorthHistory
+    // 6. Portfolio History
+    const sortedHistory = [...netWorthHistory].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
-
-    // Sort history by date asc
-    const sortedHistory = [...netWorthHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    // Convert to chart format
     const portfolioHistory = sortedHistory.map(entry => ({
         name: entry.date,
-        value: entry.value
+        value: entry.value,
     }));
 
-    // If history is empty (first day), show current state as a single dot
     if (portfolioHistory.length === 0 && totalValue > 0) {
         const today = new Date().toISOString().split('T')[0];
         portfolioHistory.push({ name: today, value: totalValue });
     }
 
-    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
-
     return (
-        <div>
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-                <div className="flex items-center gap-4">
-                    {lastUpdated && (
-                        <p className="text-xs text-slate-400">
-                            Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div className="space-y-8">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-blue-500/15 rounded-2xl border border-blue-500/35 text-blue-400 shadow-sm">
+                        <LayoutDashboard size={24} />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Dashboard</h1>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                            Household portfolio summary, account rankings &amp; asset performance
                         </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    {lastUpdated && (
+                        <span className="text-xs font-medium text-slate-300 bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 rounded-xl">
+                            Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                     )}
                     <button
                         onClick={handleRefresh}
                         disabled={isRefreshing}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white rounded-lg transition-colors"
+                        style={{ color: '#ffffff' }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold shadow-sm transition-colors"
                     >
-                        <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-                        {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
+                        <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                        <span>{isRefreshing ? 'Refreshing...' : 'Refresh Prices'}</span>
                     </button>
                     <button
                         onClick={() => setShowMigrationModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors border border-slate-600"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-sm font-semibold transition-colors border border-slate-700 hover:border-slate-500"
                         title="Migrate CAD asset to USD"
                     >
-                        <ArrowRightLeft size={18} />
-                        Migrate Currency
+                        <ArrowRightLeft size={16} />
+                        <span>Migrate Currency</span>
                     </button>
                 </div>
             </div>
 
             {/* Global Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-                <div className="card border-l-4 border-blue-500">
-                    <div className="flex justify-between items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <div className="flex justify-between items-start gap-2">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase">Net Worth</p>
-                            <h2 className="text-3xl font-bold text-white mt-2">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                            <p className="text-slate-300 text-xs font-bold uppercase tracking-wider">Net Worth</p>
+                            <h2 className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white mt-2">
+                                ${fmt2(totalValue)}
+                            </h2>
                         </div>
-                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-                            <DollarSign size={24} />
+                        <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400 shrink-0">
+                            <DollarSign size={20} />
                         </div>
                     </div>
                 </div>
 
-                <div className="card border-l-4 border-purple-500">
-                    <div className="flex justify-between items-start">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <div className="flex justify-between items-start gap-2">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase">Total Invested</p>
-                            <h2 className="text-3xl font-bold text-white mt-2">${totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                            <p className="text-slate-300 text-xs font-bold uppercase tracking-wider">Total Invested</p>
+                            <h2 className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white mt-2">
+                                ${fmt2(totalInvested)}
+                            </h2>
                         </div>
-                        <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
-                            <Wallet size={24} />
+                        <div className="p-2.5 bg-purple-500/15 border border-purple-500/30 rounded-xl text-purple-400 shrink-0">
+                            <Wallet size={20} />
                         </div>
                     </div>
                 </div>
 
-                <div className="card border-l-4 border-green-500">
-                    <div className="flex justify-between items-start">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <div className="flex justify-between items-start gap-2">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase">Total Profit ($)</p>
-                            <div className="flex items-center gap-2 mt-2">
-                                <h2 className={`text-3xl font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    {totalProfit >= 0 ? '+' : '-'}${Math.abs(totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </h2>
-                            </div>
+                            <p className="text-slate-300 text-xs font-bold uppercase tracking-wider">Total Profit ($)</p>
+                            <h2
+                                className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums mt-2 ${
+                                    totalProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                                }`}
+                            >
+                                {totalProfit >= 0 ? '+' : '-'}${fmt2(Math.abs(totalProfit))}
+                            </h2>
                         </div>
-                        <div className={`p-2 rounded-lg ${totalProfit >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                            <DollarSign size={24} />
+                        <div
+                            className={`p-2.5 rounded-xl border shrink-0 ${
+                                totalProfit >= 0
+                                    ? 'bg-green-500/15 border-green-500/30 text-green-400'
+                                    : 'bg-red-500/15 border-red-500/30 text-red-400'
+                            }`}
+                        >
+                            <DollarSign size={20} />
                         </div>
                     </div>
                 </div>
 
-                <div className={`card border-l-4 ${totalProfitPercent >= 0 ? 'border-green-500' : 'border-red-500'}`}>
-                    <div className="flex justify-between items-start">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <div className="flex justify-between items-start gap-2">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase">Total Profit (%)</p>
-                            <div className="flex items-center gap-2 mt-2">
-                                <h2 className={`text-3xl font-bold ${totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    {totalProfitPercent >= 0 ? '+' : ''}{totalProfitPercent.toFixed(2)}%
-                                </h2>
-                            </div>
+                            <p className="text-slate-300 text-xs font-bold uppercase tracking-wider">Total Profit (%)</p>
+                            <h2
+                                className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums mt-2 ${
+                                    totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                }`}
+                            >
+                                {totalProfitPercent >= 0 ? '+' : ''}
+                                {totalProfitPercent.toFixed(2)}%
+                            </h2>
                         </div>
-                        <div className={`p-2 rounded-lg ${totalProfitPercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                            {totalProfitPercent >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+                        <div
+                            className={`p-2.5 rounded-xl border shrink-0 ${
+                                totalProfitPercent >= 0
+                                    ? 'bg-green-500/15 border-green-500/30 text-green-400'
+                                    : 'bg-red-500/15 border-red-500/30 text-red-400'
+                            }`}
+                        >
+                            {totalProfitPercent >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
                         </div>
                     </div>
                 </div>
 
-                <div className="card border-l-4 border-slate-500">
-                    <div className="flex justify-between items-start">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <div className="flex justify-between items-start gap-2">
                         <div>
-                            <p className="text-slate-400 text-sm font-medium uppercase">Cash Available</p>
-                            <h2 className="text-3xl font-bold text-white mt-2">${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                            <p className="text-slate-300 text-xs font-bold uppercase tracking-wider">Cash Available</p>
+                            <h2 className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-white mt-2">
+                                ${fmt2(totalCash)}
+                            </h2>
                         </div>
-                        <div className="p-2 bg-slate-500/10 rounded-lg text-slate-500">
-                            <DollarSign size={24} />
+                        <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-400 shrink-0">
+                            <Wallet size={20} />
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Member Overview Section */}
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                    <Users size={24} className="text-blue-400" />
-                    Member Overview
+            <section className="space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2.5 tracking-tight">
+                    <Users size={22} className="text-blue-400" />
+                    <span>Member Overview</span>
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {memberDetails.map((member) => (
-                        <div key={member.id} className="card border-l-4 border-blue-400 flex flex-col justify-between">
-                            <h3 className="text-xl font-bold text-white mb-4">{member.name}</h3>
+                    {memberDetails.map(member => (
+                        <div
+                            key={member.id}
+                            className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-4"
+                        >
+                            <h3 className="text-xl font-bold text-white tracking-tight">{member.name}</h3>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Total Worth */}
+                            <div className="grid grid-cols-2 gap-3.5 bg-slate-900/65 border border-slate-700/70 rounded-xl p-4">
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Total Worth</p>
-                                    <p className="text-2xl font-bold text-white">
-                                        ${member.totalWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                        Total Worth
+                                    </p>
+                                    <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-white">
+                                        ${fmt2(member.totalWorth)}
                                     </p>
                                 </div>
 
-                                {/* Invested */}
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Invested</p>
-                                    <p className="text-xl font-semibold text-slate-300">
-                                        ${member.invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                        Invested
+                                    </p>
+                                    <p className="text-lg sm:text-xl font-semibold font-mono tabular-nums text-slate-200">
+                                        ${fmt2(member.invested)}
                                     </p>
                                 </div>
 
-                                {/* Profit/Loss */}
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Profit/Loss</p>
-                                    <div className="flex items-center gap-2">
-                                        <p className={`text-lg font-bold ${member.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {member.profit >= 0 ? '+' : '-'}${Math.abs(member.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                        Profit / Loss
+                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                        <p
+                                            className={`text-base sm:text-lg font-bold font-mono tabular-nums ${
+                                                member.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                            }`}
+                                        >
+                                            {member.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(member.profit))}
                                         </p>
-                                        {member.profit >= 0 ?
-                                            <TrendingUp size={18} className="text-green-400" /> :
-                                            <TrendingDown size={18} className="text-red-400" />
-                                        }
+                                        {member.profit >= 0 ? (
+                                            <TrendingUp size={16} className="text-green-400 shrink-0" />
+                                        ) : (
+                                            <TrendingDown size={16} className="text-red-400 shrink-0" />
+                                        )}
                                     </div>
-                                    <p className={`text-sm font-semibold ${member.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {member.profitPercent >= 0 ? '+' : ''}{member.profitPercent.toFixed(2)}%
+                                    <p
+                                        className={`text-xs font-mono tabular-nums font-bold ${
+                                            member.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {member.profitPercent >= 0 ? '+' : ''}
+                                        {member.profitPercent.toFixed(2)}%
                                     </p>
                                 </div>
 
-                                {/* Cash Available */}
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Cash Available</p>
-                                    <p className="text-lg font-semibold text-slate-300">
-                                        ${member.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                        Cash Available
+                                    </p>
+                                    <p className="text-base sm:text-lg font-semibold font-mono tabular-nums text-slate-200">
+                                        ${fmt2(member.cash)}
                                     </p>
                                 </div>
                             </div>
-                            
-                            <div className="mt-4 pt-3 border-t border-slate-700 grid grid-cols-2 gap-4">
+
+                            <div className="pt-3 border-t border-slate-700/70 grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Deposited This Year</p>
-                                    <div className="flex items-baseline gap-2">
-                                        <p className="text-lg font-semibold text-blue-400">
-                                            ${member.depositedThisYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                        Deposited This Year
+                                    </p>
+                                    <div className="flex flex-wrap items-baseline gap-2">
+                                        <p className="text-lg font-bold font-mono tabular-nums text-blue-400">
+                                            ${fmt2(member.depositedThisYear)}
                                         </p>
-                                        <p className="text-xs text-slate-400 font-medium" title="To TFSA accounts">
-                                            (TFSA: ${member.depositedTfsaThisYear.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})
-                                        </p>
+                                        <span
+                                            className="text-xs text-slate-300 font-medium font-mono"
+                                            title="To TFSA accounts"
+                                        >
+                                            (TFSA: $
+                                            {member.depositedTfsaThisYear.toLocaleString(undefined, {
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0,
+                                            })}
+                                            )
+                                        </span>
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium uppercase mb-1">Withdrawn This Year</p>
-                                    <p className="text-lg font-semibold text-amber-400">
-                                        ${member.withdrawnThisYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                        Withdrawn This Year
+                                    </p>
+                                    <p className="text-lg font-bold font-mono tabular-nums text-amber-400">
+                                        ${fmt2(member.withdrawnThisYear)}
                                     </p>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
-            </div>
+            </section>
 
-            {/* Best and Worst Performing Assets */}
+            {/* Asset Performance Highlights */}
             {bestPerformer && worstPerformer && (
-                <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-white mb-6">Asset Performance</h2>
+                <section className="space-y-4">
+                    <h2 className="text-xl font-bold text-white tracking-tight">Asset Performance Highlights</h2>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                        {/* Best Performer */}
-                        <div className="card border-l-4 border-green-500">
-                            <div className="flex items-start justify-between mb-4">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Award size={20} className="text-green-400" />
-                                        <h3 className="text-lg font-bold text-green-400">Best Performer</h3>
-                                    </div>
-                                    <h4 className="text-2xl font-bold text-white">{bestPerformer.name || bestPerformer.ticker}</h4>
-                                    <p className="text-slate-400 text-sm">{bestPerformer.ticker} • {bestPerformer.accountName} ({bestPerformer.memberName})</p>
-                                </div>
-                                <div className={`px-3 py-1 rounded-lg ${bestPerformer.profitPercent >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                    <p className="text-lg font-bold">
-                                        {bestPerformer.profitPercent >= 0 ? '+' : ''}{bestPerformer.profitPercent.toFixed(2)}%
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Current Price</p>
-                                    <p className="text-lg font-semibold text-white">${bestPerformer.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Shares</p>
-                                    <p className="text-lg font-semibold text-white">{bestPerformer.quantity.toLocaleString()}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Cost Per Share</p>
-                                    <p className="text-lg font-semibold text-white">${bestPerformer.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Market Value</p>
-                                    <p className="text-lg font-semibold text-white">${bestPerformer.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Book Cost</p>
-                                    <p className="text-lg font-semibold text-white">${(bestPerformer.customBookCost || bestPerformer.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">52W Low</p>
-                                    <p className="text-sm font-semibold text-slate-300">${bestPerformer.low52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">52W High</p>
-                                    <p className="text-sm font-semibold text-slate-300">${bestPerformer.high52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">% to 52W High</p>
-                                    <div className="flex items-center gap-2">
-                                        <p className={`text-sm font-bold ${bestPerformer.percentTo52WeekHigh >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {bestPerformer.percentTo52WeekHigh >= 0 ? '+' : ''}{bestPerformer.percentTo52WeekHigh.toFixed(2)}%
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-700">
-                                <div className="flex justify-between items-center mb-2">
-                                    <p className="text-slate-400 text-xs uppercase">Total Profit/Loss</p>
-                                    <div className="text-right">
-                                        <p className={`text-xl font-bold ${bestPerformer.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {bestPerformer.profit >= 0 ? '+' : '-'}${Math.abs(bestPerformer.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Sparkline Chart */}
-                            {bestPerformer.sparkline && bestPerformer.sparkline.length > 0 && (
-                                <div className="mt-4">
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 text-right">1 Year Trend</p>
-                                    <div className="h-24">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={bestPerformer.sparkline}>
-                                                <defs>
-                                                    <linearGradient id="colorGreen" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <Tooltip
-                                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', fontSize: '12px', padding: '8px' }}
-                                                    itemStyle={{ color: '#f8fafc' }}
-                                                    formatter={(value: any) => [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Price']}
-                                                    labelStyle={{ display: 'none' }}
-                                                    cursor={{ stroke: '#475569', strokeWidth: 1 }}
-                                                />
-                                                <YAxis domain={['auto', 'auto']} hide />
-                                                <Area type="monotone" dataKey="price" stroke="#10b981" strokeWidth={2} fill="url(#colorGreen)" />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Worst Performer */}
-                        <div className="card border-l-4 border-red-500">
-                            <div className="flex items-start justify-between mb-4">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <AlertTriangle size={20} className="text-red-400" />
-                                        <h3 className="text-lg font-bold text-red-400">Worst Performer</h3>
-                                    </div>
-                                    <h4 className="text-2xl font-bold text-white">{worstPerformer.name || worstPerformer.ticker}</h4>
-                                    <p className="text-slate-400 text-sm">{worstPerformer.ticker} • {worstPerformer.accountName} ({worstPerformer.memberName})</p>
-                                </div>
-                                <div className={`px-3 py-1 rounded-lg ${worstPerformer.profitPercent >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                    <p className="text-lg font-bold">
-                                        {worstPerformer.profitPercent >= 0 ? '+' : ''}{worstPerformer.profitPercent.toFixed(2)}%
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Current Price</p>
-                                    <p className="text-lg font-semibold text-white">${worstPerformer.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Shares</p>
-                                    <p className="text-lg font-semibold text-white">{worstPerformer.quantity.toLocaleString()}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Cost Per Share</p>
-                                    <p className="text-lg font-semibold text-white">${worstPerformer.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Market Value</p>
-                                    <p className="text-lg font-semibold text-white">${worstPerformer.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">Book Cost</p>
-                                    <p className="text-lg font-semibold text-white">${(worstPerformer.customBookCost || worstPerformer.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">52W Low</p>
-                                    <p className="text-sm font-semibold text-slate-300">${worstPerformer.low52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">52W High</p>
-                                    <p className="text-sm font-semibold text-slate-300">${worstPerformer.high52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs uppercase mb-1">% to 52W High</p>
-                                    <div className="flex items-center gap-2">
-                                        <p className={`text-sm font-bold ${worstPerformer.percentTo52WeekHigh >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {worstPerformer.percentTo52WeekHigh >= 0 ? '+' : ''}{worstPerformer.percentTo52WeekHigh.toFixed(2)}%
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-700">
-                                <div className="flex justify-between items-center mb-2">
-                                    <p className="text-slate-400 text-xs uppercase">Total Profit/Loss</p>
-                                    <div className="text-right">
-                                        <p className={`text-xl font-bold ${worstPerformer.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {worstPerformer.profit >= 0 ? '+' : '-'}${Math.abs(worstPerformer.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Sparkline Chart */}
-                            {worstPerformer.sparkline && worstPerformer.sparkline.length > 0 && (
-                                <div className="mt-4">
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 text-right">1 Year Trend</p>
-                                    <div className="h-24">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={worstPerformer.sparkline}>
-                                                <defs>
-                                                    <linearGradient id="colorRed" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <Tooltip
-                                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', fontSize: '12px', padding: '8px' }}
-                                                    itemStyle={{ color: '#f8fafc' }}
-                                                    formatter={(value: any) => [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Price']}
-                                                    labelStyle={{ display: 'none' }}
-                                                    cursor={{ stroke: '#475569', strokeWidth: 1 }}
-                                                />
-                                                <YAxis domain={['auto', 'auto']} hide />
-                                                <Area type="monotone" dataKey="price" stroke="#ef4444" strokeWidth={2} fill="url(#colorRed)" />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Highest Gain ($) */}
+                        <PerformerCard
+                            title="Best Performer (%)"
+                            mode="positive"
+                            badgeMode="percent"
+                            asset={bestPerformer}
+                            gradientId="colorBestPct"
+                            chartTheme={chartTheme}
+                        />
+                        <PerformerCard
+                            title="Worst Performer (%)"
+                            mode="negative"
+                            badgeMode="percent"
+                            asset={worstPerformer}
+                            gradientId="colorWorstPct"
+                            chartTheme={chartTheme}
+                        />
                         {highestGainerDollar && (
-                            <div className="card border-l-4 border-emerald-500">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Award size={20} className="text-emerald-400" />
-                                            <h3 className="text-lg font-bold text-emerald-400">Highest Gain ($)</h3>
-                                        </div>
-                                        <h4 className="text-2xl font-bold text-white">{highestGainerDollar.name || highestGainerDollar.ticker}</h4>
-                                        <p className="text-slate-400 text-sm">{highestGainerDollar.ticker} • {highestGainerDollar.accountName} ({highestGainerDollar.memberName})</p>
-                                    </div>
-                                    <div className={`px-3 py-1 rounded-lg ${highestGainerDollar.profit >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                        <p className="text-lg font-bold">
-                                            {highestGainerDollar.profit >= 0 ? '+' : '-'}${Math.abs(highestGainerDollar.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Current Price</p>
-                                        <p className="text-lg font-semibold text-white">${highestGainerDollar.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Shares</p>
-                                        <p className="text-lg font-semibold text-white">{highestGainerDollar.quantity.toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Cost Per Share</p>
-                                        <p className="text-lg font-semibold text-white">${highestGainerDollar.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Market Value</p>
-                                        <p className="text-lg font-semibold text-white">${highestGainerDollar.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Book Cost</p>
-                                        <p className="text-lg font-semibold text-white">${(highestGainerDollar.customBookCost || highestGainerDollar.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">52W Low</p>
-                                        <p className="text-sm font-semibold text-slate-300">${highestGainerDollar.low52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">52W High</p>
-                                        <p className="text-sm font-semibold text-slate-300">${highestGainerDollar.high52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">% to 52W High</p>
-                                        <div className="flex items-center gap-2">
-                                            <p className={`text-sm font-bold ${highestGainerDollar.percentTo52WeekHigh >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {highestGainerDollar.percentTo52WeekHigh >= 0 ? '+' : ''}{highestGainerDollar.percentTo52WeekHigh.toFixed(2)}%
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-700">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <p className="text-slate-400 text-xs uppercase">Total Return (%)</p>
-                                        <div className="text-right">
-                                            <p className={`text-xl font-bold ${highestGainerDollar.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {highestGainerDollar.profitPercent >= 0 ? '+' : ''}{highestGainerDollar.profitPercent.toFixed(2)}%
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Sparkline Chart */}
-                                {highestGainerDollar.sparkline && highestGainerDollar.sparkline.length > 0 && (
-                                    <div className="mt-4">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 text-right">1 Year Trend</p>
-                                        <div className="h-24">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={highestGainerDollar.sparkline}>
-                                                    <defs>
-                                                        <linearGradient id="colorEmerald" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <Tooltip
-                                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', fontSize: '12px', padding: '8px' }}
-                                                        itemStyle={{ color: '#f8fafc' }}
-                                                        formatter={(value: any) => [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Price']}
-                                                        labelStyle={{ display: 'none' }}
-                                                        cursor={{ stroke: '#475569', strokeWidth: 1 }}
-                                                    />
-                                                    <YAxis domain={['auto', 'auto']} hide />
-                                                    <Area type="monotone" dataKey="price" stroke="#10b981" strokeWidth={2} fill="url(#colorEmerald)" />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <PerformerCard
+                                title="Highest Gain ($)"
+                                mode="positive"
+                                badgeMode="dollar"
+                                asset={highestGainerDollar}
+                                gradientId="colorBestDollar"
+                                chartTheme={chartTheme}
+                            />
                         )}
-
-                        {/* Lowest Gain ($) */}
                         {lowestGainerDollar && (
-                            <div className="card border-l-4 border-rose-500">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <AlertTriangle size={20} className="text-rose-400" />
-                                            <h3 className="text-lg font-bold text-rose-400">Lowest Gain ($)</h3>
-                                        </div>
-                                        <h4 className="text-2xl font-bold text-white">{lowestGainerDollar.name || lowestGainerDollar.ticker}</h4>
-                                        <p className="text-slate-400 text-sm">{lowestGainerDollar.ticker} • {lowestGainerDollar.accountName} ({lowestGainerDollar.memberName})</p>
-                                    </div>
-                                    <div className={`px-3 py-1 rounded-lg ${lowestGainerDollar.profit >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                        <p className="text-lg font-bold">
-                                            {lowestGainerDollar.profit >= 0 ? '+' : '-'}${Math.abs(lowestGainerDollar.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Current Price</p>
-                                        <p className="text-lg font-semibold text-white">${lowestGainerDollar.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Shares</p>
-                                        <p className="text-lg font-semibold text-white">{lowestGainerDollar.quantity.toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Cost Per Share</p>
-                                        <p className="text-lg font-semibold text-white">${lowestGainerDollar.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Market Value</p>
-                                        <p className="text-lg font-semibold text-white">${lowestGainerDollar.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Book Cost</p>
-                                        <p className="text-lg font-semibold text-white">${(lowestGainerDollar.customBookCost || lowestGainerDollar.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">52W Low</p>
-                                        <p className="text-sm font-semibold text-slate-300">${lowestGainerDollar.low52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">52W High</p>
-                                        <p className="text-sm font-semibold text-slate-300">${lowestGainerDollar.high52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">% to 52W High</p>
-                                        <div className="flex items-center gap-2">
-                                            <p className={`text-sm font-bold ${lowestGainerDollar.percentTo52WeekHigh >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {lowestGainerDollar.percentTo52WeekHigh >= 0 ? '+' : ''}{lowestGainerDollar.percentTo52WeekHigh.toFixed(2)}%
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-700">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <p className="text-slate-400 text-xs uppercase">Total Return (%)</p>
-                                        <div className="text-right">
-                                            <p className={`text-xl font-bold ${lowestGainerDollar.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {lowestGainerDollar.profitPercent >= 0 ? '+' : ''}{lowestGainerDollar.profitPercent.toFixed(2)}%
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Sparkline Chart */}
-                                {lowestGainerDollar.sparkline && lowestGainerDollar.sparkline.length > 0 && (
-                                    <div className="mt-4">
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 text-right">1 Year Trend</p>
-                                        <div className="h-24">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={lowestGainerDollar.sparkline}>
-                                                    <defs>
-                                                        <linearGradient id="colorRose" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <Tooltip
-                                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', fontSize: '12px', padding: '8px' }}
-                                                        itemStyle={{ color: '#f8fafc' }}
-                                                        formatter={(value: any) => [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Price']}
-                                                        labelStyle={{ display: 'none' }}
-                                                        cursor={{ stroke: '#475569', strokeWidth: 1 }}
-                                                    />
-                                                    <YAxis domain={['auto', 'auto']} hide />
-                                                    <Area type="monotone" dataKey="price" stroke="#f43f5e" strokeWidth={2} fill="url(#colorRose)" />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <PerformerCard
+                                title="Lowest Gain ($)"
+                                mode="negative"
+                                badgeMode="dollar"
+                                asset={lowestGainerDollar}
+                                gradientId="colorWorstDollar"
+                                chartTheme={chartTheme}
+                            />
                         )}
-
                     </div>
-                </div>
+                </section>
             )}
 
             {/* Upcoming Events */}
-            <div className="mb-8">
-                <EventsTable assets={assets} />
-            </div>
+            <EventsTable assets={assets} />
 
             {/* Portfolio History Chart */}
             {portfolioHistory.length > 0 && (
-                <div className="card mb-8">
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <TrendingUp size={24} className="text-blue-400" />
-                        Portfolio Value History
-                    </h3>
-                    <div className="h-[300px] w-full">
+                <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl">
+                    <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-700/70">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2.5 tracking-tight">
+                            <TrendingUp size={20} className="text-blue-400" />
+                            <span>Portfolio Value History</span>
+                        </h3>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                            Net Worth Trend
+                        </span>
+                    </div>
+                    <div className="h-[300px] w-full bg-slate-900/50 border border-slate-700/60 rounded-xl p-3">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={portfolioHistory} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <AreaChart data={portfolioHistory} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.32} />
                                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
                                 <XAxis
                                     dataKey="name"
-                                    hide={false} // Show dates now
-                                    tickFormatter={(val) => {
-                                        // Show Month/Year for readability
+                                    tickFormatter={val => {
                                         const d = new Date(val);
-                                        return `${d.getMonth() + 1}/${d.getFullYear().toString().substr(2)}`;
+                                        return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
                                     }}
-                                    interval={Math.max(1, Math.floor(portfolioHistory.length / 5))} // ~5 ticks
-                                    stroke="#475569"
-                                    tick={{ fill: '#64748b', fontSize: 10 }}
+                                    interval={Math.max(1, Math.floor(portfolioHistory.length / 5))}
+                                    tick={{ fill: chartTheme.tickColor, fontSize: 11 }}
+                                    axisLine={false}
+                                    tickLine={false}
                                 />
                                 <YAxis
                                     domain={['auto', 'auto']}
                                     orientation="right"
-                                    tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
-                                    stroke="#94a3b8"
-                                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                                    tickFormatter={val => `$${(val / 1000).toFixed(0)}k`}
+                                    tick={{ fill: chartTheme.tickColor, fontSize: 11 }}
                                     tickLine={false}
                                     axisLine={false}
+                                    width={56}
                                 />
                                 <Tooltip
-                                    formatter={(value: any) => [`$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Net Worth']}
-                                    labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
+                                    formatter={(value) => [`$${fmt2(Number(value))}`, 'Net Worth']}
+                                    labelFormatter={label => new Date(label).toLocaleDateString()}
+                                    contentStyle={chartTheme.tooltipStyle}
+                                    itemStyle={chartTheme.tooltipItemStyle}
+                                    labelStyle={chartTheme.tooltipLabelStyle}
                                 />
                                 <Area
                                     type="monotone"
                                     dataKey="value"
                                     stroke="#3b82f6"
-                                    strokeWidth={3}
+                                    strokeWidth={2.5}
                                     fillOpacity={1}
                                     fill="url(#colorValue)"
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </section>
             )}
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                {/* Allocation by Person */}
-                <div className="card h-[400px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                        <Users size={20} className="text-slate-400" /> Allocation by Person
-                    </h3>
-                    <div className="flex-1 w-full relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={allocationByPerson}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={120}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {allocationByPerson.map((_entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    formatter={(value: any) => `$${(value || 0).toLocaleString()}`}
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        {/* Center Label */}
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                            <p className="text-slate-400 text-xs uppercase font-medium">Total</p>
-                            <p className="text-xl font-bold text-white">${totalValue.toLocaleString(undefined, { notation: 'compact' })}</p>
-                        </div>
-                    </div>
-                    <div className="flex justify-center flex-wrap gap-4 mt-4">
-                        {allocationByPerson.map((entry, index) => (
-                            <div key={entry.name} className="flex items-center gap-2 text-sm text-slate-300">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                {entry.name}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AllocationDonutCard
+                    title="Allocation by Person"
+                    icon={<Users size={19} className="text-blue-400" />}
+                    data={allocationByPerson}
+                    centerTotal={totalValue}
+                    chartTheme={chartTheme}
+                />
 
                 {/* Financial Freedom Goal Gauge */}
-                <div className="card p-8 flex flex-col items-center justify-center text-center">
-                    <h3 className="text-lg font-bold text-white mb-2">Financial Freedom Goal</h3>
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col items-center justify-center text-center">
+                    <h3 className="text-lg font-bold text-white mb-2 tracking-tight">Financial Freedom Goal</h3>
 
-                    <div className="mb-8 flex items-center justify-center gap-2">
+                    <div className="mb-6 flex items-center justify-center gap-2">
                         {isEditingGoal ? (
                             <div className="flex items-center gap-2">
                                 <input
                                     type="number"
                                     value={tempGoal}
-                                    onChange={(e) => setTempGoal(e.target.value)}
-                                    className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white text-sm w-32 focus:outline-none focus:border-blue-500"
+                                    onChange={e => setTempGoal(e.target.value)}
+                                    className="bg-slate-900 border border-slate-600 rounded-xl px-3 py-1.5 text-white font-mono text-sm w-36 focus:outline-none focus:border-blue-500"
                                     autoFocus
                                 />
-                                <button onClick={handleSaveGoal} className="p-1 bg-green-500/20 text-green-400 rounded hover:bg-green-500/30 transition-colors">
+                                <button
+                                    onClick={handleSaveGoal}
+                                    className="p-1.5 bg-green-500/20 text-green-400 border border-green-500/35 rounded-lg hover:bg-green-500/30 transition-colors"
+                                    aria-label="Save goal"
+                                >
                                     <Check size={16} />
                                 </button>
-                                <button onClick={handleCancelGoal} className="p-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors">
+                                <button
+                                    onClick={handleCancelGoal}
+                                    className="p-1.5 bg-red-500/20 text-red-400 border border-red-500/35 rounded-lg hover:bg-red-500/30 transition-colors"
+                                    aria-label="Cancel editing goal"
+                                >
                                     <X size={16} />
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingGoal(true)}>
-                                <p className="text-slate-400 text-sm">Target: ${financialGoal.toLocaleString()}</p>
-                                <Pencil size={12} className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
+                            <button
+                                type="button"
+                                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-900/70 border border-slate-700/80 hover:border-blue-500/60 transition-colors cursor-pointer"
+                                onClick={() => setIsEditingGoal(true)}
+                            >
+                                <span className="text-slate-200 text-sm font-mono font-semibold">
+                                    Target: ${financialGoal.toLocaleString()}
+                                </span>
+                                <Pencil size={13} className="text-slate-300" />
+                            </button>
                         )}
                     </div>
 
-                    <div className="relative w-64 h-32 overflow-hidden mb-6">
+                    <div className="relative w-64 h-32 overflow-hidden mb-5">
                         {/* Gauge Background */}
-                        <div className="absolute bottom-0 w-full h-full bg-slate-700 rounded-t-full"></div>
+                        <div className="absolute bottom-0 w-full h-full bg-slate-700 rounded-t-full" />
                         {/* Gauge Progress */}
                         <div
-                            className={`absolute bottom-0 w-full h-full bg-gradient-to-t ${gaugeColor} rounded-t-full origin-bottom transform rotate-[-180deg] transition-all duration-1000`}
+                            className={`absolute bottom-0 w-full h-full bg-gradient-to-t ${gaugeColor} rounded-t-full origin-bottom transition-all duration-1000`}
                             style={{
-                                transform: `rotate(${Math.min(0, (totalValue / financialGoal * 180) - 180)}deg)`
+                                transform: `rotate(${Math.min(0, (totalValue / financialGoal) * 180 - 180)}deg)`,
                             }}
-                        ></div>
+                        />
                         {/* Inner Cover */}
-                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-48 h-48 bg-slate-800 rounded-full flex items-center justify-center pt-4">
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-48 h-48 bg-slate-800 rounded-full flex items-start justify-center pt-5">
+                            <span className="text-xs font-mono font-bold text-blue-400 bg-blue-500/15 border border-blue-500/35 px-2.5 py-0.5 rounded-full">
+                                {goalProgressPct.toFixed(1)}%
+                            </span>
                         </div>
                     </div>
 
-                    <h2 className="text-4xl font-bold text-white mb-2">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h2>
-                    <p className={`text-sm font-medium ${isPositivePerformance ? 'text-green-400' : 'text-red-400'}`}>
-                        {isPositivePerformance ? 'Profit' : 'Loss'}: ${(totalValue - totalBasis).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        <span className="opacity-75 ml-1">
-                            ({totalProfitPercent >= 0 ? '+' : ''}{totalProfitPercent.toFixed(2)}%)
+                    <h2 className="text-3xl sm:text-4xl font-bold font-mono tabular-nums text-white mb-1.5">
+                        ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </h2>
+                    <p
+                        className={`text-sm font-mono tabular-nums font-bold ${
+                            isPositivePerformance ? 'text-green-400' : 'text-red-400'
+                        }`}
+                    >
+                        {isPositivePerformance ? 'Profit' : 'Loss'}: ${fmt2(totalValue - totalBasis)}{' '}
+                        <span className="ml-1">
+                            ({totalProfitPercent >= 0 ? '+' : ''}
+                            {totalProfitPercent.toFixed(2)}%)
                         </span>
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">Current Net Worth</p>
+                    <p className="text-xs font-medium text-slate-300 mt-1">Current Net Worth</p>
                 </div>
 
-                {/* Allocation by Account Type */}
-                <div className="card h-[400px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                        <Wallet size={20} className="text-slate-400" /> Allocation by Account Type
-                    </h3>
-                    <div className="flex-1 w-full relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={allocationByAccountType}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={120}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {allocationByAccountType.map((_entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    formatter={(value: any) => `$${(value || 0).toLocaleString()}`}
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="flex justify-center flex-wrap gap-4 mt-4">
-                        {allocationByAccountType.map((entry, index) => (
-                            <div key={entry.name} className="flex items-center gap-2 text-sm text-slate-300">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                {entry.name}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <AllocationDonutCard
+                    title="Allocation by Account Type"
+                    icon={<Wallet size={19} className="text-purple-400" />}
+                    data={allocationByAccountType}
+                    chartTheme={chartTheme}
+                />
 
-                {/* Allocation by Institution */}
-                <div className="card h-[400px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                        <Users size={20} className="text-slate-400" /> Allocation by Institution
-                    </h3>
-                    <div className="flex-1 w-full relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={allocationByInstitution}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={120}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {allocationByInstitution.map((_entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    formatter={(value: any) => `$${(value || 0).toLocaleString()}`}
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="flex justify-center flex-wrap gap-4 mt-4">
-                        {allocationByInstitution.map((entry, index) => (
-                            <div key={entry.name} className="flex items-center gap-2 text-sm text-slate-300">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                {entry.name}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <AllocationDonutCard
+                    title="Allocation by Institution"
+                    icon={<Building2 size={19} className="text-amber-400" />}
+                    data={allocationByInstitution}
+                    chartTheme={chartTheme}
+                />
 
                 {/* Top 5 Assets by % Profit */}
-                <div className="card h-[400px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                        <TrendingUp size={20} className="text-green-400" /> Top 5 Assets (% Profit)
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5 pb-3 border-b border-slate-700/70">
+                        <TrendingUp size={19} className="text-green-400" />
+                        <span>Top 5 Assets (% Profit)</span>
                     </h3>
-                    <div className="flex-1 w-full">
+                    <div className="flex-1 w-full min-h-0 bg-slate-900/50 border border-slate-700/60 rounded-xl p-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={top5AssetsPercent} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                                <XAxis type="number" unit="%" stroke="#94a3b8" />
-                                <YAxis type="category" dataKey="name" stroke="#94a3b8" width={150} fontSize={12} tickLine={false} />
-                                <Tooltip
-                                    cursor={{ fill: '#334155', opacity: 0.4 }}
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
-                                    labelStyle={{ color: '#f8fafc' }}
-                                    formatter={(value: any) => `${value.toFixed(2)}%`}
+                            <BarChart layout="vertical" data={top5AssetsPercent} margin={{ top: 8, right: 24, left: 10, bottom: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} horizontal={false} />
+                                <XAxis type="number" unit="%" tick={{ fill: chartTheme.tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                <YAxis
+                                    type="category"
+                                    dataKey="name"
+                                    tick={{ fill: chartTheme.tickColor, fontSize: 11, fontWeight: 600 }}
+                                    width={135}
+                                    tickLine={false}
+                                    axisLine={false}
                                 />
-                                <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]}>
+                                <Tooltip
+                                    cursor={{ fill: chartTheme.cursorFill }}
+                                    contentStyle={chartTheme.tooltipStyle}
+                                    itemStyle={chartTheme.tooltipItemStyle}
+                                    labelStyle={chartTheme.tooltipLabelStyle}
+                                    formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Return']}
+                                />
+                                <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]}>
                                     {top5AssetsPercent.map((_entry, index) => (
                                         <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#34d399'} />
                                     ))}
@@ -1277,24 +1251,32 @@ const Dashboard = () => {
                 </div>
 
                 {/* Bottom 5 Assets by % Profit */}
-                <div className="card h-[400px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                        <TrendingDown size={20} className="text-red-400" /> Bottom 5 Assets (% Profit)
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5 pb-3 border-b border-slate-700/70">
+                        <TrendingDown size={19} className="text-red-400" />
+                        <span>Bottom 5 Assets (% Profit)</span>
                     </h3>
-                    <div className="flex-1 w-full">
+                    <div className="flex-1 w-full min-h-0 bg-slate-900/50 border border-slate-700/60 rounded-xl p-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={bottom5AssetsPercent} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                                <XAxis type="number" unit="%" stroke="#94a3b8" />
-                                <YAxis type="category" dataKey="name" stroke="#94a3b8" width={150} fontSize={12} tickLine={false} />
-                                <Tooltip
-                                    cursor={{ fill: '#334155', opacity: 0.4 }}
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
-                                    labelStyle={{ color: '#f8fafc' }}
-                                    formatter={(value: any) => `${value.toFixed(2)}%`}
+                            <BarChart layout="vertical" data={bottom5AssetsPercent} margin={{ top: 8, right: 24, left: 10, bottom: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} horizontal={false} />
+                                <XAxis type="number" unit="%" tick={{ fill: chartTheme.tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                <YAxis
+                                    type="category"
+                                    dataKey="name"
+                                    tick={{ fill: chartTheme.tickColor, fontSize: 11, fontWeight: 600 }}
+                                    width={135}
+                                    tickLine={false}
+                                    axisLine={false}
                                 />
-                                <Bar dataKey="value" fill="#ef4444" radius={[4, 0, 0, 4]}>
+                                <Tooltip
+                                    cursor={{ fill: chartTheme.cursorFill }}
+                                    contentStyle={chartTheme.tooltipStyle}
+                                    itemStyle={chartTheme.tooltipItemStyle}
+                                    labelStyle={chartTheme.tooltipLabelStyle}
+                                    formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Return']}
+                                />
+                                <Bar dataKey="value" fill="#ef4444" radius={[0, 6, 6, 0]}>
                                     {bottom5AssetsPercent.map((_entry, index) => (
                                         <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} />
                                     ))}
@@ -1303,65 +1285,82 @@ const Dashboard = () => {
                         </ResponsiveContainer>
                     </div>
                 </div>
-
             </div>
 
             {/* Account Performance Table */}
-            <div className="card mt-8 overflow-hidden">
-                <h3 className="text-xl font-bold text-white mb-6">Accounts Ranked by Performance</h3>
+            <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                <div className="px-6 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white tracking-tight">Accounts Ranked by Performance</h3>
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                        {sortedAccountPerformance.length}
+                    </span>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="text-slate-400 border-b border-slate-700 text-xs uppercase whitespace-nowrap">
-                                <th className="px-3 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('rank')}>
+                        <thead className="bg-slate-900/90 border-b border-slate-700/80">
+                            <tr className="text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                                <th className={`px-4 py-3.5 cursor-pointer hover:text-white transition-colors ${sortField === 'rank' ? 'text-blue-400' : ''}`} onClick={() => handleSort('rank')}>
                                     <div className="flex items-center gap-1">Rank <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('accountName')}>
+                                <th className={`px-4 py-3.5 cursor-pointer hover:text-white transition-colors ${sortField === 'accountName' ? 'text-blue-400' : ''}`} onClick={() => handleSort('accountName')}>
                                     <div className="flex items-center gap-1">Account <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('memberName')}>
+                                <th className={`px-4 py-3.5 cursor-pointer hover:text-white transition-colors ${sortField === 'memberName' ? 'text-blue-400' : ''}`} onClick={() => handleSort('memberName')}>
                                     <div className="flex items-center gap-1">Member <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('institutionName')}>
+                                <th className={`px-4 py-3.5 cursor-pointer hover:text-white transition-colors ${sortField === 'institutionName' ? 'text-blue-400' : ''}`} onClick={() => handleSort('institutionName')}>
                                     <div className="flex items-center gap-1">Institution <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('bookCost')}>
+                                <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${sortField === 'bookCost' ? 'text-blue-400' : ''}`} onClick={() => handleSort('bookCost')}>
                                     <div className="flex items-center justify-end gap-1">Book <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('marketValue')}>
+                                <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${sortField === 'marketValue' ? 'text-blue-400' : ''}`} onClick={() => handleSort('marketValue')}>
                                     <div className="flex items-center justify-end gap-1">Value <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('profitDollar')}>
+                                <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${sortField === 'profitDollar' ? 'text-blue-400' : ''}`} onClick={() => handleSort('profitDollar')}>
                                     <div className="flex items-center justify-end gap-1">P/L $ <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('profitPercent')}>
+                                <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${sortField === 'profitPercent' ? 'text-blue-400' : ''}`} onClick={() => handleSort('profitPercent')}>
                                     <div className="flex items-center justify-end gap-1">P/L % <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-3 py-3 text-right font-medium">Action</th>
+                                <th className="px-4 py-3.5 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-700 text-sm">
-                            {sortedAccountPerformance.map((account) => (
-                                <tr key={account.accountId} className="hover:bg-slate-700/30 transition-colors">
-                                    <td className="p-4 text-white font-medium">#{account.rank}</td>
-                                    <td className="p-4 text-white font-bold">{account.accountName}</td>
-                                    <td className="p-4 text-slate-300">{account.memberName}</td>
-                                    <td className="p-4 text-slate-300">{account.institutionName}</td>
-                                    <td className="p-4 text-right text-slate-300 font-medium">
-                                        ${account.bookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <tbody className="divide-y divide-slate-700/60 text-sm">
+                            {sortedAccountPerformance.map(account => (
+                                <tr key={account.accountId} className="hover:bg-slate-750/60 transition-colors">
+                                    <td className="px-4 py-3.5 text-slate-300 font-mono font-bold">#{account.rank}</td>
+                                    <td className="px-4 py-3.5 text-white font-bold">{account.accountName}</td>
+                                    <td className="px-4 py-3.5 text-slate-300">{account.memberName}</td>
+                                    <td className="px-4 py-3.5 text-slate-300">{account.institutionName}</td>
+                                    <td className="px-4 py-3.5 text-right text-slate-300 font-mono tabular-nums font-medium">
+                                        ${fmt2(account.bookCost)}
                                     </td>
-                                    <td className="p-4 text-right text-white font-bold">
-                                        ${account.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td className="px-4 py-3.5 text-right text-white font-mono tabular-nums font-bold">
+                                        ${fmt2(account.marketValue)}
                                     </td>
-                                    <td className={`p-4 text-right font-bold ${account.profitDollar >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {account.profitDollar >= 0 ? '+' : '-'}${Math.abs(account.profitDollar).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td
+                                        className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                            account.profitDollar >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {account.profitDollar >= 0 ? '+' : '-'}${fmt2(Math.abs(account.profitDollar))}
                                     </td>
-                                    <td className={`p-4 text-right font-bold ${account.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {account.profitPercent >= 0 ? '+' : ''}{account.profitPercent.toFixed(2)}%
+                                    <td
+                                        className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                            account.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {account.profitPercent >= 0 ? '+' : ''}
+                                        {account.profitPercent.toFixed(2)}%
                                     </td>
-                                    <td className="p-4 text-right">
-                                        <Link to={`/accounts/${account.accountId}`} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 hover:text-blue-300 transition-colors inline-block" title="View Account">
-                                            <Eye size={18} />
+                                    <td className="px-4 py-3.5 text-right">
+                                        <Link
+                                            to={`/accounts/${account.accountId}`}
+                                            className="p-2 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/25 transition-colors inline-flex"
+                                            title="View Account"
+                                        >
+                                            <Eye size={16} />
                                         </Link>
                                     </td>
                                 </tr>
@@ -1369,107 +1368,143 @@ const Dashboard = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
             {/* All Assets Performance Table */}
-            <div className="card mt-8 overflow-hidden">
-                <h3 className="text-xl font-bold text-white mb-6">All Assets Ranked by Performance</h3>
+            <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                <div className="px-6 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white tracking-tight">All Assets Ranked by Performance</h3>
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                        {sortedAssetPerformance.length}
+                    </span>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="text-slate-400 border-b border-slate-700 text-xs uppercase whitespace-nowrap">
-                                <th className="px-2 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('rank')}>
+                        <thead className="bg-slate-900/90 border-b border-slate-700/80">
+                            <tr className="text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                                <th className={`px-3 py-3.5 cursor-pointer hover:text-white transition-colors ${assetSortField === 'rank' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('rank')}>
                                     <div className="flex items-center gap-1">Rank <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('ticker')}>
+                                <th className={`px-3 py-3.5 cursor-pointer hover:text-white transition-colors ${assetSortField === 'ticker' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('ticker')}>
                                     <div className="flex items-center gap-1">Ticker <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('currentPrice')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'currentPrice' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('currentPrice')}>
                                     <div className="flex items-center justify-end gap-1">Price <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('todayChangePercent')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'todayChangePercent' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('todayChangePercent')}>
                                     <div className="flex items-center justify-end gap-1">Day % <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('todayChangeDollar')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'todayChangeDollar' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('todayChangeDollar')}>
                                     <div className="flex items-center justify-end gap-1">Day $ <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('averageCost')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'averageCost' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('averageCost')}>
                                     <div className="flex items-center justify-end gap-1">Avg Cost <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('effectiveBookCost')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'effectiveBookCost' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('effectiveBookCost')}>
                                     <div className="flex items-center justify-end gap-1">Book <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('marketValue')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'marketValue' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('marketValue')}>
                                     <div className="flex items-center justify-end gap-1">Value <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('profit')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'profit' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('profit')}>
                                     <div className="flex items-center justify-end gap-1">P/L $ <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('profitPercent')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'profitPercent' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('profitPercent')}>
                                     <div className="flex items-center justify-end gap-1">P/L % <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('low52Week')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'low52Week' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('low52Week')}>
                                     <div className="flex items-center justify-end gap-1">Low <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('high52Week')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'high52Week' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('high52Week')}>
                                     <div className="flex items-center justify-end gap-1">High <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('percentTo52WeekHigh')}>
+                                <th className={`px-3 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${assetSortField === 'percentTo52WeekHigh' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('percentTo52WeekHigh')}>
                                     <div className="flex items-center justify-end gap-1">% High <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAssetSort('accountName')}>
+                                <th className={`px-3 py-3.5 cursor-pointer hover:text-white transition-colors ${assetSortField === 'accountName' ? 'text-blue-400' : ''}`} onClick={() => handleAssetSort('accountName')}>
                                     <div className="flex items-center gap-1">Account <ArrowUpDown size={12} /></div>
                                 </th>
-                                <th className="px-2 py-3 text-right font-medium">
-                                    Action
-                                </th>
+                                <th className="px-3 py-3.5 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-700 text-sm">
-                            {sortedAssetPerformance.map((asset) => (
-                                <tr key={asset.id} className="hover:bg-slate-700/30 transition-colors">
-                                    <td className="p-2 text-white font-medium">#{asset.rank}</td>
-                                    <td className="p-2 text-white font-bold flex items-center gap-1.5">
-                                        {asset.ticker}
-                                        {asset.currency === 'USD' && <span title="USD Asset" className="text-xs">🇺🇸</span>}
+                        <tbody className="divide-y divide-slate-700/60 text-sm">
+                            {sortedAssetPerformance.map(asset => (
+                                <tr key={asset.id} className="hover:bg-slate-750/60 transition-colors">
+                                    <td className="px-3 py-3 text-slate-300 font-mono font-bold">#{asset.rank}</td>
+                                    <td className="px-3 py-3 text-white font-mono font-bold">
+                                        <span className="inline-flex items-center gap-1.5">
+                                            {asset.ticker}
+                                            {asset.currency === 'USD' && (
+                                                <span className="text-[11px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                                                    USD
+                                                </span>
+                                            )}
+                                        </span>
                                     </td>
-                                    <td className="p-2 text-right text-slate-300 font-medium">
-                                        ${asset.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td className="px-3 py-3 text-right text-slate-200 font-mono tabular-nums font-medium">
+                                        ${fmt2(asset.currentPrice)}
                                     </td>
-                                    <td className={`p-2 text-right font-medium ${asset.todayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {asset.todayChangePercent >= 0 ? '+' : ''}{asset.todayChangePercent.toFixed(2)}%
+                                    <td
+                                        className={`px-3 py-3 text-right font-mono tabular-nums font-semibold ${
+                                            asset.todayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {asset.todayChangePercent >= 0 ? '+' : ''}
+                                        {asset.todayChangePercent.toFixed(2)}%
                                     </td>
-                                    <td className={`p-2 text-right font-medium ${(asset.todayChangeDollar || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {(asset.todayChangeDollar || 0) >= 0 ? '+' : '-'}${Math.abs(asset.todayChangeDollar || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td
+                                        className={`px-3 py-3 text-right font-mono tabular-nums font-semibold ${
+                                            (asset.todayChangeDollar || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {(asset.todayChangeDollar || 0) >= 0 ? '+' : '-'}$
+                                        {fmt2(Math.abs(asset.todayChangeDollar || 0))}
                                     </td>
-                                    <td className="p-2 text-right text-slate-300 font-medium">
-                                        ${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td className="px-3 py-3 text-right text-slate-300 font-mono tabular-nums">
+                                        ${fmt2(asset.averageCost)}
                                     </td>
-                                    <td className="p-2 text-right text-slate-300 font-medium">
-                                        ${(asset.customBookCost || asset.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td className="px-3 py-3 text-right text-slate-300 font-mono tabular-nums">
+                                        ${fmt2(asset.customBookCost || asset.totalCost)}
                                     </td>
-                                    <td className="p-2 text-right text-white font-bold">
-                                        ${asset.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td className="px-3 py-3 text-right text-white font-mono tabular-nums font-bold">
+                                        ${fmt2(asset.marketValue)}
                                     </td>
-                                    <td className={`p-2 text-right font-bold ${asset.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {asset.profit >= 0 ? '+' : '-'}${Math.abs(asset.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <td
+                                        className={`px-3 py-3 text-right font-mono tabular-nums font-bold ${
+                                            asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {asset.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(asset.profit))}
                                     </td>
-                                    <td className={`p-2 text-right font-bold ${asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {asset.profitPercent >= 0 ? '+' : ''}{asset.profitPercent.toFixed(2)}%
+                                    <td
+                                        className={`px-3 py-3 text-right font-mono tabular-nums font-bold ${
+                                            asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                        }`}
+                                    >
+                                        {asset.profitPercent >= 0 ? '+' : ''}
+                                        {asset.profitPercent.toFixed(2)}%
                                     </td>
-                                    <td className="p-2 text-right text-slate-400">
-                                        ${asset.low52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '-'}
+                                    <td className="px-3 py-3 text-right text-slate-300 font-mono tabular-nums">
+                                        {asset.low52Week ? `$${fmt2(asset.low52Week)}` : '—'}
                                     </td>
-                                    <td className="p-2 text-right text-slate-400">
-                                        ${asset.high52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '-'}
+                                    <td className="px-3 py-3 text-right text-slate-300 font-mono tabular-nums">
+                                        {asset.high52Week ? `$${fmt2(asset.high52Week)}` : '—'}
                                     </td>
-                                    <td className={`p-2 text-right font-semibold ${asset.percentTo52WeekHigh >= -5 ? 'text-green-400' : 'text-slate-400'}`}>
+                                    <td
+                                        className={`px-3 py-3 text-right font-mono tabular-nums font-semibold ${
+                                            asset.percentTo52WeekHigh >= -5 ? 'text-green-400' : 'text-slate-300'
+                                        }`}
+                                    >
                                         {asset.percentTo52WeekHigh.toFixed(2)}%
                                     </td>
-                                    <td className="p-2 text-slate-300">{asset.accountName}</td>
-                                    <td className="p-2 text-right">
-                                        <Link to={`/accounts/${asset.accountId}`} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 hover:text-blue-300 transition-colors inline-block" title="View Account">
-                                            <Eye size={18} />
+                                    <td className="px-3 py-3 text-slate-300">{asset.accountName}</td>
+                                    <td className="px-3 py-3 text-right">
+                                        <Link
+                                            to={`/accounts/${asset.accountId}`}
+                                            className="p-2 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/25 transition-colors inline-flex"
+                                            title="View Account"
+                                        >
+                                            <Eye size={16} />
                                         </Link>
                                     </td>
                                 </tr>
@@ -1477,44 +1512,72 @@ const Dashboard = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
             {/* Breakdown by Member, Institution & Account */}
-            <div className="mt-12">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <Users size={24} className="text-blue-500" /> Breakdown by Member, Institution & Account
+            <section className="space-y-6">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2.5 tracking-tight">
+                    <Users size={22} className="text-blue-400" />
+                    <span>Breakdown by Member, Institution &amp; Account</span>
                 </h3>
 
-                <div className="space-y-8">
-                    {memberBreakdown.map((mb) => (
-                        <div key={mb.member.id} className="card overflow-hidden border border-slate-700 p-0">
+                <div className="space-y-6">
+                    {memberBreakdown.map(mb => (
+                        <div
+                            key={mb.member.id}
+                            className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden"
+                        >
                             {/* Member Header */}
-                            <div className="bg-slate-800/80 p-6 border-b border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="bg-slate-900/80 p-6 border-b border-slate-700/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <div>
-                                    <h4 className="text-2xl font-bold text-white mb-1">{mb.member.name}</h4>
-                                    <p className="text-slate-400 text-sm">Member Overview</p>
+                                    <h4 className="text-2xl font-bold text-white">{mb.member.name}</h4>
+                                    <p className="text-slate-300 text-sm">Member Overview</p>
                                 </div>
-                                <div className="flex flex-wrap gap-4 md:gap-8">
+                                <div className="flex flex-wrap gap-5 md:gap-8">
                                     <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Total Cash</p>
-                                        <p className="text-lg font-bold text-white tabular-nums">${mb.stats.totalCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                            Total Cash
+                                        </p>
+                                        <p className="text-lg font-bold text-white font-mono tabular-nums">
+                                            ${fmt2(mb.stats.totalCash)}
+                                        </p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Total Book Cost</p>
-                                        <p className="text-lg font-bold text-white tabular-nums">${mb.stats.totalBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                            Total Book Cost
+                                        </p>
+                                        <p className="text-lg font-bold text-white font-mono tabular-nums">
+                                            ${fmt2(mb.stats.totalBookCost)}
+                                        </p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Total Market Value</p>
-                                        <p className="text-lg font-bold text-white tabular-nums">${mb.stats.totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                            Total Market Value
+                                        </p>
+                                        <p className="text-lg font-bold text-white font-mono tabular-nums">
+                                            ${fmt2(mb.stats.totalMarketValue)}
+                                        </p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-400 text-xs uppercase mb-1">Total Profit</p>
+                                        <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
+                                            Total Profit
+                                        </p>
                                         <div className="flex items-center gap-2">
-                                            <p className={`text-lg font-bold tabular-nums ${mb.stats.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {mb.stats.totalProfit >= 0 ? '+' : '-'}${Math.abs(mb.stats.totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            <p
+                                                className={`text-lg font-bold font-mono tabular-nums ${
+                                                    mb.stats.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                                                }`}
+                                            >
+                                                {mb.stats.totalProfit >= 0 ? '+' : '-'}$
+                                                {fmt2(Math.abs(mb.stats.totalProfit))}
                                             </p>
-                                            <span className={`text-sm font-bold ${mb.stats.totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                ({mb.stats.totalProfitPercent >= 0 ? '+' : ''}{mb.stats.totalProfitPercent.toFixed(2)}%)
+                                            <span
+                                                className={`text-sm font-mono font-bold ${
+                                                    mb.stats.totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                                }`}
+                                            >
+                                                ({mb.stats.totalProfitPercent >= 0 ? '+' : ''}
+                                                {mb.stats.totalProfitPercent.toFixed(2)}%)
                                             </span>
                                         </div>
                                     </div>
@@ -1522,45 +1585,70 @@ const Dashboard = () => {
                             </div>
 
                             {/* Groups */}
-                            <div className="p-6 space-y-8 bg-slate-900/40">
-                                {mb.institutionGroups.map((group) => (
-                                    <div key={group.institution.id} className="space-y-6">
-                                        {group.accounts.map((accGroup) => (
-                                            <div key={accGroup.account.id} className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+                            <div className="p-5 sm:p-6 space-y-6">
+                                {mb.institutionGroups.map(group => (
+                                    <div key={group.institution.id} className="space-y-4">
+                                        {group.accounts.map(accGroup => (
+                                            <div
+                                                key={accGroup.account.id}
+                                                className="bg-slate-900/70 rounded-xl overflow-hidden border border-slate-700/80"
+                                            >
                                                 {/* Account Header */}
-                                                <div className="px-6 py-4 bg-slate-800/50 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                                <div className="px-5 py-4 bg-slate-900/95 border-b border-slate-700/80 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="p-2 bg-slate-700/50 rounded-lg">
-                                                            <Wallet size={18} className="text-blue-400" />
+                                                        <div className="p-2 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400">
+                                                            <Wallet size={18} />
                                                         </div>
                                                         <div>
-                                                            <h5 className="font-bold text-white">{group.institution.name}</h5>
-                                                            <p className="text-slate-400 text-sm">{accGroup.account.name}</p>
+                                                            <h5 className="font-bold text-white">
+                                                                {group.institution.name}
+                                                            </h5>
+                                                            <p className="text-slate-300 text-sm">{accGroup.account.name}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex gap-6 text-sm">
+                                                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                                                         <div>
-                                                            <span className="text-slate-500 mr-2">Cash:</span>
-                                                            <span className="text-white tabular-nums font-mono">${accGroup.account.cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-slate-500 mr-2">Book:</span>
-                                                            <span className="text-slate-300 tabular-nums">${accGroup.stats.bookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-slate-500 mr-2">Value:</span>
-                                                            <span className="text-white font-bold tabular-nums">${accGroup.stats.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-slate-500 mr-2">P/L:</span>
-                                                            <span className={`font-bold tabular-nums ${accGroup.stats.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                {accGroup.stats.profit >= 0 ? '+' : '-'}${Math.abs(accGroup.stats.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            <span className="text-slate-400 font-semibold mr-1.5">Cash:</span>
+                                                            <span className="text-white tabular-nums font-mono font-semibold">
+                                                                ${fmt2(accGroup.account.cashBalance)}
                                                             </span>
                                                         </div>
                                                         <div>
-                                                            <span className="text-slate-500 mr-2">P/L %:</span>
-                                                            <span className={`font-bold tabular-nums ${accGroup.stats.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                {accGroup.stats.profitPercent >= 0 ? '+' : ''}{accGroup.stats.profitPercent.toFixed(2)}%
+                                                            <span className="text-slate-400 font-semibold mr-1.5">Book:</span>
+                                                            <span className="text-slate-200 tabular-nums font-mono font-semibold">
+                                                                ${fmt2(accGroup.stats.bookCost)}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-slate-400 font-semibold mr-1.5">Value:</span>
+                                                            <span className="text-white font-bold tabular-nums font-mono">
+                                                                ${fmt2(accGroup.stats.marketValue)}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-slate-400 font-semibold mr-1.5">P/L:</span>
+                                                            <span
+                                                                className={`font-bold tabular-nums font-mono ${
+                                                                    accGroup.stats.profit >= 0
+                                                                        ? 'text-green-400'
+                                                                        : 'text-red-400'
+                                                                }`}
+                                                            >
+                                                                {accGroup.stats.profit >= 0 ? '+' : '-'}$
+                                                                {fmt2(Math.abs(accGroup.stats.profit))}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-slate-400 font-semibold mr-1.5">P/L %:</span>
+                                                            <span
+                                                                className={`font-bold tabular-nums font-mono ${
+                                                                    accGroup.stats.profitPercent >= 0
+                                                                        ? 'text-green-400'
+                                                                        : 'text-red-400'
+                                                                }`}
+                                                            >
+                                                                {accGroup.stats.profitPercent >= 0 ? '+' : ''}
+                                                                {accGroup.stats.profitPercent.toFixed(2)}%
                                                             </span>
                                                         </div>
                                                     </div>
@@ -1570,61 +1658,112 @@ const Dashboard = () => {
                                                 <div className="overflow-x-auto">
                                                     <table className="w-full text-left border-collapse">
                                                         <thead>
-                                                            <tr className="text-slate-400 border-b border-slate-700/50 text-xs uppercase whitespace-nowrap bg-slate-800/20">
-                                                                <th className="px-4 py-3 font-medium">Ticker</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Shares</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Price</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Avg Cost</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Book</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Value</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Day %</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Day $</th>
-                                                                <th className="px-4 py-3 text-right font-medium">P/L $</th>
-                                                                <th className="px-4 py-3 text-right font-medium">P/L %</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Low</th>
-                                                                <th className="px-4 py-3 text-right font-medium">High</th>
-                                                                <th className="px-4 py-3 text-right font-medium">% High</th>
-                                                                <th className="px-4 py-3 text-right font-medium">Action</th>
+                                                            <tr className="text-slate-300 border-b border-slate-700/80 text-xs font-bold uppercase tracking-wider whitespace-nowrap bg-slate-900/60">
+                                                                <th className="px-4 py-3">Ticker</th>
+                                                                <th className="px-4 py-3 text-right">Shares</th>
+                                                                <th className="px-4 py-3 text-right">Price</th>
+                                                                <th className="px-4 py-3 text-right">Avg Cost</th>
+                                                                <th className="px-4 py-3 text-right">Book</th>
+                                                                <th className="px-4 py-3 text-right">Value</th>
+                                                                <th className="px-4 py-3 text-right">Day %</th>
+                                                                <th className="px-4 py-3 text-right">Day $</th>
+                                                                <th className="px-4 py-3 text-right">P/L $</th>
+                                                                <th className="px-4 py-3 text-right">P/L %</th>
+                                                                <th className="px-4 py-3 text-right">Low</th>
+                                                                <th className="px-4 py-3 text-right">High</th>
+                                                                <th className="px-4 py-3 text-right">% High</th>
+                                                                <th className="px-4 py-3 text-right">Action</th>
                                                             </tr>
                                                         </thead>
-                                                        <tbody className="divide-y divide-slate-800 text-sm">
-                                                            {accGroup.assets.map((asset) => (
-                                                                <tr key={asset.id} className="hover:bg-slate-800/50 transition-colors">
-                                                                    <td className="px-4 py-2 text-white font-bold flex items-center gap-1.5">
-                                                                        {asset.ticker}
-                                                                        {asset.currency === 'USD' && <span title="USD Asset" className="text-xs">🇺🇸</span>}
+                                                        <tbody className="divide-y divide-slate-700/50 text-sm">
+                                                            {accGroup.assets.map(asset => (
+                                                                <tr key={asset.id} className="hover:bg-slate-800/70 transition-colors">
+                                                                    <td className="px-4 py-2.5 text-white font-mono font-bold">
+                                                                        <span className="inline-flex items-center gap-1.5">
+                                                                            {asset.ticker}
+                                                                            {asset.currency === 'USD' && (
+                                                                                <span className="text-[11px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                                                                                    USD
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
                                                                     </td>
-                                                                    <td className="px-4 py-2 text-right text-slate-300 tabular-nums">{asset.quantity}</td>
-                                                                    <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${asset.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="px-4 py-2 text-right text-slate-300 font-medium tabular-nums">${(asset.customBookCost || asset.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="px-4 py-2 text-right text-white font-bold tabular-nums">${asset.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className={`px-4 py-2 text-right font-medium tabular-nums ${asset.todayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {asset.todayChangePercent >= 0 ? '+' : ''}{asset.todayChangePercent.toFixed(2)}%
+                                                                    <td className="px-4 py-2.5 text-right text-slate-200 font-mono tabular-nums">
+                                                                        {asset.quantity}
                                                                     </td>
-                                                                    <td className={`px-4 py-2 text-right font-medium tabular-nums ${(asset.todayChangeDollar || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {(asset.todayChangeDollar || 0) >= 0 ? '+' : '-'}${Math.abs(asset.todayChangeDollar || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    <td className="px-4 py-2.5 text-right text-slate-200 font-mono tabular-nums font-medium">
+                                                                        ${fmt2(asset.currentPrice)}
                                                                     </td>
-                                                                    <td className={`px-4 py-2 text-right font-bold tabular-nums ${asset.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {asset.profit >= 0 ? '+' : '-'}${Math.abs(asset.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    <td className="px-4 py-2.5 text-right text-slate-300 font-mono tabular-nums">
+                                                                        ${fmt2(asset.averageCost)}
                                                                     </td>
-                                                                    <td className={`px-4 py-2 text-right font-bold tabular-nums ${asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {asset.profitPercent >= 0 ? '+' : ''}{asset.profitPercent.toFixed(2)}%
+                                                                    <td className="px-4 py-2.5 text-right text-slate-300 font-mono tabular-nums">
+                                                                        ${fmt2(asset.customBookCost || asset.totalCost)}
                                                                     </td>
-                                                                    <td className="px-4 py-2 text-right text-slate-400 tabular-nums">${asset.low52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '-'}</td>
-                                                                    <td className="px-4 py-2 text-right text-slate-400 tabular-nums">${asset.high52Week?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '-'}</td>
-                                                                    <td className={`px-4 py-2 text-right font-semibold tabular-nums ${asset.percentTo52WeekHigh >= -5 ? 'text-green-400' : 'text-slate-400'}`}>
+                                                                    <td className="px-4 py-2.5 text-right text-white font-mono tabular-nums font-bold">
+                                                                        ${fmt2(asset.marketValue)}
+                                                                    </td>
+                                                                    <td
+                                                                        className={`px-4 py-2.5 text-right font-mono tabular-nums font-semibold ${
+                                                                            asset.todayChangePercent >= 0
+                                                                                ? 'text-green-400'
+                                                                                : 'text-red-400'
+                                                                        }`}
+                                                                    >
+                                                                        {asset.todayChangePercent >= 0 ? '+' : ''}
+                                                                        {asset.todayChangePercent.toFixed(2)}%
+                                                                    </td>
+                                                                    <td
+                                                                        className={`px-4 py-2.5 text-right font-mono tabular-nums font-semibold ${
+                                                                            (asset.todayChangeDollar || 0) >= 0
+                                                                                ? 'text-green-400'
+                                                                                : 'text-red-400'
+                                                                        }`}
+                                                                    >
+                                                                        {(asset.todayChangeDollar || 0) >= 0 ? '+' : '-'}$
+                                                                        {fmt2(Math.abs(asset.todayChangeDollar || 0))}
+                                                                    </td>
+                                                                    <td
+                                                                        className={`px-4 py-2.5 text-right font-mono tabular-nums font-bold ${
+                                                                            asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                                                        }`}
+                                                                    >
+                                                                        {asset.profit >= 0 ? '+' : '-'}$
+                                                                        {fmt2(Math.abs(asset.profit))}
+                                                                    </td>
+                                                                    <td
+                                                                        className={`px-4 py-2.5 text-right font-mono tabular-nums font-bold ${
+                                                                            asset.profitPercent >= 0
+                                                                                ? 'text-green-400'
+                                                                                : 'text-red-400'
+                                                                        }`}
+                                                                    >
+                                                                        {asset.profitPercent >= 0 ? '+' : ''}
+                                                                        {asset.profitPercent.toFixed(2)}%
+                                                                    </td>
+                                                                    <td className="px-4 py-2.5 text-right text-slate-300 font-mono tabular-nums">
+                                                                        {asset.low52Week ? `$${fmt2(asset.low52Week)}` : '—'}
+                                                                    </td>
+                                                                    <td className="px-4 py-2.5 text-right text-slate-300 font-mono tabular-nums">
+                                                                        {asset.high52Week ? `$${fmt2(asset.high52Week)}` : '—'}
+                                                                    </td>
+                                                                    <td
+                                                                        className={`px-4 py-2.5 text-right font-mono tabular-nums font-semibold ${
+                                                                            asset.percentTo52WeekHigh >= -5
+                                                                                ? 'text-green-400'
+                                                                                : 'text-slate-300'
+                                                                        }`}
+                                                                    >
                                                                         {asset.percentTo52WeekHigh.toFixed(2)}%
                                                                     </td>
-                                                                    <td className="px-4 py-2 text-right">
-                                                                        <div className="flex items-center justify-end gap-2">
-                                                                            <Link to={`/accounts/${asset.accountId}`} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 hover:text-blue-300 transition-colors" title="View Account">
-                                                                                <Eye size={16} />
-                                                                            </Link>
-                                                                            <button className="p-1.5 bg-slate-700/50 text-slate-400 rounded hover:bg-slate-700 hover:text-slate-200 transition-colors" title="Manage Asset">
-                                                                                <Settings size={16} />
-                                                                            </button>
-                                                                        </div>
+                                                                    <td className="px-4 py-2.5 text-right">
+                                                                        <Link
+                                                                            to={`/accounts/${asset.accountId}`}
+                                                                            className="p-1.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/25 transition-colors inline-flex"
+                                                                            title="View Account"
+                                                                        >
+                                                                            <Eye size={15} />
+                                                                        </Link>
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -1639,55 +1778,56 @@ const Dashboard = () => {
                         </div>
                     ))}
                 </div>
-            </div>
+            </section>
 
             {/* Aggregated Stocks View */}
-            <div className="mt-12">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <Layers size={24} className="text-purple-500" /> Combined Stocks (All Accounts)
+            <section className="space-y-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2.5 tracking-tight">
+                    <Layers size={22} className="text-purple-400" />
+                    <span>Combined Stocks (All Accounts)</span>
                 </h3>
-                <div className="card overflow-hidden border border-slate-700 p-0">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="text-slate-400 border-b border-slate-700/50 text-xs uppercase whitespace-nowrap bg-slate-800/20">
-                                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('ticker')}>
+                            <thead className="bg-slate-900/90 border-b border-slate-700/80">
+                                <tr className="text-slate-300 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                                    <th className={`px-4 py-3.5 cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'ticker' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('ticker')}>
                                         <div className="flex items-center gap-1">
                                             Ticker
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'ticker' ? 'text-blue-400' : ''} />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('totalShares')}>
+                                    <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'totalShares' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('totalShares')}>
                                         <div className="flex items-center justify-end gap-1">
                                             Total Shares
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'totalShares' ? 'text-blue-400' : ''} />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('totalInvested')}>
+                                    <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'totalInvested' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('totalInvested')}>
                                         <div className="flex items-center justify-end gap-1">
                                             Total Invested
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'totalInvested' ? 'text-blue-400' : ''} />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('totalMarketValue')}>
+                                    <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'totalMarketValue' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('totalMarketValue')}>
                                         <div className="flex items-center justify-end gap-1">
                                             Market Value
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'totalMarketValue' ? 'text-blue-400' : ''} />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('profit')}>
+                                    <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'profit' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('profit')}>
                                         <div className="flex items-center justify-end gap-1">
                                             Total P/L $
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'profit' ? 'text-blue-400' : ''} />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-3 text-right font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('profitPercent')}>
+                                    <th className={`px-4 py-3.5 text-right cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'profitPercent' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('profitPercent')}>
                                         <div className="flex items-center justify-end gap-1">
                                             Total P/L %
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'profitPercent' ? 'text-blue-400' : ''} />
                                         </div>
                                     </th>
-                                    <th className="px-4 py-3 font-medium cursor-pointer hover:text-white transition-colors" onClick={() => handleAggregatedSort('accountsList')}>
+                                    <th className={`px-4 py-3.5 cursor-pointer hover:text-white transition-colors ${aggregatedSortField === 'accountsList' ? 'text-blue-400' : ''}`} onClick={() => handleAggregatedSort('accountsList')}>
                                         <div className="flex items-center gap-1">
                                             Accounts
                                             <ArrowUpDown size={12} className={aggregatedSortField === 'accountsList' ? 'text-blue-400' : ''} />
@@ -1695,32 +1835,45 @@ const Dashboard = () => {
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800 text-sm">
-                                {aggregatedStocks.map((stock) => (
-                                    <tr key={stock.ticker} className="hover:bg-slate-800/50 transition-colors">
-                                        <td className="px-4 py-3 text-white font-bold">{stock.ticker}</td>
-                                        <td className="px-4 py-3 text-right text-slate-300 tabular-nums">{stock.totalShares.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
-                                        <td className="px-4 py-3 text-right text-slate-300 font-medium tabular-nums">${stock.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                        <td className="px-4 py-3 text-right text-white font-bold tabular-nums">${stock.totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                        <td className={`px-4 py-3 text-right font-bold tabular-nums ${stock.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {stock.profit >= 0 ? '+' : '-'}${Math.abs(stock.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <tbody className="divide-y divide-slate-700/60 text-sm">
+                                {aggregatedStocks.map(stock => (
+                                    <tr key={stock.ticker} className="hover:bg-slate-750/60 transition-colors">
+                                        <td className="px-4 py-3.5 text-white font-mono font-bold">{stock.ticker}</td>
+                                        <td className="px-4 py-3.5 text-right text-slate-200 font-mono tabular-nums">
+                                            {stock.totalShares.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                         </td>
-                                        <td className={`px-4 py-3 text-right font-bold tabular-nums ${stock.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {stock.profitPercent >= 0 ? '+' : ''}{stock.profitPercent.toFixed(2)}%
+                                        <td className="px-4 py-3.5 text-right text-slate-300 font-mono tabular-nums font-medium">
+                                            ${fmt2(stock.totalInvested)}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400 text-xs">{stock.accountsList}</td>
+                                        <td className="px-4 py-3.5 text-right text-white font-mono tabular-nums font-bold">
+                                            ${fmt2(stock.totalMarketValue)}
+                                        </td>
+                                        <td
+                                            className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                                stock.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                            }`}
+                                        >
+                                            {stock.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(stock.profit))}
+                                        </td>
+                                        <td
+                                            className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                                stock.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                            }`}
+                                        >
+                                            {stock.profitPercent >= 0 ? '+' : ''}
+                                            {stock.profitPercent.toFixed(2)}%
+                                        </td>
+                                        <td className="px-4 py-3.5 text-slate-300 text-xs">{stock.accountsList}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {showMigrationModal && (
-                <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />
-            )}
-        </div >
+            {showMigrationModal && <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />}
+        </div>
     );
 };
 

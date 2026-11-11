@@ -5,30 +5,28 @@ import { useData } from '../context/DataContext';
 import type { Account, AccountType } from '../types';
 import '../styles/shared.css';
 
-const ACCOUNT_TYPES: AccountType[] = ['TFSA', 'RRSP', 'Margin', 'Cash', 'Crypto', 'Other'];
-
 const Accounts = () => {
-    const { accounts, members, institutions, assets, addAccount, updateAccount, deleteAccount } = useData();
+    const { accounts, members, institutions, accountTypes, assets, addAccount, updateAccount, deleteAccount } = useData();
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
     // Form State
     const [memberId, setMemberId] = useState('');
     const [institutionId, setInstitutionId] = useState('');
-    const [type, setType] = useState<AccountType>('TFSA');
+    const [type, setType] = useState<AccountType>(() => accountTypes[0] || 'TFSA');
     const [name, setName] = useState('');
     const [initialCash, setInitialCash] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (memberId && institutionId && name && initialCash) {
+        if (memberId && institutionId && name && initialCash !== '') {
             if (isEditing && editingId) {
                 updateAccount(editingId, {
                     memberId,
                     institutionId,
                     type,
                     name,
-                    cashBalance: parseFloat(initialCash)
+                    cashBalance: parseFloat(initialCash),
                 });
             } else {
                 addAccount({
@@ -36,7 +34,7 @@ const Accounts = () => {
                     institutionId,
                     type,
                     name,
-                    cashBalance: parseFloat(initialCash)
+                    cashBalance: parseFloat(initialCash),
                 });
             }
             resetForm();
@@ -58,121 +56,246 @@ const Accounts = () => {
         setEditingId(null);
         setMemberId('');
         setInstitutionId('');
-        setType('TFSA');
+        setType(accountTypes[0] || 'TFSA');
         setName('');
         setInitialCash('');
     };
 
+    const availableAccountTypes = type && !accountTypes.includes(type) ? [type, ...accountTypes] : accountTypes;
+
     const getMemberName = (id: string) => members.find(m => m.id === id)?.name || 'Unknown';
-    const getInstName   = (id: string) => institutions.find(i => i.id === id)?.name || 'Unknown';
+    const getInstName = (id: string) => institutions.find(i => i.id === id)?.name || 'Unknown';
 
     return (
-        <div>
-            <div className="page-header">
-                <h1 className="page-title">Accounts</h1>
+        <div className="space-y-6">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-blue-500/15 rounded-2xl border border-blue-500/35 text-blue-400 shadow-sm">
+                        <Wallet size={24} />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Accounts</h1>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                            Manage household investment accounts, cash balances &amp; holdings
+                        </p>
+                    </div>
+                </div>
                 {!isEditing && (
-                    <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
+                    <button
+                        style={{ color: '#ffffff' }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
+                        onClick={() => setIsEditing(true)}
+                    >
                         <Plus size={18} /> Add Account
                     </button>
                 )}
             </div>
 
             {isEditing && (
-                <div className="card mb-6 border-blue-500/30">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">{editingId ? 'Edit Account' : 'New Account'}</h3>
-                        <button onClick={resetForm} className="text-slate-400 hover:text-white"><X size={20} /></button>
+                <div className="bg-slate-800/95 border border-blue-500/40 rounded-2xl p-6 shadow-xl">
+                    <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-700/80">
+                        <h3 className="text-lg font-bold text-white">
+                            {editingId ? 'Edit Account' : 'New Account'}
+                        </h3>
+                        <button
+                            onClick={resetForm}
+                            className="p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white transition-colors"
+                            aria-label="Close form"
+                        >
+                            <X size={18} />
+                        </button>
                     </div>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Account Name</label>
-                            <input type="text" className="input" placeholder="e.g. John's TFSA" value={name} onChange={e => setName(e.target.value)} required />
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                                Account Name
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                placeholder="e.g. John's TFSA"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                required
+                            />
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Select Member</label>
-                            <select className="input" value={memberId} onChange={e => setMemberId(e.target.value)} required>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                                Select Member
+                            </label>
+                            <select
+                                className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                value={memberId}
+                                onChange={e => setMemberId(e.target.value)}
+                                required
+                            >
                                 <option value="">-- Select Member --</option>
-                                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                {members.map(m => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Select Institution</label>
-                            <select className="input" value={institutionId} onChange={e => setInstitutionId(e.target.value)} required>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                                Select Institution
+                            </label>
+                            <select
+                                className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                value={institutionId}
+                                onChange={e => setInstitutionId(e.target.value)}
+                                required
+                            >
                                 <option value="">-- Select Institution --</option>
-                                {institutions.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                                {institutions.map(i => (
+                                    <option key={i.id} value={i.id}>
+                                        {i.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Account Type</label>
-                            <select className="input" value={type} onChange={e => setType(e.target.value as AccountType)} required>
-                                {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Account Type
+                                </label>
+                                <Link
+                                    to="/settings"
+                                    className="text-xs font-semibold text-blue-400 hover:underline"
+                                >
+                                    Manage types in Settings
+                                </Link>
+                            </div>
+                            <select
+                                className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                value={type}
+                                onChange={e => setType(e.target.value as AccountType)}
+                                required
+                            >
+                                {availableAccountTypes.map(t => (
+                                    <option key={t} value={t}>
+                                        {t}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Initial Cash Balance ($)</label>
-                            <input type="number" step="0.01" className="input" placeholder="0.00" value={initialCash} onChange={e => setInitialCash(e.target.value)} required />
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                                Cash Balance ($)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2.5 text-sm font-mono tabular-nums font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                placeholder="0.00"
+                                value={initialCash}
+                                onChange={e => setInitialCash(e.target.value)}
+                                required
+                            />
                         </div>
-                        <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                            <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>
-                            <button type="submit" className="btn btn-primary">
-                                <Save size={18} /> {editingId ? 'Update Account' : 'Save Account'}
+                        <div className="md:col-span-2 flex justify-end gap-3 mt-2 pt-4 border-t border-slate-700/70">
+                            <button
+                                type="button"
+                                className="px-4 py-2 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-sm font-semibold transition-colors"
+                                onClick={resetForm}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                style={{ color: '#ffffff' }}
+                                className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors"
+                            >
+                                <Save size={16} /> {editingId ? 'Update Account' : 'Save Account'}
                             </button>
                         </div>
                     </form>
                 </div>
             )}
 
-            <div className="card">
+            <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
                 {accounts.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">No accounts found. Create one above!</div>
+                    <div className="text-center py-14 px-6">
+                        <p className="text-slate-300 text-sm font-medium">No accounts found yet.</p>
+                        <p className="text-slate-400 text-xs mt-1">Click &ldquo;Add Account&rdquo; above to get started.</p>
+                    </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Account Name</th>
-                                    <th>Member</th>
-                                    <th>Institution</th>
-                                    <th>Type</th>
-                                    <th className="text-right">Assets</th>
-                                    <th className="text-right">Cash Balance</th>
-                                    <th className="text-right">Actions</th>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-slate-900/90 border-b border-slate-700/80">
+                                <tr className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    <th className="px-5 py-3.5">Account Name</th>
+                                    <th className="px-5 py-3.5">Member</th>
+                                    <th className="px-5 py-3.5">Institution</th>
+                                    <th className="px-5 py-3.5">Type</th>
+                                    <th className="px-5 py-3.5 text-right">Assets</th>
+                                    <th className="px-5 py-3.5 text-right">Cash Balance</th>
+                                    <th className="px-5 py-3.5 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {accounts.map(acc => (
-                                    <tr key={acc.id}>
-                                        <td className="font-medium text-white flex items-center gap-2">
-                                            <Wallet size={16} className="text-blue-400" /> {acc.name}
-                                        </td>
-                                        <td>{getMemberName(acc.memberId)}</td>
-                                        <td>{getInstName(acc.institutionId)}</td>
-                                        <td>
-                                            <span className="bg-slate-700 text-xs px-2 py-1 rounded-full text-slate-300">{acc.type}</span>
-                                        </td>
-                                        <td className="text-right text-slate-300">
-                                            {assets.filter(a => a.accountId === acc.id).length}
-                                        </td>
-                                        <td className="text-right font-mono text-green-400">
-                                            ${acc.cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="text-right flex justify-end gap-2">
-                                            <Link
-                                                to={`/accounts/${acc.id}`}
-                                                className="btn btn-primary bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/50"
-                                                title="Manage Assets"
-                                            >
-                                                <TrendingUp size={16} /> Assets
-                                            </Link>
-                                            <button className="btn btn-secondary" onClick={() => startEdit(acc)} title="Edit Account">
-                                                <Pencil size={16} />
-                                            </button>
-                                            <button className="btn btn-danger" onClick={() => deleteAccount(acc.id)} title="Delete Account">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                            <tbody className="divide-y divide-slate-700/60 text-sm">
+                                {accounts.map(acc => {
+                                    const assetCount = assets.filter(a => a.accountId === acc.id).length;
+                                    return (
+                                        <tr key={acc.id} className="hover:bg-slate-750/60 transition-colors">
+                                            <td className="px-5 py-4">
+                                                <Link
+                                                    to={`/accounts/${acc.id}`}
+                                                    className="font-bold text-white hover:text-blue-400 transition-colors inline-flex items-center gap-2.5"
+                                                >
+                                                    <span className="p-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                                                        <Wallet size={15} />
+                                                    </span>
+                                                    <span>{acc.name}</span>
+                                                </Link>
+                                            </td>
+                                            <td className="px-5 py-4 text-slate-200 font-medium">
+                                                {getMemberName(acc.memberId)}
+                                            </td>
+                                            <td className="px-5 py-4 text-slate-300">{getInstName(acc.institutionId)}</td>
+                                            <td className="px-5 py-4">
+                                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900 border border-slate-700 text-slate-200">
+                                                    {acc.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-4 text-right font-mono tabular-nums text-slate-200 font-semibold">
+                                                {assetCount}
+                                            </td>
+                                            <td className="px-5 py-4 text-right font-mono tabular-nums font-bold text-green-400">
+                                                ${acc.cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <Link
+                                                        to={`/accounts/${acc.id}`}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/35 transition-colors"
+                                                        title="Manage Assets"
+                                                    >
+                                                        <TrendingUp size={14} /> Assets
+                                                    </Link>
+                                                    <button
+                                                        className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+                                                        onClick={() => startEdit(acc)}
+                                                        title="Edit Account"
+                                                        aria-label={`Edit ${acc.name}`}
+                                                    >
+                                                        <Pencil size={15} />
+                                                    </button>
+                                                    <button
+                                                        className="p-2 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-colors"
+                                                        onClick={() => deleteAccount(acc.id)}
+                                                        title="Delete Account"
+                                                        aria-label={`Delete ${acc.name}`}
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

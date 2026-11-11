@@ -1,9 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Wrench, Target, Shield, PieChart, Leaf, Plus, Trash2, TrendingUp, AlertTriangle, CheckCircle, RotateCcw, ShoppingCart } from 'lucide-react';
+import {
+    Wrench,
+    Target,
+    Shield,
+    PieChart,
+    Leaf,
+    Plus,
+    Trash2,
+    TrendingUp,
+    AlertTriangle,
+    CheckCircle,
+    RotateCcw,
+    ShoppingCart,
+    Radio,
+} from 'lucide-react';
 import { useData } from '../context/DataContext';
 import '../styles/shared.css';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Constants & Helpers ─────────────────────────────────────────────────────
+
+const API_BASE = 'http://localhost:3001';
 
 const fmtCurrency = (n: number): string =>
     n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,65 +38,96 @@ interface InputFieldProps {
     action?: React.ReactNode;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, value, onChange, prefix, suffix, placeholder, step = 'any', min = '0', action }) => (
+const InputField: React.FC<InputFieldProps> = ({
+    label,
+    value,
+    onChange,
+    prefix,
+    suffix,
+    placeholder,
+    step = 'any',
+    min = '0',
+    action,
+}) => (
     <div>
-        <div className="flex justify-between items-end mb-1.5">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</label>
+        <div className="flex justify-between items-center gap-2 mb-1.5">
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">{label}</label>
             {action && <div>{action}</div>}
         </div>
         <div className="relative flex items-center">
-            {prefix && <span className="absolute left-3 text-slate-400 text-sm font-medium pointer-events-none">{prefix}</span>}
+            {prefix && (
+                <span className="absolute left-3 text-slate-300 text-sm font-semibold pointer-events-none">
+                    {prefix}
+                </span>
+            )}
             <input
                 type="number"
                 step={step}
                 min={min}
-                className="input input-no-spinner w-full"
-                style={{ paddingLeft: prefix ? '1.75rem' : undefined, paddingRight: suffix ? '2.5rem' : undefined }}
+                className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-xl py-2 px-3 text-sm font-mono tabular-nums font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                style={{
+                    paddingLeft: prefix ? '1.75rem' : undefined,
+                    paddingRight: suffix ? '2.25rem' : undefined,
+                }}
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder ?? '0'}
             />
-            {suffix && <span className="absolute right-3 text-slate-400 text-sm font-medium pointer-events-none">{suffix}</span>}
+            {suffix && (
+                <span className="absolute right-3 text-slate-300 text-sm font-semibold pointer-events-none">
+                    {suffix}
+                </span>
+            )}
         </div>
     </div>
 );
 
 const ResultRow: React.FC<{ label: string; value: string; color?: string; large?: boolean }> = ({
-    label, value, color = 'text-white', large = false
+    label,
+    value,
+    color = 'text-white',
+    large = false,
 }) => (
-    <div className="flex justify-between items-center py-2 border-b border-slate-700/40 last:border-0">
-        <span className="text-sm text-slate-400">{label}</span>
-        <span className={`font-mono font-bold ${large ? 'text-lg' : 'text-sm'} ${color}`}>{value}</span>
+    <div className="flex justify-between items-center py-2.5 border-b border-slate-700/60 last:border-0">
+        <span className="text-sm text-slate-300 font-medium">{label}</span>
+        <span className={`font-mono tabular-nums font-bold ${large ? 'text-lg' : 'text-sm'} ${color}`}>{value}</span>
     </div>
 );
 
-const CardShell: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; accentColor: string; onClear?: () => void; children: React.ReactNode }> = ({
-    icon, title, subtitle, accentColor, onClear, children
-}) => (
-    <div className={`bg-slate-800/50 border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl flex flex-col`}>
-        <div className={`p-5 border-b border-slate-700/50 bg-gradient-to-r ${accentColor} flex justify-between items-start`}>
-            <div>
-                <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">{icon}</div>
-                    <h2 className="text-lg font-bold text-white">{title}</h2>
+interface CardShellProps {
+    icon: React.ReactNode;
+    iconTone: string;
+    title: string;
+    subtitle: string;
+    onClear?: () => void;
+    children: React.ReactNode;
+}
+
+const CardShell: React.FC<CardShellProps> = ({ icon, iconTone, title, subtitle, onClear, children }) => (
+    <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl overflow-hidden shadow-xl flex flex-col">
+        <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex justify-between items-center gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+                <div className={`p-2.5 rounded-xl border shrink-0 ${iconTone}`}>{icon}</div>
+                <div className="min-w-0">
+                    <h2 className="text-lg font-bold text-white tracking-tight truncate">{title}</h2>
+                    <p className="text-xs text-slate-300 mt-0.5">{subtitle}</p>
                 </div>
-                <p className="text-xs text-white/60 ml-12">{subtitle}</p>
             </div>
             {onClear && (
-                <button 
+                <button
                     onClick={onClear}
-                    title="Clear Calculator"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                    title="Reset calculator"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white rounded-xl text-xs font-semibold transition-colors shrink-0"
                 >
-                    <RotateCcw size={14} /> Clear
+                    <RotateCcw size={13} /> Clear
                 </button>
             )}
         </div>
         <div className="p-5 flex-1 flex flex-col gap-5">{children}</div>
-    </div>
+    </section>
 );
 
-// ─── 0. Stock Buying Planner ───────────────────────────────────────────────
+// ─── 0. Stock Buying Planner ─────────────────────────────────────────────────
 
 interface PlannedBuy {
     id: string;
@@ -103,9 +150,11 @@ const StockBuyingPlanner: React.FC = () => {
         try {
             const saved = localStorage.getItem('stockPlannerGroups');
             if (saved) return JSON.parse(saved);
-        } catch (e) {}
+        } catch {
+            // ignore corrupt localStorage
+        }
         return [
-            { id: '1', accountId: accounts[0]?.id || '', buys: [{ id: 'b1', ticker: '', price: '', shares: '' }] }
+            { id: '1', accountId: accounts[0]?.id || '', buys: [{ id: 'b1', ticker: '', price: '', shares: '' }] },
         ];
     });
 
@@ -114,7 +163,14 @@ const StockBuyingPlanner: React.FC = () => {
     }, [groups]);
 
     const addGroup = () => {
-        setGroups([...groups, { id: Date.now().toString(), accountId: accounts[0]?.id || '', buys: [{ id: Date.now().toString() + 'b', ticker: '', price: '', shares: '' }] }]);
+        setGroups([
+            ...groups,
+            {
+                id: Date.now().toString(),
+                accountId: accounts[0]?.id || '',
+                buys: [{ id: Date.now().toString() + 'b', ticker: '', price: '', shares: '' }],
+            },
+        ]);
     };
 
     const removeGroup = (groupId: string) => {
@@ -122,150 +178,242 @@ const StockBuyingPlanner: React.FC = () => {
     };
 
     const updateGroupAccount = (groupId: string, accountId: string) => {
-        setGroups(groups.map(g => g.id === groupId ? { ...g, accountId } : g));
+        setGroups(groups.map(g => (g.id === groupId ? { ...g, accountId } : g)));
     };
 
     const addBuy = (groupId: string) => {
-        setGroups(groups.map(g => g.id === groupId ? { ...g, buys: [...g.buys, { id: Date.now().toString(), ticker: '', price: '', shares: '' }] } : g));
+        setGroups(
+            groups.map(g =>
+                g.id === groupId
+                    ? { ...g, buys: [...g.buys, { id: Date.now().toString(), ticker: '', price: '', shares: '' }] }
+                    : g
+            )
+        );
     };
 
     const removeBuy = (groupId: string, buyId: string) => {
-        setGroups(groups.map(g => g.id === groupId ? { ...g, buys: g.buys.filter(b => b.id !== buyId) } : g));
+        setGroups(
+            groups.map(g => (g.id === groupId ? { ...g, buys: g.buys.filter(b => b.id !== buyId) } : g))
+        );
     };
 
     const updateBuy = (groupId: string, buyId: string, field: keyof PlannedBuy, value: string) => {
-        setGroups(groups.map(g => g.id === groupId ? {
-            ...g,
-            buys: g.buys.map(b => b.id === buyId ? { ...b, [field]: field === 'ticker' ? value.toUpperCase() : value } : b)
-        } : g));
+        setGroups(
+            groups.map(g =>
+                g.id === groupId
+                    ? {
+                          ...g,
+                          buys: g.buys.map(b =>
+                              b.id === buyId
+                                  ? { ...b, [field]: field === 'ticker' ? value.toUpperCase() : value }
+                                  : b
+                          ),
+                      }
+                    : g
+            )
+        );
     };
 
     const handleClear = () => {
-        setGroups([{ id: '1', accountId: accounts[0]?.id || '', buys: [{ id: 'b1', ticker: '', price: '', shares: '' }] }]);
+        setGroups([
+            { id: '1', accountId: accounts[0]?.id || '', buys: [{ id: 'b1', ticker: '', price: '', shares: '' }] },
+        ]);
     };
 
     const handleTickerBlur = async (groupId: string, buyId: string, ticker: string) => {
         if (!ticker.trim()) return;
         const upperTicker = ticker.toUpperCase();
-        
+
         const group = groups.find(g => g.id === groupId);
         if (!group) return;
-        
-        const assets = getAssetsByAccount(group.accountId);
-        const existingAsset = assets.find(a => a.ticker === upperTicker);
-        
+
+        const accountAssets = getAssetsByAccount(group.accountId);
+        const existingAsset = accountAssets.find(a => a.ticker === upperTicker);
+
         if (existingAsset && existingAsset.currentPrice) {
-            setGroups(prev => prev.map(g => g.id === groupId ? {
-                ...g,
-                buys: g.buys.map(b => b.id === buyId ? {
-                    ...b,
-                    currentPrice: existingAsset.currentPrice,
-                    price: b.price === '' ? existingAsset.currentPrice.toFixed(2) : b.price
-                } : b)
-            } : g));
+            setGroups(prev =>
+                prev.map(g =>
+                    g.id === groupId
+                        ? {
+                              ...g,
+                              buys: g.buys.map(b =>
+                                  b.id === buyId
+                                      ? {
+                                            ...b,
+                                            currentPrice: existingAsset.currentPrice,
+                                            price: b.price === '' ? existingAsset.currentPrice.toFixed(2) : b.price,
+                                        }
+                                      : b
+                              ),
+                          }
+                        : g
+                )
+            );
             return;
         }
 
-        setGroups(prev => prev.map(g => g.id === groupId ? { ...g, buys: g.buys.map(b => b.id === buyId ? { ...b, isLoadingPrice: true } : b) } : g));
+        setGroups(prev =>
+            prev.map(g =>
+                g.id === groupId
+                    ? { ...g, buys: g.buys.map(b => (b.id === buyId ? { ...b, isLoadingPrice: true } : b)) }
+                    : g
+            )
+        );
         try {
-            const res = await fetch(`/api/quote?symbol=${upperTicker}`);
+            const res = await fetch(`${API_BASE}/api/quote?symbol=${upperTicker}`);
             if (res.ok) {
                 const data = await res.json();
                 const currentPrice = data.regularMarketPrice;
                 if (currentPrice !== undefined) {
-                    setGroups(prev => prev.map(g => g.id === groupId ? {
-                        ...g,
-                        buys: g.buys.map(b => b.id === buyId ? { 
-                            ...b, 
-                            currentPrice, 
-                            isLoadingPrice: false,
-                            price: b.price === '' ? currentPrice.toFixed(2) : b.price 
-                        } : b)
-                    } : g));
+                    setGroups(prev =>
+                        prev.map(g =>
+                            g.id === groupId
+                                ? {
+                                      ...g,
+                                      buys: g.buys.map(b =>
+                                          b.id === buyId
+                                              ? {
+                                                    ...b,
+                                                    currentPrice,
+                                                    isLoadingPrice: false,
+                                                    price: b.price === '' ? currentPrice.toFixed(2) : b.price,
+                                                }
+                                              : b
+                                      ),
+                                  }
+                                : g
+                        )
+                    );
                     return;
                 }
             }
-        } catch (e) {}
-        
-        setGroups(prev => prev.map(g => g.id === groupId ? { ...g, buys: g.buys.map(b => b.id === buyId ? { ...b, isLoadingPrice: false } : b) } : g));
+        } catch {
+            // ignore network quote error
+        }
+
+        setGroups(prev =>
+            prev.map(g =>
+                g.id === groupId
+                    ? { ...g, buys: g.buys.map(b => (b.id === buyId ? { ...b, isLoadingPrice: false } : b)) }
+                    : g
+            )
+        );
     };
 
-    const grandTotal = groups.reduce((sum, g) => sum + g.buys.reduce((s, b) => s + (parseFloat(b.price) || 0) * (parseFloat(b.shares) || 0), 0), 0);
+    const grandTotal = groups.reduce(
+        (sum, g) => sum + g.buys.reduce((s, b) => s + (parseFloat(b.price) || 0) * (parseFloat(b.shares) || 0), 0),
+        0
+    );
 
     return (
         <CardShell
-            icon={<ShoppingCart size={20} className="text-white" />}
+            icon={<ShoppingCart size={20} />}
+            iconTone="bg-green-500/15 border-green-500/35 text-green-400"
             title="Stock Buying Planner"
-            subtitle="Plan your stock purchases, track total spend, and preview your new average costs"
-            accentColor="from-emerald-900/80 to-teal-900/60"
+            subtitle="Plan purchases by account, track remaining cash, and preview updated average cost"
             onClear={handleClear}
         >
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
                 {groups.map((group, groupIdx) => {
                     const selectedAccount = accounts.find(a => a.id === group.accountId);
                     const availableCash = selectedAccount?.cashBalance || 0;
-                    const assets = selectedAccount ? getAssetsByAccount(group.accountId) : [];
-                    
-                    const groupTotal = group.buys.reduce((sum, b) => sum + (parseFloat(b.price) || 0) * (parseFloat(b.shares) || 0), 0);
+                    const accountAssets = selectedAccount ? getAssetsByAccount(group.accountId) : [];
+
+                    const groupTotal = group.buys.reduce(
+                        (sum, b) => sum + (parseFloat(b.price) || 0) * (parseFloat(b.shares) || 0),
+                        0
+                    );
                     const remainingCash = availableCash - groupTotal;
                     const isOverdrawn = remainingCash < 0;
 
                     return (
-                        <div key={group.id} className="flex flex-col gap-3 bg-slate-900/40 p-4 rounded-xl border border-slate-700/50 relative">
-                            {groups.length > 1 && (
-                                <button
-                                    onClick={() => removeGroup(group.id)}
-                                    className="absolute -top-3 -right-3 p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-colors z-10 border border-red-500/30 shadow-lg"
-                                    title="Remove Account Group"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            )}
-                            
+                        <div
+                            key={group.id}
+                            className="flex flex-col gap-4 bg-slate-900/65 p-4 sm:p-5 rounded-xl border border-slate-700/80"
+                        >
                             {/* Account Selection & Cash Summary */}
-                            <div className="flex items-center gap-4 bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">
-                                <div className="flex-1">
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Account {groupIdx + 1}</label>
-                                    <select 
-                                        className="input w-full bg-slate-900/80 text-sm font-bold border-slate-700/60"
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-800/95 p-3.5 rounded-xl border border-slate-700/80">
+                                <div className="flex-1 min-w-0">
+                                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                                        Account {groupIdx + 1}
+                                    </label>
+                                    <select
+                                        className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                                         value={group.accountId}
                                         onChange={e => updateGroupAccount(group.id, e.target.value)}
                                     >
-                                        <option value="" disabled>Select an Account</option>
+                                        <option value="" disabled>
+                                            Select an Account
+                                        </option>
                                         {accounts.map(a => (
-                                            <option key={a.id} value={a.id}>{a.name}</option>
+                                            <option key={a.id} value={a.id}>
+                                                {a.name}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Available Cash</p>
-                                    <p className="font-mono font-bold text-lg text-emerald-400">${fmtCurrency(availableCash)}</p>
+
+                                <div className="flex items-center justify-between sm:justify-end gap-4">
+                                    <div className="sm:text-right">
+                                        <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                            Available Cash
+                                        </p>
+                                        <p className="font-mono tabular-nums font-bold text-lg text-green-400">
+                                            ${fmtCurrency(availableCash)}
+                                        </p>
+                                    </div>
+
+                                    {groups.length > 1 && (
+                                        <button
+                                            onClick={() => removeGroup(group.id)}
+                                            className="p-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 rounded-xl transition-colors border border-red-500/35"
+                                            title="Remove Account Group"
+                                            aria-label={`Remove Account ${groupIdx + 1}`}
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
+                            {/* Column Labels (Desktop) */}
+                            <div className="hidden md:grid md:grid-cols-[1.2fr_1fr_20px_1fr_110px_36px] gap-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                                <span>Ticker</span>
+                                <span>Price ($)</span>
+                                <span />
+                                <span>Shares</span>
+                                <span className="text-right">Est. Cost</span>
+                                <span />
+                            </div>
+
                             {/* Planned Buys */}
-                            <div className="flex flex-col gap-2 pl-2 border-l-2 border-slate-700/50">
+                            <div className="flex flex-col gap-2.5">
                                 {group.buys.map(buy => {
                                     const p = parseFloat(buy.price) || 0;
                                     const s = parseFloat(buy.shares) || 0;
                                     const cost = p * s;
-                                    const existingAsset = assets.find(a => a.ticker === buy.ticker && buy.ticker !== '');
-                                    
+                                    const existingAsset = accountAssets.find(
+                                        a => a.ticker === buy.ticker && buy.ticker !== ''
+                                    );
+
                                     let newAvgCostMsg = '';
                                     if (existingAsset && p > 0 && s > 0) {
                                         const oldTotalCost = existingAsset.quantity * existingAsset.averageCost;
                                         const newTotalCost = oldTotalCost + cost;
                                         const newTotalQty = existingAsset.quantity + s;
                                         const newAvg = newTotalCost / newTotalQty;
-                                        newAvgCostMsg = `Avg: $${fmtCurrency(existingAsset.averageCost)} → $${fmtCurrency(newAvg)} (${newTotalQty} shs)`;
+                                        newAvgCostMsg = `New Avg: $${fmtCurrency(existingAsset.averageCost)} → $${fmtCurrency(newAvg)} (${newTotalQty.toLocaleString()} shs)`;
                                     }
 
                                     return (
-                                        <div key={buy.id} className="flex flex-col gap-2 p-2 bg-slate-900/60 rounded-lg border border-slate-700/30">
-                                            <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
+                                        <div
+                                            key={buy.id}
+                                            className="flex flex-col gap-2 p-3 bg-slate-800/80 rounded-xl border border-slate-700/80"
+                                        >
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.2fr_1fr_20px_1fr_110px_36px] items-center gap-3">
                                                 <input
                                                     type="text"
-                                                    className="input flex-1 min-w-[90px] text-sm font-bold uppercase py-1.5"
+                                                    className="bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3 py-2 text-sm font-bold font-mono uppercase focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                                                     placeholder="TICKER"
                                                     value={buy.ticker}
                                                     onChange={e => updateBuy(group.id, buy.id, 'ticker', e.target.value)}
@@ -274,47 +422,67 @@ const StockBuyingPlanner: React.FC = () => {
                                                 />
                                                 <input
                                                     type="number"
-                                                    className="input input-no-spinner flex-1 min-w-[90px] text-sm font-mono py-1.5"
+                                                    className="input-no-spinner bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                                                     placeholder="Price ($)"
                                                     value={buy.price}
                                                     onChange={e => updateBuy(group.id, buy.id, 'price', e.target.value)}
                                                 />
-                                                <span className="text-slate-600 text-xs hidden md:block">×</span>
+                                                <span className="text-slate-400 text-sm font-bold text-center hidden md:block">
+                                                    ×
+                                                </span>
                                                 <input
                                                     type="number"
-                                                    className="input input-no-spinner flex-1 min-w-[90px] text-sm font-mono py-1.5"
+                                                    className="input-no-spinner bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3 py-2 text-sm font-mono tabular-nums focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                                                     placeholder="Shares"
                                                     value={buy.shares}
                                                     onChange={e => updateBuy(group.id, buy.id, 'shares', e.target.value)}
                                                 />
-                                                <div className="flex-1 min-w-[100px] text-right">
-                                                    <span className="font-mono font-bold text-sm text-slate-200">${fmtCurrency(cost)}</span>
+                                                <div className="flex items-center justify-between md:justify-end">
+                                                    <span className="text-xs font-semibold text-slate-400 md:hidden">
+                                                        Est. Cost:
+                                                    </span>
+                                                    <span className="font-mono tabular-nums font-bold text-sm text-white">
+                                                        ${fmtCurrency(cost)}
+                                                    </span>
                                                 </div>
                                                 <button
                                                     onClick={() => removeBuy(group.id, buy.id)}
-                                                    className="p-1.5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded transition-colors"
+                                                    className="p-2 hover:bg-red-500/15 text-slate-400 hover:text-red-400 rounded-lg transition-colors justify-self-end"
+                                                    title="Remove order row"
+                                                    aria-label="Remove order row"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={15} />
                                                 </button>
                                             </div>
+
                                             {(buy.isLoadingPrice || buy.currentPrice !== undefined || newAvgCostMsg) && (
-                                                <div className="flex flex-wrap items-center gap-2 ml-1">
+                                                <div className="flex flex-wrap items-center gap-2 pt-1">
                                                     {buy.isLoadingPrice && (
-                                                        <span className="text-[10px] text-slate-500 italic">Fetching...</span>
+                                                        <span className="text-xs text-slate-300 italic">
+                                                            Fetching quote…
+                                                        </span>
                                                     )}
                                                     {!buy.isLoadingPrice && buy.currentPrice !== undefined && (
-                                                        <button 
-                                                            onClick={() => updateBuy(group.id, buy.id, 'price', buy.currentPrice!.toFixed(2))}
-                                                            className="text-[10px] text-emerald-400/80 hover:text-emerald-300 transition-colors px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 font-mono"
-                                                            title="Click to use current price"
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                updateBuy(
+                                                                    group.id,
+                                                                    buy.id,
+                                                                    'price',
+                                                                    buy.currentPrice!.toFixed(2)
+                                                                )
+                                                            }
+                                                            className="text-xs font-mono font-semibold text-green-400 bg-green-500/15 hover:bg-green-500/25 border border-green-500/35 px-2.5 py-0.5 rounded-md transition-colors"
+                                                            title="Click to apply current market price"
                                                         >
                                                             Market: ${buy.currentPrice.toFixed(2)}
                                                         </button>
                                                     )}
                                                     {newAvgCostMsg && (
-                                                        <div className="text-[10px] text-blue-400/80 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 font-mono">
+                                                        <span className="text-xs font-mono font-semibold text-blue-400 bg-blue-500/15 border border-blue-500/35 px-2.5 py-0.5 rounded-md">
                                                             {newAvgCostMsg}
-                                                        </div>
+                                                        </span>
                                                     )}
                                                 </div>
                                             )}
@@ -325,20 +493,30 @@ const StockBuyingPlanner: React.FC = () => {
 
                             <button
                                 onClick={() => addBuy(group.id)}
-                                className="flex items-center gap-1.5 justify-center py-1.5 text-xs font-bold text-slate-400 hover:text-emerald-400 border border-dashed border-slate-700 hover:border-emerald-500/50 rounded-lg transition-colors ml-2"
+                                className="flex items-center gap-1.5 justify-center py-2 text-xs font-bold text-slate-300 hover:text-green-400 border border-dashed border-slate-600 hover:border-green-500/60 rounded-xl transition-colors"
                             >
-                                <Plus size={12} /> Add Stock to Account {groupIdx + 1}
+                                <Plus size={14} /> Add Stock to Account {groupIdx + 1}
                             </button>
 
                             {/* Account Footer Totals */}
-                            <div className="flex justify-between items-center mt-2 p-3 bg-slate-800/40 rounded-lg border border-slate-700/40 ml-2">
+                            <div className="flex justify-between items-center p-3.5 bg-slate-800/95 rounded-xl border border-slate-700/80">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Account Spend</p>
-                                    <p className="font-mono font-bold text-sm text-white">${fmtCurrency(groupTotal)}</p>
+                                    <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                        Account Spend
+                                    </p>
+                                    <p className="font-mono tabular-nums font-bold text-base text-white mt-0.5">
+                                        ${fmtCurrency(groupTotal)}
+                                    </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Remaining Cash</p>
-                                    <p className={`font-mono font-bold text-sm ${isOverdrawn ? 'text-red-400' : 'text-emerald-400'}`}>
+                                    <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                        Remaining Cash
+                                    </p>
+                                    <p
+                                        className={`font-mono tabular-nums font-bold text-base mt-0.5 ${
+                                            isOverdrawn ? 'text-red-400' : 'text-green-400'
+                                        }`}
+                                    >
                                         ${fmtCurrency(remainingCash)}
                                     </p>
                                 </div>
@@ -349,15 +527,19 @@ const StockBuyingPlanner: React.FC = () => {
 
                 <button
                     onClick={addGroup}
-                    className="flex items-center gap-2 justify-center py-2.5 text-sm font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl shadow transition-colors"
+                    className="flex items-center gap-2 justify-center py-2.5 text-sm font-semibold text-slate-200 hover:text-white bg-slate-900 hover:bg-slate-750 border border-slate-700 hover:border-slate-500 rounded-xl transition-colors"
                 >
                     <Plus size={16} /> Add Another Account
                 </button>
 
                 {groups.length > 1 && (
-                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-emerald-900/40 to-teal-900/40 rounded-xl border border-emerald-500/30">
-                        <span className="text-sm font-bold text-emerald-400 uppercase tracking-widest">Grand Total Spend</span>
-                        <span className="font-mono font-bold text-2xl text-emerald-400">${fmtCurrency(grandTotal)}</span>
+                    <div className="flex justify-between items-center p-4 bg-green-500/15 rounded-xl border border-green-500/35">
+                        <span className="text-sm font-bold text-green-400 uppercase tracking-widest">
+                            Grand Total Spend
+                        </span>
+                        <span className="font-mono tabular-nums font-bold text-2xl text-green-400">
+                            ${fmtCurrency(grandTotal)}
+                        </span>
                     </div>
                 )}
             </div>
@@ -414,27 +596,27 @@ const ProfitLossCalc: React.FC = () => {
 
     return (
         <CardShell
-            icon={<Target size={20} className="text-white" />}
+            icon={<Target size={20} />}
+            iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
             title="Profit / Loss & Risk-Reward"
             subtitle="Evaluate your trade's upside vs. downside before entering"
-            accentColor="from-blue-900/80 to-indigo-900/60"
             onClear={handleClear}
         >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <InputField label="Entry Price" value={entry} onChange={setEntry} prefix="$" placeholder="e.g. 50.00" />
                 <InputField label="Target Price" value={target} onChange={setTarget} prefix="$" placeholder="e.g. 65.00" />
-                <InputField 
-                    label="Stop Loss Price" 
-                    value={stopLoss} 
-                    onChange={setStopLoss} 
-                    prefix="$" 
+                <InputField
+                    label="Stop Loss Price"
+                    value={stopLoss}
+                    onChange={setStopLoss}
+                    prefix="$"
                     placeholder="e.g. 45.00"
                     action={
-                        <button 
+                        <button
                             type="button"
                             onClick={handleAutoStopLoss}
                             title="Auto-calculate 1:2 Risk/Reward based on Entry and Target"
-                            className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase bg-blue-500/10 hover:bg-blue-500/20 px-1.5 py-0.5 rounded transition-colors"
+                            className="text-xs text-blue-400 font-bold bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 px-2 py-0.5 rounded-md transition-colors"
                         >
                             Auto 1:2
                         </button>
@@ -444,23 +626,33 @@ const ProfitLossCalc: React.FC = () => {
             </div>
 
             {result ? (
-                <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
-                    <ResultRow label="Total Profit (at target)" value={`+$${fmtCurrency(result.totalProfit)}`} color="text-green-400" large />
+                <div className="bg-slate-900/75 rounded-xl p-4 border border-slate-700/80">
+                    <ResultRow
+                        label="Total Profit (at target)"
+                        value={`+$${fmtCurrency(result.totalProfit)}`}
+                        color="text-green-400"
+                        large
+                    />
                     <ResultRow label="Profit %" value={`+${fmtPct(result.profitPct)}`} color="text-green-400" />
-                    <ResultRow label="Total Loss (at stop)" value={`-$${fmtCurrency(result.totalLoss)}`} color="text-red-400" large />
+                    <ResultRow
+                        label="Total Loss (at stop)"
+                        value={`-$${fmtCurrency(result.totalLoss)}`}
+                        color="text-red-400"
+                        large
+                    />
                     <ResultRow label="Loss %" value={`-${fmtPct(result.lossPct)}`} color="text-red-400" />
-                    <div className="flex justify-between items-center pt-3 mt-1 border-t border-slate-700/40">
-                        <span className="text-sm text-slate-400">Risk : Reward</span>
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-white text-lg">
+                    <div className="flex justify-between items-center pt-3 mt-1 border-t border-slate-700/60">
+                        <span className="text-sm font-medium text-slate-300">Risk : Reward</span>
+                        <div className="flex items-center gap-2.5">
+                            <span className="font-mono tabular-nums font-bold text-white text-lg">
                                 1 : {result.rrRatio.toFixed(2)}
                             </span>
                             {result.isFavorable ? (
-                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-500/15 text-green-400 text-xs font-bold border border-green-500/30">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-500/15 text-green-400 text-xs font-bold border border-green-500/35">
                                     <CheckCircle size={12} /> Favorable
                                 </span>
                             ) : (
-                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 text-xs font-bold border border-red-500/30">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 text-xs font-bold border border-red-500/35">
                                     <AlertTriangle size={12} /> High Risk
                                 </span>
                             )}
@@ -468,7 +660,7 @@ const ProfitLossCalc: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-600 text-sm italic bg-slate-900/30 rounded-xl p-6 text-center">
+                <div className="flex-1 flex items-center justify-center text-slate-300 text-sm bg-slate-900/50 border border-dashed border-slate-700 rounded-xl p-6 text-center min-h-[150px]">
                     Fill in all fields to see your risk/reward analysis
                 </div>
             )}
@@ -477,8 +669,6 @@ const ProfitLossCalc: React.FC = () => {
 };
 
 // ─── 2. Position Sizing Calculator ───────────────────────────────────────────
-
-const API_BASE = 'http://localhost:3001';
 
 const PositionSizingCalc: React.FC = () => {
     const [balance, setBalance] = useState('');
@@ -554,13 +744,13 @@ const PositionSizingCalc: React.FC = () => {
 
     return (
         <CardShell
-            icon={<Shield size={20} className="text-white" />}
+            icon={<Shield size={20} />}
+            iconTone="bg-indigo-500/15 border-indigo-500/35 text-indigo-400"
             title="Position Sizing"
-            subtitle="Risk only what you can afford to lose on each trade"
-            accentColor="from-blue-900/80 to-indigo-900/60"
+            subtitle="Cap maximum dollar risk per trade using account size & stop distance"
             onClear={handleClear}
         >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <InputField label="Account Balance" value={balance} onChange={setBalance} prefix="$" placeholder="e.g. 25000" />
                 <InputField label="Risk %" value={riskPct} onChange={setRiskPct} suffix="%" placeholder="e.g. 1" min="0.1" step="0.1" />
                 <InputField label="Entry Price" value={entryPrice} onChange={setEntryPrice} prefix="$" placeholder="e.g. 50.00" />
@@ -576,7 +766,7 @@ const PositionSizingCalc: React.FC = () => {
                             onClick={handleAutoStopLoss}
                             disabled={!canAutoSL}
                             title="Set stop loss using ATR × Multiplier"
-                            className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-30 disabled:cursor-not-allowed px-1.5 py-0.5 rounded transition-colors"
+                            className="text-xs text-blue-400 font-bold bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-0.5 rounded-md transition-colors"
                         >
                             ATR Auto
                         </button>
@@ -585,53 +775,53 @@ const PositionSizingCalc: React.FC = () => {
             </div>
 
             {/* ATR Lookup Panel */}
-            <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 flex flex-col gap-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400">
-                    📡 ATR-Based Stop Loss
-                </p>
+            <div className="bg-slate-900/75 rounded-xl p-4 border border-slate-700/80 flex flex-col gap-3.5">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-400">
+                    <Radio size={14} />
+                    <span>ATR-Based Stop Loss</span>
+                </div>
 
                 {/* Ticker fetch row */}
                 <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <input
-                            type="text"
-                            className="input input-no-spinner w-full uppercase"
-                            placeholder="Ticker (e.g. AAPL)"
-                            value={atrTicker}
-                            onChange={e => setAtrTicker(e.target.value.toUpperCase())}
-                            onKeyDown={e => e.key === 'Enter' && fetchATR()}
-                        />
-                    </div>
+                    <input
+                        type="text"
+                        className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2 text-sm font-mono font-semibold uppercase focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="Ticker (e.g. AAPL)"
+                        value={atrTicker}
+                        onChange={e => setAtrTicker(e.target.value.toUpperCase())}
+                        onKeyDown={e => e.key === 'Enter' && fetchATR()}
+                    />
                     <button
                         onClick={fetchATR}
                         disabled={atrLoading || !atrTicker.trim()}
-                        className="px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors whitespace-nowrap"
+                        style={{ color: '#ffffff' }}
+                        className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-45 disabled:cursor-not-allowed rounded-xl transition-colors whitespace-nowrap"
                     >
-                        {atrLoading ? '...' : 'Fetch ATR'}
+                        {atrLoading ? 'Fetching…' : 'Fetch ATR'}
                     </button>
                 </div>
 
                 {atrError && (
-                    <p className="text-xs text-red-400 flex items-center gap-1">
-                        <AlertTriangle size={12} /> {atrError}
+                    <p className="text-xs text-red-400 font-medium flex items-center gap-1.5">
+                        <AlertTriangle size={13} /> {atrError}
                     </p>
                 )}
 
                 {/* ATR value + multiplier */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-end">
                     <InputField
                         label="Current ATR ($)"
                         value={currentATR}
                         onChange={setCurrentATR}
                         prefix="$"
-                        placeholder="Auto-filled or manual"
+                        placeholder="Auto or manual"
                     />
-                    <div>
-                        <div className="flex justify-between items-end mb-1.5">
-                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                                Volatility Multiplier
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                Volatility Mult.
                             </label>
-                            <span className="text-xs font-bold text-blue-400">{multiplier.toFixed(1)}×</span>
+                            <span className="text-xs font-mono font-bold text-blue-400">{multiplier.toFixed(1)}×</span>
                         </div>
                         <input
                             type="range"
@@ -642,9 +832,9 @@ const PositionSizingCalc: React.FC = () => {
                             onChange={e => setMultiplier(parseFloat(e.target.value))}
                             className="w-full accent-blue-500 cursor-pointer"
                         />
-                        <div className="flex justify-between text-[10px] text-slate-600 mt-0.5">
+                        <div className="flex justify-between text-xs text-slate-400 font-medium">
                             <span>1.0× Tight</span>
-                            <span>2.0× Standard</span>
+                            <span>2.0× Std</span>
                             <span>3.0× Wide</span>
                         </div>
                     </div>
@@ -652,11 +842,12 @@ const PositionSizingCalc: React.FC = () => {
 
                 {/* Preview of auto stop loss */}
                 {canAutoSL && (
-                    <div className="flex items-center justify-between p-2.5 bg-blue-500/8 border border-blue-500/20 rounded-lg">
-                        <span className="text-xs text-slate-400">
-                            Auto Stop: {parseFloat(entryPrice).toFixed(2)} − ({parseFloat(currentATR).toFixed(4)} × {multiplier.toFixed(1)})
+                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-blue-500/15 border border-blue-500/35 rounded-xl">
+                        <span className="text-xs font-medium text-slate-200 font-mono">
+                            Auto Stop: {parseFloat(entryPrice).toFixed(2)} − ({parseFloat(currentATR).toFixed(4)} ×{' '}
+                            {multiplier.toFixed(1)})
                         </span>
-                        <span className="font-mono font-bold text-blue-300 text-sm">
+                        <span className="font-mono tabular-nums font-bold text-blue-400 text-sm">
                             = ${Math.max(0, parseFloat(entryPrice) - parseFloat(currentATR) * multiplier).toFixed(2)}
                         </span>
                     </div>
@@ -664,22 +855,35 @@ const PositionSizingCalc: React.FC = () => {
             </div>
 
             {result ? (
-                <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
-                    {/* Dollar Risk — highlighted */}
-                    <div className="mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 flex justify-between items-center">
+                <div className="bg-slate-900/75 rounded-xl p-4 border border-slate-700/80">
+                    <div className="mb-3 p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/35 flex justify-between items-center gap-3">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-amber-400 mb-0.5">⚠ Maximum Dollar Risk</p>
-                            <p className="text-xs text-slate-400">This is the exact amount you can lose</p>
+                            <p className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 mb-0.5">
+                                <AlertTriangle size={13} /> Maximum Dollar Risk
+                            </p>
+                            <p className="text-xs text-slate-300">Exact loss if stopped out</p>
                         </div>
-                        <span className="font-mono font-bold text-2xl text-amber-400">-${fmtCurrency(result.dollarRisk)}</span>
+                        <span className="font-mono tabular-nums font-bold text-2xl text-amber-400">
+                            -${fmtCurrency(result.dollarRisk)}
+                        </span>
                     </div>
                     <ResultRow label="Risk per Share" value={`$${fmtCurrency(result.riskPerShare)}`} color="text-red-400" />
-                    <ResultRow label="Recommended Shares" value={result.shares.toLocaleString()} color="text-white" large />
-                    <ResultRow label="Total Position Size" value={`$${fmtCurrency(result.positionSize)}`} color="text-blue-400" large />
-                    <ResultRow label="% of Portfolio" value={fmtPct(result.pctOfPortfolio)} color="text-slate-300" />
+                    <ResultRow
+                        label="Recommended Shares"
+                        value={result.shares.toLocaleString()}
+                        color="text-white"
+                        large
+                    />
+                    <ResultRow
+                        label="Total Position Size"
+                        value={`$${fmtCurrency(result.positionSize)}`}
+                        color="text-blue-400"
+                        large
+                    />
+                    <ResultRow label="% of Portfolio" value={fmtPct(result.pctOfPortfolio)} color="text-slate-200" />
                 </div>
             ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-600 text-sm italic bg-slate-900/30 rounded-xl p-6 text-center">
+                <div className="flex-1 flex items-center justify-center text-slate-300 text-sm bg-slate-900/50 border border-dashed border-slate-700 rounded-xl p-6 text-center min-h-[120px]">
                     {parseFloat(entryPrice) <= parseFloat(stopLoss) && entryPrice && stopLoss
                         ? 'Entry price must be above stop loss'
                         : 'Fill in all fields to calculate your position size'}
@@ -688,7 +892,6 @@ const PositionSizingCalc: React.FC = () => {
         </CardShell>
     );
 };
-
 
 // ─── 3. Portfolio Allocation Splitter ────────────────────────────────────────
 
@@ -719,12 +922,14 @@ const PortfolioSplitter: React.FC = () => {
     };
 
     const updateAsset = (id: string, field: 'ticker' | 'pct', value: string) => {
-        setAssets(prev => prev.map(a =>
-            a.id === id ? { ...a, [field]: field === 'pct' ? parseFloat(value) || 0 : value.toUpperCase() } : a
-        ));
+        setAssets(prev =>
+            prev.map(a =>
+                a.id === id ? { ...a, [field]: field === 'pct' ? parseFloat(value) || 0 : value.toUpperCase() } : a
+            )
+        );
     };
 
-    const pctBarColor = !isValid ? 'bg-red-500' : 'bg-green-500';
+    const pctBarColor = !isValid ? (totalPct > 100 ? 'bg-red-500' : 'bg-amber-400') : 'bg-green-500';
 
     const handleClear = () => {
         setCash('');
@@ -737,23 +942,27 @@ const PortfolioSplitter: React.FC = () => {
 
     return (
         <CardShell
-            icon={<PieChart size={20} className="text-white" />}
+            icon={<PieChart size={20} />}
+            iconTone="bg-purple-500/15 border-purple-500/35 text-purple-400"
             title="Portfolio Allocation Splitter"
-            subtitle="Divide your cash across assets with instant dollar amounts"
-            accentColor="from-blue-900/80 to-indigo-900/60"
+            subtitle="Divide available cash across target weights with exact dollar amounts"
             onClear={handleClear}
         >
             <InputField label="Total Cash to Invest" value={cash} onChange={setCash} prefix="$" placeholder="e.g. 10000" />
 
             {/* % validation bar */}
-            <div>
-                <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Allocation Total</span>
-                    <span className={`text-xs font-bold ${isValid ? 'text-green-400' : totalPct > 100 ? 'text-red-400' : 'text-amber-400'}`}>
+            <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-3.5 space-y-2">
+                <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">Allocation Total</span>
+                    <span
+                        className={`text-xs font-mono font-bold ${
+                            isValid ? 'text-green-400' : totalPct > 100 ? 'text-red-400' : 'text-amber-400'
+                        }`}
+                    >
                         {totalPct.toFixed(1)}% {isValid ? '✓ Valid' : totalPct > 100 ? '— Over 100%' : '— Under 100%'}
                     </span>
                 </div>
-                <div className="h-1.5 w-full bg-slate-700/60 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
                     <div
                         className={`h-full rounded-full transition-all duration-300 ${pctBarColor}`}
                         style={{ width: `${Math.min(totalPct, 100)}%` }}
@@ -762,40 +971,51 @@ const PortfolioSplitter: React.FC = () => {
             </div>
 
             {/* Asset rows */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
                 {assets.map(asset => {
                     const dollars = isValid && totalCash > 0 ? (asset.pct / 100) * totalCash : null;
                     return (
-                        <div key={asset.id} className="flex items-center gap-2 p-2.5 bg-slate-900/50 rounded-lg border border-slate-700/40">
+                        <div
+                            key={asset.id}
+                            className="flex items-center gap-2.5 p-2.5 bg-slate-900/75 rounded-xl border border-slate-700/80"
+                        >
                             <input
                                 type="text"
-                                className="input w-24 text-sm font-bold uppercase"
+                                className="w-24 bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-2.5 py-1.5 text-sm font-bold font-mono uppercase focus:outline-none focus:border-blue-500"
                                 placeholder="TICK"
                                 value={asset.ticker}
                                 onChange={e => updateAsset(asset.id, 'ticker', e.target.value)}
-                                maxLength={6}
+                                maxLength={10}
                             />
-                            <input
-                                type="number"
-                                step="0.1"
-                                min="0"
-                                max="100"
-                                className="input input-no-spinner w-20 text-sm text-right font-mono"
-                                placeholder="%"
-                                value={asset.pct || ''}
-                                onChange={e => updateAsset(asset.id, 'pct', e.target.value)}
-                            />
-                            <span className="text-slate-500 text-sm">%</span>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="100"
+                                    className="input-no-spinner w-20 bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg pl-2.5 pr-6 py-1.5 text-sm text-right font-mono tabular-nums focus:outline-none focus:border-blue-500"
+                                    placeholder="0"
+                                    value={asset.pct || ''}
+                                    onChange={e => updateAsset(asset.id, 'pct', e.target.value)}
+                                />
+                                <span className="absolute right-2.5 text-slate-300 text-xs font-bold pointer-events-none">
+                                    %
+                                </span>
+                            </div>
                             <div className="flex-1 text-right">
                                 {dollars !== null ? (
-                                    <span className="font-mono font-bold text-sm text-purple-300">${fmtCurrency(dollars)}</span>
+                                    <span className="font-mono tabular-nums font-bold text-sm text-purple-400">
+                                        ${fmtCurrency(dollars)}
+                                    </span>
                                 ) : (
-                                    <span className="text-slate-600 text-xs italic">—</span>
+                                    <span className="text-slate-400 text-xs font-mono">—</span>
                                 )}
                             </div>
                             <button
                                 onClick={() => removeAsset(asset.id)}
-                                className="p-1.5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded transition-colors"
+                                className="p-1.5 hover:bg-red-500/15 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                title="Remove asset"
+                                aria-label="Remove asset"
                             >
                                 <Trash2 size={14} />
                             </button>
@@ -806,9 +1026,9 @@ const PortfolioSplitter: React.FC = () => {
 
             <button
                 onClick={addAsset}
-                className="flex items-center gap-2 justify-center py-2 text-sm text-slate-400 hover:text-purple-400 border border-dashed border-slate-700 hover:border-purple-500/50 rounded-lg transition-colors"
+                className="flex items-center gap-2 justify-center py-2.5 text-sm font-semibold text-slate-300 hover:text-purple-400 border border-dashed border-slate-600 hover:border-purple-500/60 rounded-xl transition-colors"
             >
-                <Plus size={14} /> Add Asset
+                <Plus size={15} /> Add Asset
             </button>
         </CardShell>
     );
@@ -835,31 +1055,41 @@ const DripCalculator: React.FC = () => {
         const gr = (parseFloat(growth) || 0) / 100;
         const yr = Math.min(Math.max(Math.floor(parseFloat(years) || 0), 1), 50);
 
-        if (p <= 0 || yr <= 0) return { withDripFinal: 0, withoutDripFinal: 0, rows: [], advantage: 0, advantagePct: 0 };
+        if (p <= 0 || yr <= 0) {
+            return { withDripFinal: 0, withoutDripFinal: 0, rows: [], advantage: 0, advantagePct: 0 };
+        }
 
-        const rows: DripYearRow[] = [];
+        const computedRows: DripYearRow[] = [];
         let dripValue = p;
         let noDripValue = p;
         let totalCashDivs = 0;
 
         for (let y = 1; y <= yr; y++) {
-            // WITH DRIP: dividends reinvested, compounding on total value
             dripValue = dripValue * (1 + gr + dy);
-
-            // WITHOUT DRIP: only share price grows; dividends taken as cash
             const cashDiv = noDripValue * dy;
             totalCashDivs += cashDiv;
             noDripValue = noDripValue * (1 + gr);
 
-            rows.push({ year: y, withDrip: dripValue, withoutDrip: noDripValue + totalCashDivs, cashDividends: totalCashDivs });
+            computedRows.push({
+                year: y,
+                withDrip: dripValue,
+                withoutDrip: noDripValue + totalCashDivs,
+                cashDividends: totalCashDivs,
+            });
         }
 
-        const withDripFinal = dripValue;
-        const withoutDripFinal = noDripValue + totalCashDivs;
-        const advantage = withDripFinal - withoutDripFinal;
-        const advantagePct = withoutDripFinal > 0 ? (advantage / withoutDripFinal) * 100 : 0;
+        const finalWith = dripValue;
+        const finalWithout = noDripValue + totalCashDivs;
+        const adv = finalWith - finalWithout;
+        const advPct = finalWithout > 0 ? (adv / finalWithout) * 100 : 0;
 
-        return { withDripFinal, withoutDripFinal, rows, advantage, advantagePct };
+        return {
+            withDripFinal: finalWith,
+            withoutDripFinal: finalWithout,
+            rows: computedRows,
+            advantage: adv,
+            advantagePct: advPct,
+        };
     }, [initial, divYield, growth, years]);
 
     const maxVal = Math.max(withDripFinal, withoutDripFinal);
@@ -873,13 +1103,13 @@ const DripCalculator: React.FC = () => {
 
     return (
         <CardShell
-            icon={<Leaf size={20} className="text-white" />}
+            icon={<Leaf size={20} />}
+            iconTone="bg-green-500/15 border-green-500/35 text-green-400"
             title="DRIP Calculator"
-            subtitle="See how dividend reinvestment compounds your wealth over time"
-            accentColor="from-blue-900/80 to-indigo-900/60"
+            subtitle="Compare dividend reinvestment compounding vs. taking cash dividends"
             onClear={handleClear}
         >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <InputField label="Initial Investment" value={initial} onChange={setInitial} prefix="$" placeholder="10000" />
                 <InputField label="Annual Dividend Yield" value={divYield} onChange={setDivYield} suffix="%" placeholder="3" step="0.1" />
                 <InputField label="Annual Price Growth" value={growth} onChange={setGrowth} suffix="%" placeholder="7" step="0.1" />
@@ -889,67 +1119,94 @@ const DripCalculator: React.FC = () => {
             {withDripFinal > 0 && (
                 <>
                     {/* Side-by-side hero comparison */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-green-500/10 border border-green-500/25 rounded-xl p-4 text-center">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-1">With DRIP</p>
-                            <p className="text-2xl font-bold font-mono text-green-400">${fmtCurrency(withDripFinal)}</p>
-                            <div className="mt-2 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
-                                <div className="h-full bg-green-500 rounded-full" style={{ width: `${(withDripFinal / maxVal) * 100}%` }} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-green-500/15 border border-green-500/35 rounded-xl p-4 text-center space-y-2">
+                            <p className="text-xs font-bold uppercase tracking-wider text-green-400">With DRIP</p>
+                            <p className="text-2xl font-bold font-mono tabular-nums text-green-400">
+                                ${fmtCurrency(withDripFinal)}
+                            </p>
+                            <div className="h-2 bg-slate-900 border border-slate-700 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-green-500 rounded-full"
+                                    style={{ width: `${maxVal > 0 ? (withDripFinal / maxVal) * 100 : 0}%` }}
+                                />
                             </div>
                         </div>
-                        <div className="bg-slate-800/60 border border-slate-700/40 rounded-xl p-4 text-center">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Without DRIP</p>
-                            <p className="text-2xl font-bold font-mono text-slate-300">${fmtCurrency(withoutDripFinal)}</p>
-                            <div className="mt-2 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
-                                <div className="h-full bg-slate-500 rounded-full" style={{ width: `${(withoutDripFinal / maxVal) * 100}%` }} />
+
+                        <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 text-center space-y-2">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-300">Without DRIP</p>
+                            <p className="text-2xl font-bold font-mono tabular-nums text-white">
+                                ${fmtCurrency(withoutDripFinal)}
+                            </p>
+                            <div className="h-2 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-slate-400 rounded-full"
+                                    style={{ width: `${maxVal > 0 ? (withoutDripFinal / maxVal) * 100 : 0}%` }}
+                                />
                             </div>
                         </div>
                     </div>
 
                     {/* DRIP advantage callout */}
-                    <div className="flex items-center justify-between bg-green-500/8 border border-green-500/20 rounded-xl px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-green-500/15 border border-green-500/35 rounded-xl px-4 py-3">
                         <div className="flex items-center gap-2 text-green-400">
                             <TrendingUp size={16} />
-                            <span className="text-sm font-semibold">DRIP Advantage</span>
+                            <span className="text-sm font-bold">DRIP Advantage</span>
                         </div>
-                        <div className="text-right">
-                            <span className="font-mono font-bold text-green-400 text-lg">+${fmtCurrency(advantage)}</span>
-                            <span className="text-xs text-green-600 ml-2">(+{fmtPct(advantagePct)} more)</span>
+                        <div className="text-right font-mono tabular-nums">
+                            <span className="font-bold text-green-400 text-lg">+${fmtCurrency(advantage)}</span>
+                            <span className="text-xs font-semibold text-slate-200 ml-2">
+                                (+{fmtPct(advantagePct)} more)
+                            </span>
                         </div>
                     </div>
 
-                    {/* Year-by-year table (last 5 milestones) */}
-                    <div className="bg-slate-900/50 rounded-xl border border-slate-700/40 overflow-hidden">
-                        <div className="px-4 py-2 bg-slate-800/60 border-b border-slate-700/40">
-                            <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Year-by-Year Milestones</span>
+                    {/* Year-by-year table */}
+                    <div className="bg-slate-900/75 rounded-xl border border-slate-700/80 overflow-hidden">
+                        <div className="px-4 py-2.5 bg-slate-900/95 border-b border-slate-700/80">
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                                Year-by-Year Milestones
+                            </span>
                         </div>
-                        <div className="overflow-auto max-h-48">
-                            <table className="data-table w-full text-xs">
-                                <thead>
+                        <div className="overflow-auto max-h-52">
+                            <table className="w-full text-xs border-collapse">
+                                <thead className="bg-slate-900/90 border-b border-slate-700/80 sticky top-0">
                                     <tr>
-                                        <th className="text-left">Year</th>
-                                        <th className="text-right text-green-400">With DRIP</th>
-                                        <th className="text-right text-slate-400">Without DRIP</th>
-                                        <th className="text-right text-amber-400">Difference</th>
+                                        <th className="px-4 py-2.5 text-left font-bold uppercase tracking-wider text-slate-300">
+                                            Year
+                                        </th>
+                                        <th className="px-4 py-2.5 text-right font-bold uppercase tracking-wider text-green-400">
+                                            With DRIP
+                                        </th>
+                                        <th className="px-4 py-2.5 text-right font-bold uppercase tracking-wider text-slate-300">
+                                            Without DRIP
+                                        </th>
+                                        <th className="px-4 py-2.5 text-right font-bold uppercase tracking-wider text-amber-400">
+                                            Difference
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-slate-700/50">
                                     {rows
                                         .filter((_, i, arr) => {
                                             const yr = arr.length;
                                             if (yr <= 10) return true;
-                                            // Show every 5 years + final
                                             return (i + 1) % 5 === 0 || i === arr.length - 1;
                                         })
                                         .map(row => (
-                                            <tr key={row.year} className="hover:bg-slate-800/30">
-                                                <td className="font-bold text-slate-300">Yr {row.year}</td>
-                                                <td className="text-right font-mono text-green-400">${fmtCurrency(row.withDrip)}</td>
-                                                <td className="text-right font-mono text-slate-400">${fmtCurrency(row.withoutDrip)}</td>
-                                                <td className="text-right font-mono text-amber-400">+${fmtCurrency(row.withDrip - row.withoutDrip)}</td>
+                                            <tr key={row.year} className="hover:bg-slate-800/70 transition-colors">
+                                                <td className="px-4 py-2.5 font-bold text-white">Yr {row.year}</td>
+                                                <td className="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-green-400">
+                                                    ${fmtCurrency(row.withDrip)}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-slate-300">
+                                                    ${fmtCurrency(row.withoutDrip)}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-amber-400">
+                                                    +${fmtCurrency(row.withDrip - row.withoutDrip)}
+                                                </td>
                                             </tr>
-                                        ))
-                                    }
+                                        ))}
                                 </tbody>
                             </table>
                         </div>
@@ -963,19 +1220,21 @@ const DripCalculator: React.FC = () => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const Tools: React.FC = () => (
-    <div>
+    <div className="space-y-8">
         {/* Page Header */}
-        <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 bg-blue-500/15 rounded-xl border border-blue-500/20">
-                <Wrench size={28} className="text-blue-400" />
+        <div className="flex items-center gap-3.5">
+            <div className="p-3 bg-blue-500/15 rounded-2xl border border-blue-500/35 text-blue-400 shadow-sm">
+                <Wrench size={24} />
             </div>
             <div>
-                <h1 className="text-3xl font-bold text-white">Investment Tools</h1>
-                <p className="text-slate-400 text-sm mt-0.5">Interactive calculators for smarter trading and long-term investing decisions</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Investment Tools</h1>
+                <p className="text-slate-300 text-sm mt-0.5">
+                    Interactive calculators for position planning, risk management, allocation &amp; compounding
+                </p>
             </div>
         </div>
 
-        {/* 2×2 Responsive Grid */}
+        {/* Responsive Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="lg:col-span-2">
                 <StockBuyingPlanner />

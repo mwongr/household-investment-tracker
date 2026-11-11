@@ -8,7 +8,7 @@ export type Institution = {
   name: string;
 };
 
-export type AccountType = 'TFSA' | 'RRSP' | 'Margin' | 'Cash' | 'Crypto' | 'Other';
+export type AccountType = string;
 
 export type Account = {
   id: string;

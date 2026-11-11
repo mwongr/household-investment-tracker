@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, DollarSign } from 'lucide-react';
+import { Calendar, DollarSign, CalendarClock } from 'lucide-react';
 import type { Asset } from '../types';
 
 interface EventsTableProps {
@@ -12,6 +12,24 @@ interface CalendarEvent {
     date: Date;
     details: string;
     isEstimate: boolean;
+}
+
+interface EventsApiItem {
+    symbol: string;
+    success: boolean;
+    data?: {
+        calendarEvents?: {
+            earnings?: {
+                earningsDate?: string[];
+                revenueAverage?: number | string;
+            };
+        };
+        summaryDetail?: {
+            exDividendDate?: string;
+            dividendYield?: number;
+            dividendRate?: number;
+        };
+    };
 }
 
 const EventsTable = ({ assets }: EventsTableProps) => {
@@ -34,113 +52,134 @@ const EventsTable = ({ assets }: EventsTableProps) => {
                 });
 
                 if (res.ok) {
-                    const data = await res.json();
+                    const data: EventsApiItem[] = await res.json();
                     const newEvents: CalendarEvent[] = [];
                     const now = new Date();
-                    now.setHours(0, 0, 0, 0); // Start of today
+                    now.setHours(0, 0, 0, 0);
 
-                    data.forEach((item: any) => {
+                    data.forEach((item) => {
                         if (!item.success || !item.data) return;
 
                         const { symbol, data: summary } = item;
                         const calendar = summary.calendarEvents;
                         const details = summary.summaryDetail;
 
-                        // 1. Earnings
-                        if (calendar && calendar.earnings && calendar.earnings.earningsDate) {
+                        if (calendar?.earnings?.earningsDate?.length) {
                             const eDates = calendar.earnings.earningsDate;
-                            if (eDates.length > 0) {
-                                // Usually returns [start, end] or [date]. We take the first.
-                                const eDate = new Date(eDates[0]);
-                                if (eDate >= now) {
-                                    newEvents.push({
-                                        ticker: symbol,
-                                        type: 'Earnings',
-                                        date: eDate,
-                                        details: `Est. EPS: ${calendar.earnings.revenueAverage || 'N/A'}`, // revenueAverage? EPS is separate usually. revenueAverage is revenue. revenueEstimate?
-                                        // earningsEstimate? Let's genericize or check structure later. 
-                                        // simpler: just show "Earnings Announcement"
-                                        isEstimate: eDates.length > 1 // range implies estimate/unconfirmed
-                                    });
-                                }
+                            const eDate = new Date(eDates[0]);
+                            if (eDate >= now) {
+                                newEvents.push({
+                                    ticker: symbol,
+                                    type: 'Earnings',
+                                    date: eDate,
+                                    details: `Est. Revenue: ${calendar.earnings.revenueAverage || 'N/A'}`,
+                                    isEstimate: eDates.length > 1
+                                });
                             }
                         }
 
-                        // 2. Ex-Dividend
-                        if (details && details.exDividendDate) {
+                        if (details?.exDividendDate) {
                             const divDate = new Date(details.exDividendDate);
                             if (divDate >= now) {
+                                const yieldStr = details.dividendYield != null
+                                    ? `${(details.dividendYield * 100).toFixed(2)}%`
+                                    : '—';
+                                const rateStr = details.dividendRate != null
+                                    ? `$${details.dividendRate}`
+                                    : '—';
                                 newEvents.push({
                                     ticker: symbol,
                                     type: 'Ex-Dividend',
                                     date: divDate,
-                                    details: `Yield: ${(details.dividendYield * 100).toFixed(2)}% | Rate: $${details.dividendRate}`,
+                                    details: `Yield: ${yieldStr} | Rate: ${rateStr}`,
                                     isEstimate: false
                                 });
                             }
                         }
                     });
 
-                    // Sort by date
                     newEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
                     setEvents(newEvents);
                 }
             } catch (error) {
-                console.error("Failed to load events", error);
+                console.error('Failed to load events', error);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchEvents();
-    }, [assets]); // Re-run if assets change (rarely on dashboard load)
+    }, [assets]);
 
-    if (loading) return <div className="glass-panel p-6 animate-pulse h-64"></div>;
-
-    if (events.length === 0) {
+    if (loading) {
         return (
-            <div className="glass-panel p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Upcoming Events</h2>
-                <div className="text-slate-400 text-center py-8">No upcoming earnings or dividends found for your assets.</div>
-            </div>
+            <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl animate-pulse h-56" />
         );
     }
 
     return (
-        <div className="glass-panel p-6 overflow-hidden">
-            <h2 className="text-xl font-bold text-white mb-4">Upcoming Events (My Positions)</h2>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="text-slate-400 border-b border-slate-700">
-                            <th className="py-3 px-2 font-medium">Date</th>
-                            <th className="py-3 px-2 font-medium">Ticker</th>
-                            <th className="py-3 px-2 font-medium">Event</th>
-                            <th className="py-3 px-2 font-medium text-right">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {events.map((evt, idx) => (
-                            <tr key={`${evt.ticker}-${evt.type}-${idx}`} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
-                                <td className="py-3 px-2 text-white whitespace-nowrap">
-                                    {evt.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </td>
-                                <td className="py-3 px-2 font-bold text-emerald-400">{evt.ticker}</td>
-                                <td className="py-3 px-2 text-white">
-                                    <div className="flex items-center gap-2">
-                                        {evt.type === 'Earnings' ? <Calendar size={16} className="text-blue-400" /> : <DollarSign size={16} className="text-green-400" />}
-                                        {evt.type}
-                                    </div>
-                                </td>
-                                <td className="py-3 px-2 text-slate-300 text-sm text-right">
-                                    {evt.details}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+        <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+            <div className="px-6 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
+                        <CalendarClock size={18} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-white tracking-tight">
+                            Upcoming Events (My Positions)
+                        </h2>
+                        <p className="text-xs text-slate-300">Upcoming earnings &amp; ex-dividend dates</p>
+                    </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-slate-800 border border-slate-700 text-slate-300">
+                    {events.length}
+                </span>
             </div>
-        </div>
+
+            {events.length === 0 ? (
+                <div className="text-slate-300 text-sm text-center py-10 px-6">
+                    No upcoming earnings or dividends found for your current holdings.
+                </div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-900/90 border-b border-slate-700/80">
+                            <tr>
+                                <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-300">Date</th>
+                                <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-300">Ticker</th>
+                                <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-300">Event</th>
+                                <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-300 text-right">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/60 text-sm">
+                            {events.map((evt, idx) => (
+                                <tr key={`${evt.ticker}-${evt.type}-${idx}`} className="hover:bg-slate-750/60 transition-colors">
+                                    <td className="px-6 py-3.5 text-white font-medium whitespace-nowrap font-mono tabular-nums">
+                                        {evt.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </td>
+                                    <td className="px-6 py-3.5 font-bold font-mono text-green-400">{evt.ticker}</td>
+                                    <td className="px-6 py-3.5">
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                                                evt.type === 'Earnings'
+                                                    ? 'bg-blue-500/15 border-blue-500/35 text-blue-400'
+                                                    : 'bg-green-500/15 border-green-500/35 text-green-400'
+                                            }`}
+                                        >
+                                            {evt.type === 'Earnings' ? <Calendar size={13} /> : <DollarSign size={13} />}
+                                            {evt.type}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-3.5 text-slate-300 text-sm font-mono tabular-nums text-right">
+                                        {evt.details}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </section>
     );
 };
 

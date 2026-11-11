@@ -25,6 +25,11 @@ interface DataContextType {
     updateInstitution: (id: string, name: string) => void;
     deleteInstitution: (id: string) => void;
 
+    accountTypes: string[];
+    addAccountType: (name: string) => void;
+    updateAccountType: (oldName: string, newName: string) => void;
+    deleteAccountType: (name: string) => void;
+
     addAccount: (account: Omit<Account, 'id'>) => void;
     updateAccount: (id: string, updates: Partial<Account>) => void;
     deleteAccount: (id: string) => void;
@@ -96,6 +101,8 @@ const INITIAL_ACCOUNTS: Account[] = [
     { id: '2', memberId: '2', institutionId: '2', type: 'RRSP', name: 'Jane RRSP', cashBalance: 10000 }
 ];
 
+const INITIAL_ACCOUNT_TYPES: string[] = ['TFSA', 'RRSP', 'Margin', 'Cash', 'Crypto', 'Other'];
+
 const STORAGE_KEY = 'wealth-tracker-storage';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -107,6 +114,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [institutions, setInstitutions] = useState<Institution[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? JSON.parse(saved).institutions : INITIAL_INSTITUTIONS;
+    });
+    const [accountTypes, setAccountTypes] = useState<string[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed.accountTypes) && parsed.accountTypes.length > 0) {
+                return parsed.accountTypes;
+            }
+            if (Array.isArray(parsed.accounts)) {
+                const usedTypes = parsed.accounts.map((a: Account) => a.type).filter(Boolean);
+                return Array.from(new Set([...INITIAL_ACCOUNT_TYPES, ...usedTypes]));
+            }
+        }
+        return INITIAL_ACCOUNT_TYPES;
     });
     const [accounts, setAccounts] = useState<Account[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -204,6 +225,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const state = {
             members,
             institutions,
+            accountTypes,
             accounts,
             transactions,
             assets,
@@ -231,7 +253,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences, exchangeRate]);
+    }, [members, institutions, accountTypes, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences, exchangeRate]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -408,27 +430,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [assets, refreshPrices]);
 
     const addMember = (name: string) => {
-        setMembers([...members, { id: uuidv4(), name }]);
+        setMembers(prev => [...prev, { id: uuidv4(), name }]);
     };
 
     const updateMember = (id: string, name: string) => {
-        setMembers(members.map(m => m.id === id ? { ...m, name } : m));
+        setMembers(prev => prev.map(m => m.id === id ? { ...m, name } : m));
     };
 
     const deleteMember = (id: string) => {
-        setMembers(members.filter(m => m.id !== id));
+        setMembers(prev => prev.filter(m => m.id !== id));
     };
 
     const addInstitution = (name: string) => {
-        setInstitutions([...institutions, { id: uuidv4(), name }]);
+        setInstitutions(prev => [...prev, { id: uuidv4(), name }]);
     };
 
     const updateInstitution = (id: string, name: string) => {
-        setInstitutions(institutions.map(i => i.id === id ? { ...i, name } : i));
+        setInstitutions(prev => prev.map(i => i.id === id ? { ...i, name } : i));
     };
 
     const deleteInstitution = (id: string) => {
-        setInstitutions(institutions.filter(i => i.id !== id));
+        setInstitutions(prev => prev.filter(i => i.id !== id));
+    };
+
+    const addAccountType = (name: string) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        setAccountTypes(prev =>
+            prev.some(t => t.toLowerCase() === trimmed.toLowerCase()) ? prev : [...prev, trimmed]
+        );
+    };
+
+    const updateAccountType = (oldName: string, newName: string) => {
+        const trimmed = newName.trim();
+        if (!trimmed) return;
+        setAccountTypes(prev => {
+            const exists = prev.some(t => t !== oldName && t.toLowerCase() === trimmed.toLowerCase());
+            if (exists) return prev;
+            return prev.map(t => (t === oldName ? trimmed : t));
+        });
+        setAccounts(prev => prev.map(a => (a.type === oldName ? { ...a, type: trimmed } : a)));
+    };
+
+    const deleteAccountType = (name: string) => {
+        setAccountTypes(prev => prev.filter(t => t !== name));
     };
 
     const addAccount = (account: Omit<Account, 'id'>) => {
@@ -901,6 +946,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addInstitution,
             updateInstitution,
             deleteInstitution,
+            accountTypes,
+            addAccountType,
+            updateAccountType,
+            deleteAccountType,
             addAccount,
             updateAccount,
             deleteAccount,

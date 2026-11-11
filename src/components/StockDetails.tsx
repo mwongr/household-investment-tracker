@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { ArrowUp, ArrowDown, X, Plus, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, X, Plus, Check, Loader2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
 import StockAnalysisCard from './StockAnalysisCard';
 
-interface StockData {
+export interface StockData {
     symbol: string;
     shortName: string;
     price: number;
@@ -26,61 +27,103 @@ interface StockData {
     isFallback?: boolean;
 }
 
+interface SparklinePoint {
+    date?: string;
+    price: number;
+    open?: number;
+    high?: number;
+    low?: number;
+    close?: number;
+    candleData?: [number, number];
+}
+
 interface StockDetailsProps {
     data: StockData;
     onClose: () => void;
 }
 
-// Generate simple mock chart data if history is not available in the quote endpoint yet.
-// NOTE: Ideally we fetch history from /api/quote logic (the v8 one includes sparkline), 
-// but clear requirements asked for specific data points. 
-// We will modify the stock-detailed endpoint to INCLUDE sparkline data later or fetch separately.
-// For now, let's create a placeholder chart or fetch it.
-// Actually, I can fetch the chart data separately in this component if needed.
-// Le's just assume we want to display the quote data first for this step.
-// Update: I will add a fetch for chart data here.
+interface CandlestickProps {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    payload?: SparklinePoint;
+}
 
-const Candlestick = (props: any) => {
-    const { x, y, width, height, payload } = props;
+const Candlestick = (props: CandlestickProps) => {
+    const { x = 0, y = 0, width = 0, height = 0, payload } = props;
     if (!payload) return null;
-    
-    // Fallbacks if OHLC is missing (using price from sparkline)
+
     const c = payload.close ?? payload.price;
     const o = payload.open ?? c;
     const h = payload.high ?? c;
     const l = payload.low ?? c;
 
     const isPositive = c >= o;
-    const fill = isPositive ? '#22c55e' : '#ef4444';
-    
+    const fill = isPositive ? '#10b981' : '#ef4444';
+
     const valueRange = h - l;
     const pixelPerValue = valueRange > 0 ? height / valueRange : 0;
-    
+
     const yOpen = y + (h - o) * pixelPerValue;
     const yClose = y + (h - c) * pixelPerValue;
-    
+
     const bodyTop = Math.min(yOpen, yClose) || y;
     const bodyBottom = Math.max(yOpen, yClose) || y;
-    const bodyHeight = Math.max(bodyBottom - bodyTop, 1);
-    
+    const bodyHeight = Math.max(bodyBottom - bodyTop, 1.5);
+
     const midX = x + width / 2;
-    
+
     return (
         <g>
-            <line x1={midX} y1={y || 0} x2={midX} y2={(y || 0) + (height || 0)} stroke={fill} strokeWidth={1} />
-            <rect x={x || 0} y={bodyTop} width={width || 0} height={bodyHeight} fill={fill} stroke={fill} />
+            <line x1={midX} y1={y || 0} x2={midX} y2={(y || 0) + (height || 0)} stroke={fill} strokeWidth={1.25} />
+            <rect x={x || 0} y={bodyTop} width={Math.max(width || 0, 2)} height={bodyHeight} fill={fill} stroke={fill} rx={1} />
         </g>
+    );
+};
+
+const RangeBar = ({ label, low, high, current }: { label: string; low?: number; high?: number; current?: number }) => {
+    const hasValues = low != null && high != null && high > low && current != null;
+    const pct = hasValues ? Math.min(100, Math.max(0, ((current! - low!) / (high! - low!)) * 100)) : 50;
+
+    return (
+        <div className="py-2.5 border-b border-slate-700/60 last:border-0 space-y-1.5">
+            <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-300 font-medium">{label}</span>
+                <span className="text-white font-mono tabular-nums font-semibold">
+                    {low != null && high != null ? `$${low.toFixed(2)} – $${high.toFixed(2)}` : '—'}
+                </span>
+            </div>
+            {hasValues && (
+                <div className="relative h-1.5 bg-slate-900 rounded-full border border-slate-700/70 overflow-hidden">
+                    <div
+                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full"
+                        style={{ width: `${pct}%` }}
+                    />
+                </div>
+            )}
+        </div>
     );
 };
 
 const StockDetails = ({ data, onClose }: StockDetailsProps) => {
     const isPositive = (data.change ?? 0) >= 0;
-    const [chartData, setChartData] = useState<any[]>([]);
-    const [range, setRange] = useState('1mo'); // 1d, 5d, 1mo, 6mo, 1y, 5y
+    const [chartData, setChartData] = useState<SparklinePoint[]>([]);
+    const [range, setRange] = useState('1mo');
     const [chartType, setChartType] = useState<'area' | 'candle'>('area');
     const [loadingChart, setLoadingChart] = useState(false);
     const { watchlist, addToWatchlist } = useData();
+    const { theme } = useTheme();
     const [isAdded, setIsAdded] = useState(false);
+
+    const isDark = theme === 'dark';
+    const tickColor = isDark ? '#94a3b8' : '#475569';
+    const gridColor = isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(15, 23, 42, 0.08)';
+    const tooltipBg = isDark ? '#0f172a' : '#ffffff';
+    const tooltipBorder = isDark ? '#334155' : '#cbd5e1';
+    const tooltipText = isDark ? '#f8fafc' : '#0f172a';
+    const tooltipLabel = isDark ? '#cbd5e1' : '#475569';
+    const trendStroke = isPositive ? (isDark ? '#10b981' : '#059669') : (isDark ? '#ef4444' : '#dc2626');
 
     useEffect(() => {
         setIsAdded(watchlist.some(w => w.ticker === data.symbol));
@@ -95,20 +138,19 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
         const fetchChart = async () => {
             setLoadingChart(true);
             try {
-                // Use the existing chart API from project
                 const res = await fetch(`http://localhost:3001/api/quote?symbol=${data.symbol}&range=${range}`);
                 if (res.ok) {
                     const result = await res.json();
                     if (result.sparkline) {
-                        const formatted = result.sparkline.map((item: any) => ({
+                        const formatted = (result.sparkline as SparklinePoint[]).map((item) => ({
                             ...item,
-                            candleData: [item.low ?? item.price, item.high ?? item.price]
+                            candleData: [item.low ?? item.price, item.high ?? item.price] as [number, number]
                         }));
                         setChartData(formatted);
                     }
                 }
             } catch (e) {
-                console.error("Chart fetch failed", e);
+                console.error('Chart fetch failed', e);
             } finally {
                 setLoadingChart(false);
             }
@@ -116,99 +158,164 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
         fetchChart();
     }, [data.symbol, range]);
 
-    return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-            <button
-                onClick={onClose}
-                className="absolute -top-3 -right-3 md:-right-4 md:-top-4 p-2 bg-slate-800 text-slate-400 hover:text-white rounded-full border border-slate-700 shadow-lg z-10 hover:bg-slate-700 transition-colors"
-                title="Close research"
-            >
-                <X size={20} />
-            </button>
+    const formatAxisDate = (label: string) => {
+        if (!label) return '';
+        const d = new Date(label);
+        if (isNaN(d.getTime())) return label;
+        if (range === '1d') return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        if (range === '5y') return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
 
-            {/* Header Section */}
-            <div className="glass-panel p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex-1">
-                    <div className="flex items-baseline gap-3">
-                        <h2 className="text-3xl font-bold text-white">{data.symbol}</h2>
-                        <span className="text-slate-400 text-lg">{data.shortName}</span>
-                        {data.isFallback && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded">Delayed/Basic</span>}
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {/* Header Banner */}
+            <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5">
+                <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xl font-bold font-mono tracking-tight text-white">
+                            {data.symbol}
+                        </span>
+                        <h2 className="text-xl sm:text-2xl font-bold text-white">{data.shortName}</h2>
+                        {data.currency && (
+                            <span className="px-2.5 py-0.5 rounded-md bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-300">
+                                {data.currency}
+                            </span>
+                        )}
+                        {data.isFallback && (
+                            <span className="px-2.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/40 text-xs font-semibold text-amber-400">
+                                Delayed / Basic
+                            </span>
+                        )}
                     </div>
-                    <div className="text-sm text-slate-500 mt-1">Currency: {data.currency}</div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={handleAdd}
-                        disabled={isAdded}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isAdded
-                                ? 'bg-green-500/20 text-green-400 cursor-default'
-                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/20'
-                            }`}
-                    >
-                        {isAdded ? (
-                            <>
-                                <Check size={18} />
-                                <span>Watchlisted</span>
-                            </>
-                        ) : (
-                            <>
-                                <Plus size={18} />
-                                <span>Add to Watchlist</span>
-                            </>
-                        )}
-                    </button>
-
-                    <div className="text-right">
-                        <div className="text-4xl font-bold text-white">${data.price != null ? data.price.toFixed(2) : '—'}</div>
-                        <div className={`flex items-center justify-end gap-2 text-lg font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                            {isPositive ? <ArrowUp size={24} /> : <ArrowDown size={24} />}
-                            {data.change != null ? data.change.toFixed(2) : '—'} ({data.changePercent != null ? `${data.changePercent.toFixed(2)}%` : '—'})
+                <div className="flex flex-wrap items-center justify-between lg:justify-end gap-5 w-full lg:w-auto">
+                    <div className="text-left lg:text-right">
+                        <div className="text-3xl sm:text-4xl font-bold text-white font-mono tabular-nums tracking-tight">
+                            ${data.price != null ? data.price.toFixed(2) : '—'}
                         </div>
+                        <div className="mt-1 flex lg:justify-end">
+                            <span
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-sm font-semibold font-mono tabular-nums border ${
+                                    isPositive
+                                        ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                        : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                }`}
+                            >
+                                {isPositive ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
+                                {data.change != null ? `${isPositive ? '+' : ''}${data.change.toFixed(2)}` : '—'}
+                                {' '}
+                                ({data.changePercent != null ? `${isPositive ? '+' : ''}${data.changePercent.toFixed(2)}%` : '—'})
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                        <button
+                            onClick={handleAdd}
+                            disabled={isAdded}
+                            style={!isAdded ? { color: '#ffffff' } : undefined}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                                isAdded
+                                    ? 'bg-green-500/15 border-green-500/40 text-green-400 cursor-default'
+                                    : 'bg-blue-600 hover:bg-blue-500 border-blue-500 shadow-md shadow-blue-600/20'
+                            }`}
+                        >
+                            {isAdded ? (
+                                <>
+                                    <Check size={16} />
+                                    <span>Watchlisted</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Plus size={16} />
+                                    <span>Add to Watchlist</span>
+                                </>
+                            )}
+                        </button>
+
+                        <button
+                            onClick={onClose}
+                            className="p-2.5 bg-slate-900 text-slate-300 hover:text-white rounded-xl border border-slate-700 hover:border-slate-500 transition-colors"
+                            title="Close quote"
+                            aria-label="Close quote"
+                        >
+                            <X size={18} />
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
                 {/* Key Statistics */}
-                <div className="glass-panel p-6 lg:col-span-1 space-y-4">
-                    <h3 className="text-lg font-semibold text-white mb-4">Key Statistics</h3>
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl lg:col-span-1 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/80">
+                            <h3 className="text-base font-bold text-white tracking-tight">Key Statistics</h3>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Snapshot</span>
+                        </div>
 
-                    <Row label="Open" value={data.open?.toFixed(2)} />
-                    <Row label="Prev Close" value={data.prevClose?.toFixed(2)} />
-                    <Row label="Day Range" value={`${data.dayLow?.toFixed(2)} - ${data.dayHigh?.toFixed(2)}`} />
-                    <Row label="52W Range" value={`${data.fiftyTwoWeekLow?.toFixed(2)} - ${data.fiftyTwoWeekHigh?.toFixed(2)}`} />
-                    <Row label="Volume" value={formatCompact(data.volume)} />
-                    <Row label="Avg Volume" value={formatCompact(data.avgVolume)} />
-                    <Row label="Bid" value={data.bid?.toFixed(2)} />
-                    <Row label="Ask" value={data.ask?.toFixed(2)} />
-                    <Row label="Market Cap" value={formatCompact(data.marketCap)} />
-                    <Row label="P/E Ratio" value={data.peRatio?.toFixed(2)} />
+                        <div>
+                            <Row label="Open" value={formatDollar(data.open)} />
+                            <Row label="Prev Close" value={formatDollar(data.prevClose)} />
+                            <RangeBar label="Day Range" low={data.dayLow} high={data.dayHigh} current={data.price} />
+                            <RangeBar label="52W Range" low={data.fiftyTwoWeekLow} high={data.fiftyTwoWeekHigh} current={data.price} />
+                            <Row label="Volume" value={formatCompact(data.volume)} />
+                            <Row label="Avg Volume" value={formatCompact(data.avgVolume)} />
+                            <Row label="Bid / Ask" value={formatBidAsk(data.bid, data.ask)} />
+                            <Row label="Market Cap" value={formatCompact(data.marketCap, true)} />
+                            <Row label="P/E Ratio" value={data.peRatio != null && data.peRatio !== 0 ? data.peRatio.toFixed(2) : '—'} />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Chart Section */}
-                <div className="glass-panel p-6 lg:col-span-2 flex flex-col min-h-[400px]">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-semibold text-white">Price Chart</h3>
-                        <div className="flex gap-4">
-                            <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl lg:col-span-2 flex flex-col min-h-[430px]">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5 pb-3 border-b border-slate-700/80">
+                        <div>
+                            <h3 className="text-base font-bold text-white tracking-tight">Price Action</h3>
+                            <p className="text-xs text-slate-400">Historical price & intraday movement</p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <div className="flex gap-1 bg-slate-900 border border-slate-700/90 p-1 rounded-xl">
                                 <button
                                     onClick={() => setChartType('area')}
-                                    className={`px-3 py-1 rounded text-sm transition-colors ${chartType === 'area' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                                >Line</button>
+                                    style={chartType === 'area' ? { color: '#ffffff' } : undefined}
+                                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                        chartType === 'area'
+                                            ? 'bg-blue-600 shadow-sm'
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    Line
+                                </button>
                                 <button
                                     onClick={() => setChartType('candle')}
-                                    className={`px-3 py-1 rounded text-sm transition-colors ${chartType === 'candle' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                                >Candle</button>
+                                    style={chartType === 'candle' ? { color: '#ffffff' } : undefined}
+                                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                        chartType === 'candle'
+                                            ? 'bg-blue-600 shadow-sm'
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    Candle
+                                </button>
                             </div>
-                            <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
+
+                            <div className="flex gap-1 bg-slate-900 border border-slate-700/90 p-1 rounded-xl">
                                 {['1d', '5d', '1mo', '6mo', '1y', '5y'].map(r => (
                                     <button
                                         key={r}
                                         onClick={() => setRange(r)}
-                                        className={`px-3 py-1 rounded text-sm transition-colors ${range === r ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                                        style={range === r ? { color: '#ffffff' } : undefined}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold uppercase transition-colors ${
+                                            range === r
+                                                ? 'bg-blue-600 shadow-sm'
+                                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                        }`}
                                     >
                                         {r}
                                     </button>
@@ -217,64 +324,122 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                         </div>
                     </div>
 
-                    <div className="flex-1 w-full min-h-0">
+                    <div className="flex-1 w-full min-h-[300px] bg-slate-900/50 border border-slate-700/60 rounded-xl p-3">
                         {loadingChart ? (
-                            <div className="h-full flex items-center justify-center text-slate-500">Loading chart...</div>
+                            <div className="h-full min-h-[280px] flex items-center justify-center gap-2 text-slate-300 text-sm">
+                                <Loader2 size={18} className="animate-spin text-blue-400" />
+                                <span>Loading chart...</span>
+                            </div>
                         ) : chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={300}>
                                 {chartType === 'area' ? (
-                                    <AreaChart data={chartData}>
+                                    <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="chartColor" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0} />
+                                                <stop offset="5%" stopColor={trendStroke} stopOpacity={0.32} />
+                                                <stop offset="95%" stopColor={trendStroke} stopOpacity={0.02} />
                                             </linearGradient>
                                         </defs>
-                                        <XAxis dataKey="date" hide />
-                                        <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(val) => val.toFixed(2)} axisLine={false} tickLine={false} />
+                                        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="date"
+                                            tickFormatter={formatAxisDate}
+                                            tick={{ fill: tickColor, fontSize: 11 }}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            minTickGap={36}
+                                        />
+                                        <YAxis
+                                            domain={['auto', 'auto']}
+                                            orientation="right"
+                                            tick={{ fill: tickColor, fontSize: 11 }}
+                                            tickFormatter={(val) => `$${val.toFixed(2)}`}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            width={64}
+                                        />
                                         <Tooltip
-                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                            itemStyle={{ color: '#f8fafc' }}
-                                            labelStyle={{ color: '#94a3b8', marginBottom: '4px', fontWeight: 'bold' }}
-                                            formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Price']}
+                                            contentStyle={{
+                                                backgroundColor: tooltipBg,
+                                                borderColor: tooltipBorder,
+                                                borderRadius: '0.75rem',
+                                                color: tooltipText,
+                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
+                                            }}
+                                            itemStyle={{ color: tooltipText, fontWeight: 700, fontFamily: 'monospace' }}
+                                            labelStyle={{ color: tooltipLabel, marginBottom: '4px', fontWeight: 600, fontSize: '12px' }}
+                                            formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Price']}
                                             labelFormatter={(label) => {
                                                 if (!label) return '';
                                                 const d = new Date(label);
-                                                return isNaN(d.getTime()) ? label : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                                return isNaN(d.getTime())
+                                                    ? label
+                                                    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                             }}
                                         />
-                                        <CartesianGrid vertical={false} stroke="#334155" strokeDasharray="3 3" opacity={0.3} />
-                                        <Area type="monotone" dataKey="price" stroke={isPositive ? "#22c55e" : "#ef4444"} fill="url(#chartColor)" strokeWidth={2} />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="price"
+                                            stroke={trendStroke}
+                                            fill="url(#chartColor)"
+                                            strokeWidth={2.25}
+                                            activeDot={{ r: 4, strokeWidth: 0 }}
+                                        />
                                     </AreaChart>
                                 ) : (
-                                    <BarChart data={chartData}>
-                                        <XAxis dataKey="date" hide />
-                                        <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(val) => val.toFixed(2)} axisLine={false} tickLine={false} />
+                                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="date"
+                                            tickFormatter={formatAxisDate}
+                                            tick={{ fill: tickColor, fontSize: 11 }}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            minTickGap={36}
+                                        />
+                                        <YAxis
+                                            domain={['auto', 'auto']}
+                                            orientation="right"
+                                            tick={{ fill: tickColor, fontSize: 11 }}
+                                            tickFormatter={(val) => `$${val.toFixed(2)}`}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            width={64}
+                                        />
                                         <Tooltip
-                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', cursor: 'crosshair' }}
-                                            itemStyle={{ color: '#f8fafc' }}
-                                            labelStyle={{ color: '#94a3b8', marginBottom: '4px', fontWeight: 'bold' }}
-                                            formatter={(value: any, name: any, props: any) => {
-                                                const payload = props.payload;
+                                            contentStyle={{
+                                                backgroundColor: tooltipBg,
+                                                borderColor: tooltipBorder,
+                                                borderRadius: '0.75rem',
+                                                color: tooltipText,
+                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
+                                            }}
+                                            itemStyle={{ color: tooltipText, fontWeight: 700, fontFamily: 'monospace' }}
+                                            labelStyle={{ color: tooltipLabel, marginBottom: '4px', fontWeight: 600, fontSize: '12px' }}
+                                            formatter={(value, name, props) => {
+                                                const payload = (props as { payload?: SparklinePoint }).payload;
                                                 if (payload) {
-                                                    return [`$${Number(payload.price || payload.close).toFixed(2)}`, 'Price'];
+                                                    return [`$${Number(payload.price || payload.close).toFixed(2)}`, 'Close'];
                                                 }
-                                                return [value, name];
+                                                return [String(value ?? ''), String(name ?? '')];
                                             }}
                                             labelFormatter={(label) => {
                                                 if (!label) return '';
                                                 const d = new Date(label);
-                                                return isNaN(d.getTime()) ? label : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                                return isNaN(d.getTime())
+                                                    ? label
+                                                    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                             }}
-                                            cursor={{ fill: '#334155', opacity: 0.4 }}
+                                            cursor={{ fill: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.06)' }}
                                         />
-                                        <CartesianGrid vertical={false} stroke="#334155" strokeDasharray="3 3" opacity={0.3} />
                                         <Bar dataKey="candleData" shape={<Candlestick />} />
                                     </BarChart>
                                 )}
                             </ResponsiveContainer>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-500">No chart data available</div>
+                            <div className="h-full min-h-[280px] flex items-center justify-center text-slate-400 text-sm">
+                                No chart data available
+                            </div>
                         )}
                     </div>
                 </div>
@@ -286,23 +451,29 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
     );
 };
 
-const Row = ({ label, value }: { label: string, value: string | undefined | number }) => {
-    // Check for null, undefined, or 0 (if 0 is considered missing for things like PE/Bid/Ask, though price can be 0).
-    const displayValue = (value === null || value === undefined) ? '-' : value;
-    // Special handling for 0 in Bid/Ask/PE which usually means data missing in this context
-    const finalValue = (displayValue === 0 || displayValue === '0' || displayValue === '0.00' || displayValue === '$0.00') ? '-' : displayValue;
+const Row = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="flex justify-between items-center py-2.5 border-b border-slate-700/60 last:border-0 text-sm">
+        <span className="text-slate-300 font-medium">{label}</span>
+        <span className="text-white font-mono tabular-nums font-semibold">{value}</span>
+    </div>
+);
 
-    return (
-        <div className="flex justify-between items-center py-2 border-b border-slate-700/50 last:border-0">
-            <span className="text-slate-400">{label}</span>
-            <span className="text-white font-medium">{finalValue}</span>
-        </div>
-    );
+const formatDollar = (num: number | null | undefined) => {
+    if (num == null || num === 0) return '—';
+    return `$${num.toFixed(2)}`;
 };
 
-const formatCompact = (num: number | null | undefined) => {
-    if (num === null || num === undefined || num === 0) return '-';
-    return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
+const formatBidAsk = (bid: number | null | undefined, ask: number | null | undefined) => {
+    if ((bid == null || bid === 0) && (ask == null || ask === 0)) return '—';
+    const b = bid ? `$${bid.toFixed(2)}` : '—';
+    const a = ask ? `$${ask.toFixed(2)}` : '—';
+    return `${b} / ${a}`;
+};
+
+const formatCompact = (num: number | null | undefined, isCurrency = false) => {
+    if (num === null || num === undefined || num === 0) return '—';
+    const formatted = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(num);
+    return isCurrency ? `$${formatted}` : formatted;
 };
 
 export default StockDetails;

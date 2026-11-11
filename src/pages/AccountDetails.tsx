@@ -1,19 +1,114 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, TrendingUp, RefreshCw, X, Pencil, Trash2, Save, RotateCcw, Calculator, Wallet, ArrowRightLeft } from 'lucide-react';
+import {
+    ArrowLeft,
+    Plus,
+    RefreshCw,
+    X,
+    Pencil,
+    Trash2,
+    Save,
+    RotateCcw,
+    Calculator,
+    Wallet,
+    ArrowRightLeft,
+} from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
 import type { Transaction, TransactionType } from '../types';
 
 import '../styles/shared.css';
 import PortfolioBalancer from '../components/PortfolioBalancer';
 import AverageDownCalc from '../components/AverageDownCalc';
-import StockDetails from '../components/StockDetails';
+import StockDetails, { type StockData } from '../components/StockDetails';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
+
+const fmt2 = (n: number) =>
+    n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+interface SimProjectedProps {
+    summaryLabel: string;
+    summaryValue: string;
+    tradeProfit?: number;
+    tradeProfitPct?: number;
+    newBookCost: number;
+    newMarketValue: number;
+    newProfit: number;
+    newProfitPercent: number;
+    newAvg: number;
+}
+
+const SimProjected: React.FC<SimProjectedProps> = ({
+    summaryLabel,
+    summaryValue,
+    tradeProfit,
+    tradeProfitPct,
+    newBookCost,
+    newMarketValue,
+    newProfit,
+    newProfitPercent,
+    newAvg,
+}) => (
+    <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-2.5 text-xs space-y-1.5">
+        <div className="flex justify-between items-center gap-2">
+            <span className="text-slate-300">
+                {summaryLabel}: <span className="text-white font-mono font-bold">{summaryValue}</span>
+            </span>
+            {tradeProfit !== undefined && tradeProfitPct !== undefined && (
+                <span
+                    className={`font-mono font-bold ${
+                        tradeProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}
+                >
+                    {tradeProfit >= 0 ? '+' : '-'}${fmt2(Math.abs(tradeProfit))} ({tradeProfitPct >= 0 ? '+' : ''}
+                    {tradeProfitPct.toFixed(2)}%)
+                </span>
+            )}
+        </div>
+        <div className="border-t border-slate-700/70 pt-1.5 space-y-1">
+            <div className="flex justify-between">
+                <span className="text-slate-400">New Book</span>
+                <span className="text-white font-mono tabular-nums font-semibold">${fmt2(newBookCost)}</span>
+            </div>
+            <div className="flex justify-between">
+                <span className="text-slate-400">New MV</span>
+                <span className="text-white font-mono tabular-nums font-semibold">${fmt2(newMarketValue)}</span>
+            </div>
+            <div className="flex justify-between">
+                <span className="text-slate-400">New P/L</span>
+                <span
+                    className={`font-mono tabular-nums font-bold ${
+                        newProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}
+                >
+                    {newProfit >= 0 ? '+' : '-'}${fmt2(Math.abs(newProfit))} ({newProfitPercent.toFixed(2)}%)
+                </span>
+            </div>
+            <div className="flex justify-between">
+                <span className="text-slate-400">New Avg</span>
+                <span className="text-blue-400 font-mono tabular-nums font-bold">${fmt2(newAvg)}</span>
+            </div>
+        </div>
+    </div>
+);
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
-    const { accounts, getAssetsByAccount, addTransaction, updateTransaction, deleteTransaction, transactions, refreshPrices, refreshAsset, updateAssetCustomBookCost } = useData();
+    const {
+        accounts,
+        getAssetsByAccount,
+        addTransaction,
+        updateTransaction,
+        deleteTransaction,
+        transactions,
+        refreshPrices,
+        refreshAsset,
+        updateAssetCustomBookCost,
+    } = useData();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     const account = accounts.find(a => a.id === id);
     const assets = getAssetsByAccount(id || '');
 
@@ -46,17 +141,26 @@ const AccountDetails = () => {
     const [customBookCostInput, setCustomBookCostInput] = useState<Record<string, string>>({});
 
     // Inline Research State
-    const [researchData, setResearchData] = useState<any>(null);
+    const [researchData, setResearchData] = useState<StockData | null>(null);
     const [loadingResearch, setLoadingResearch] = useState(false);
 
-    if (!account) return <div>Account not found</div>;
+    if (!account) {
+        return (
+            <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-10 text-center space-y-3">
+                <p className="text-lg font-bold text-white">Account not found</p>
+                <Link to="/accounts" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 hover:underline">
+                    <ArrowLeft size={16} /> Back to Accounts
+                </Link>
+            </div>
+        );
+    }
 
     const handleResearchClick = async (symbol: string) => {
         setLoadingResearch(true);
         try {
             const res = await fetch(`http://localhost:3001/api/quote-detailed?symbol=${symbol}`);
             if (res.ok) {
-                const data = await res.json();
+                const data: StockData = await res.json();
                 setResearchData(data);
             }
         } catch (err) {
@@ -73,11 +177,6 @@ const AccountDetails = () => {
         const isDividendCash = type === 'Dividend' || type === 'Dividend Income';
         const isStockSplit = type === 'Stock Split';
 
-        // Validation: 
-        // - Asset/DRIP: ticker + shares + price
-        // - Dividend (Cash): ticker + price (Amount)
-        // - Deposit/Withdrawal: price (Amount)
-        // - Stock Split: ticker + splitFrom & splitTo
         if (
             (isCashTx && price) ||
             (isDividendCash && ticker && price) ||
@@ -85,27 +184,24 @@ const AccountDetails = () => {
             (!isCashTx && !isDividendCash && !isStockSplit && ticker && shares && price)
         ) {
             const qty = shares ? parseFloat(shares) : 0;
-            const priceVal = price ? parseFloat(price) : 0; // Used as "Amount" for cash/dividend, or "Price Per Share" for asset
+            const priceVal = price ? parseFloat(price) : 0;
             const commVal = commission ? parseFloat(commission) : 0;
 
             let amount = 0;
             let finalPricePerShare = 0;
 
             if (isCashTx || isDividendCash) {
-                // For Cash Dividend or Deposit, user enters TOTAL Amount in "price" field
                 amount = priceVal;
                 finalPricePerShare = 0;
             } else if (isStockSplit) {
-                // Stock split has no new monetary amount or price per share
                 amount = 0;
                 finalPricePerShare = 0;
             } else {
-                // Buy/Sell/DRIP
-                amount = (qty * priceVal) + commVal;
+                amount = qty * priceVal + commVal;
                 finalPricePerShare = priceVal;
             }
 
-            const txData: any = {
+            const txData: Omit<Transaction, 'id'> = {
                 accountId: account.id,
                 ticker: isCashTx ? '' : ticker.toUpperCase(),
                 date,
@@ -113,13 +209,14 @@ const AccountDetails = () => {
                 shares: isStockSplit ? 0 : qty,
                 pricePerShare: finalPricePerShare,
                 commission: commVal,
-                amount: amount
+                amount,
+                ...(isStockSplit
+                    ? {
+                          splitFrom: parseFloat(splitFrom),
+                          splitTo: parseFloat(splitTo),
+                      }
+                    : {}),
             };
-
-            if (isStockSplit) {
-                txData.splitFrom = parseFloat(splitFrom);
-                txData.splitTo = parseFloat(splitTo);
-            }
 
             if (editingTxId) {
                 updateTransaction(editingTxId, txData);
@@ -144,7 +241,6 @@ const AccountDetails = () => {
         setType(tx.type);
         setShares(tx.shares?.toString() || '');
 
-        // For Dividend/Cash txs, we stored amount in 'amount' but UI usually uses 'price' state
         if (tx.type === 'Deposit' || tx.type === 'Withdrawal' || tx.type === 'Dividend' || tx.type === 'Dividend Income') {
             setPrice(tx.amount.toString());
         } else if (tx.type === 'Stock Split') {
@@ -179,7 +275,8 @@ const AccountDetails = () => {
     // Calculations
     const totalValue = assets.reduce((sum, asset) => sum + (asset.cadMarketValue || asset.marketValue || 0), 0);
     const totalCost = assets.reduce((sum, asset) => {
-        const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+        const effectiveBookCost =
+            asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
         return sum + effectiveBookCost;
     }, 0);
     const totalProfit = totalValue - totalCost;
@@ -188,223 +285,325 @@ const AccountDetails = () => {
     // Transaction activity summary with year filter
     const accountTxs = transactions.filter(tx => tx.accountId === id);
     const txYears = Array.from(new Set(accountTxs.map(tx => new Date(tx.date).getFullYear()))).sort((a, b) => b - a);
-
-    // Sort transactions chronologically to calculate realized gains properly
     const sortedTxs = [...accountTxs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    const assetCosts: Record<string, { quantity: number, totalCost: number }> = {};
+
+    const assetCosts: Record<string, { quantity: number; totalCost: number }> = {};
     const realizedGainsPerTx: Record<string, number> = {};
 
     sortedTxs.forEach(tx => {
         if (!tx.ticker) return;
-        const ticker = tx.ticker;
-        if (!assetCosts[ticker]) {
-            assetCosts[ticker] = { quantity: 0, totalCost: 0 };
+        const sym = tx.ticker;
+        if (!assetCosts[sym]) {
+            assetCosts[sym] = { quantity: 0, totalCost: 0 };
         }
-        
-        const state = assetCosts[ticker];
-        
+
+        const state = assetCosts[sym];
+
         if (tx.type === 'Buy' || tx.type === 'DRIP' || tx.type === 'Dividend Reinvested') {
-            state.quantity += (tx.shares || 0);
+            state.quantity += tx.shares || 0;
             state.totalCost += tx.amount;
         } else if (tx.type === 'Sell') {
             const avgCost = state.quantity > 0 ? state.totalCost / state.quantity : 0;
             const costOfSharesSold = (tx.shares || 0) * avgCost;
-            state.quantity -= (tx.shares || 0);
+            state.quantity -= tx.shares || 0;
             state.totalCost -= costOfSharesSold;
-            
-            const gain = tx.amount - costOfSharesSold;
-            realizedGainsPerTx[tx.id] = gain;
+
+            realizedGainsPerTx[tx.id] = tx.amount - costOfSharesSold;
         } else if (tx.type === 'Stock Split') {
             if (tx.splitFrom && tx.splitTo) {
                 state.quantity = (state.quantity * tx.splitTo) / tx.splitFrom;
             } else {
-                state.quantity += (tx.shares || 0);
+                state.quantity += tx.shares || 0;
             }
         }
     });
 
-    const filteredTxs = selectedYear === 'All' ? accountTxs : accountTxs.filter(tx => new Date(tx.date).getFullYear() === selectedYear);
-    const txSummary = filteredTxs.reduce((acc, tx) => {
-        if (tx.type === 'Deposit') acc.deposits += tx.amount;
-        else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
-        else if (tx.type === 'Buy' || tx.type === 'Dividend Reinvested' || tx.type === 'DRIP') acc.buys += tx.amount;
-        else if (tx.type === 'Sell') {
-            acc.sells += tx.amount;
-            acc.realizedGains += (realizedGainsPerTx[tx.id] || 0);
-        }
-        else if (tx.type === 'Dividend Income' || tx.type === 'Dividend') acc.dividends += tx.amount;
-        return acc;
-    }, { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, realizedGains: 0 });
+    const filteredTxs =
+        selectedYear === 'All' ? accountTxs : accountTxs.filter(tx => new Date(tx.date).getFullYear() === selectedYear);
+    const txSummary = filteredTxs.reduce(
+        (acc, tx) => {
+            if (tx.type === 'Deposit') acc.deposits += tx.amount;
+            else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
+            else if (tx.type === 'Buy' || tx.type === 'Dividend Reinvested' || tx.type === 'DRIP') acc.buys += tx.amount;
+            else if (tx.type === 'Sell') {
+                acc.sells += tx.amount;
+                acc.realizedGains += realizedGainsPerTx[tx.id] || 0;
+            } else if (tx.type === 'Dividend Income' || tx.type === 'Dividend') acc.dividends += tx.amount;
+            return acc;
+        },
+        { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, realizedGains: 0 }
+    );
+
+    const tooltipContentStyle = {
+        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        borderColor: isDark ? '#334155' : '#cbd5e1',
+        borderRadius: '0.75rem',
+        color: isDark ? '#f8fafc' : '#0f172a',
+        fontSize: '12px',
+        padding: '8px 10px',
+    };
+
+    const tooltipItemStyle = {
+        color: isDark ? '#f8fafc' : '#0f172a',
+        fontWeight: 700,
+        fontFamily: 'monospace',
+    };
 
     return (
-        <div>
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <Link to="/accounts" className="text-slate-400 hover:text-white transition-colors">
-                    <ArrowLeft size={24} />
-                </Link>
-                <div className="flex-1">
-                    <h1 className="text-2xl font-bold text-white">{account.name}</h1>
-                    <div className="flex gap-2 text-sm text-slate-400">
-                        <span>{account.type}</span> •
-                        <span>Cash Balance: ${account.cashBalance.toLocaleString()}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <Link
+                        to="/accounts"
+                        className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+                        title="Back to Accounts"
+                        aria-label="Back to Accounts"
+                    >
+                        <ArrowLeft size={18} />
+                    </Link>
+                    <div>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{account.name}</h1>
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 border border-slate-700 text-slate-200">
+                                {account.type}
+                            </span>
+                        </div>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                            Available Cash:{' '}
+                            <span className="font-mono font-bold text-green-400">
+                                ${fmt2(account.cashBalance)}
+                            </span>
+                        </p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex flex-wrap gap-2.5">
                     <button
                         onClick={handleRefresh}
                         disabled={isRefreshing}
-                        className="btn btn-secondary flex items-center gap-2"
+                        style={{ color: '#ffffff' }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold shadow-sm transition-colors"
                     >
-                        <RotateCcw size={18} className="text-white" />
-                        {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
+                        <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                        <span>{isRefreshing ? 'Refreshing...' : 'Refresh Prices'}</span>
                     </button>
                     <button
                         onClick={() => setShowMigrationModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors border border-slate-600"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-sm font-semibold transition-colors border border-slate-700 hover:border-slate-500"
                         title="Migrate CAD asset to USD"
                     >
-                        <ArrowRightLeft size={18} />
-                        Migrate Currency
+                        <ArrowRightLeft size={16} />
+                        <span>Migrate Currency</span>
                     </button>
                 </div>
             </div>
 
             {/* Account Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Value</p>
-                    <p className="text-3xl font-bold text-white font-mono">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    <TrendingUp size={48} className="absolute -right-2 -bottom-2 opacity-5 text-blue-500" />
-                </div>
-                <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Cost</p>
-                    <p className="text-3xl font-bold text-slate-200 font-mono">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    <Wallet size={48} className="absolute -right-2 -bottom-2 opacity-5 text-slate-500" />
-                </div>
-                <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Profit</p>
-                    <p className={`text-3xl font-bold font-mono ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {totalProfit >= 0 ? '+' : ''}${Math.abs(totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">Total Value</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-white font-mono tabular-nums">
+                        ${fmt2(totalValue)}
                     </p>
-                    <TrendingUp size={48} className={`absolute -right-2 -bottom-2 opacity-10 ${totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`} />
                 </div>
-                <div className="glass-panel p-4 relative overflow-hidden">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Return</p>
-                    <p className={`text-3xl font-bold font-mono ${totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {totalProfitPercent >= 0 ? '+' : ''}{totalProfitPercent.toFixed(2)}%
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">Total Cost</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-200 font-mono tabular-nums">
+                        ${fmt2(totalCost)}
                     </p>
-                    <TrendingUp size={48} className={`absolute -right-2 -bottom-2 opacity-10 ${totalProfitPercent >= 0 ? 'text-green-500' : 'text-red-500'}`} />
                 </div>
-                <div className="glass-panel p-4 relative overflow-hidden bg-blue-900/20 border-blue-500/30">
-                    <p className="text-xs text-blue-400 font-bold uppercase tracking-widest mb-1">Available Cash</p>
-                    <p className="text-3xl font-bold text-white font-mono">${account.cashBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    <Wallet size={48} className="absolute -right-2 -bottom-2 opacity-10 text-blue-400" />
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">Total Profit</p>
+                    <p
+                        className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums ${
+                            totalProfit >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}
+                    >
+                        {totalProfit >= 0 ? '+' : '-'}${fmt2(Math.abs(totalProfit))}
+                    </p>
+                </div>
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
+                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">Total Return</p>
+                    <p
+                        className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums ${
+                            totalProfitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}
+                    >
+                        {totalProfitPercent >= 0 ? '+' : ''}
+                        {totalProfitPercent.toFixed(2)}%
+                    </p>
+                </div>
+                <div className="bg-slate-800/95 border border-blue-500/40 rounded-2xl p-5 shadow-xl">
+                    <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs text-blue-400 font-bold uppercase tracking-wider">Available Cash</p>
+                        <Wallet size={16} className="text-blue-400" />
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-white font-mono tabular-nums">
+                        ${fmt2(account.cashBalance)}
+                    </p>
                 </div>
             </div>
 
             {/* Transaction Activity Summary */}
-            <div className="glass-panel p-4 mb-6">
-                <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Transaction Activity</span>
-                    <div className="flex items-center gap-1 flex-wrap">
+            <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        Transaction Activity
+                    </span>
+                    <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/90 p-1 rounded-xl flex-wrap">
                         {txYears.map(yr => (
                             <button
                                 key={yr}
                                 onClick={() => setSelectedYear(yr)}
-                                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${ selectedYear === yr ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700' }`}
+                                style={selectedYear === yr ? { color: '#ffffff' } : undefined}
+                                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                                    selectedYear === yr
+                                        ? 'bg-blue-600 shadow-sm'
+                                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                }`}
                             >
                                 {yr}
                             </button>
                         ))}
                         <button
                             onClick={() => setSelectedYear('All')}
-                            className={`px-3 py-1 rounded text-xs font-semibold transition-all ${ selectedYear === 'All' ? 'bg-slate-500 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700' }`}
+                            style={selectedYear === 'All' ? { color: '#ffffff' } : undefined}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                                selectedYear === 'All'
+                                    ? 'bg-blue-600 shadow-sm'
+                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
                         >
                             All Time
                         </button>
                     </div>
                 </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <div className="bg-slate-800/60 rounded-lg p-3 border border-green-500/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Deposits</p>
-                        <p className="text-lg font-bold font-mono text-green-400">${txSummary.deposits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-green-500/25">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Deposits</p>
+                        <p className="text-lg font-bold font-mono tabular-nums text-green-400">
+                            ${fmt2(txSummary.deposits)}
+                        </p>
                     </div>
-                    <div className="bg-slate-800/60 rounded-lg p-3 border border-red-500/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Withdrawals</p>
-                        <p className="text-lg font-bold font-mono text-red-400">${txSummary.withdrawals.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-red-500/25">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Withdrawals</p>
+                        <p className="text-lg font-bold font-mono tabular-nums text-red-400">
+                            ${fmt2(txSummary.withdrawals)}
+                        </p>
                     </div>
-                    <div className="bg-slate-800/60 rounded-lg p-3 border border-blue-500/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Buys</p>
-                        <p className="text-lg font-bold font-mono text-blue-400">${txSummary.buys.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-blue-500/25">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Buys</p>
+                        <p className="text-lg font-bold font-mono tabular-nums text-blue-400">
+                            ${fmt2(txSummary.buys)}
+                        </p>
                     </div>
-                    <div className="bg-slate-800/60 rounded-lg p-3 border border-purple-500/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Sells</p>
-                        <p className="text-lg font-bold font-mono text-purple-400">${txSummary.sells.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-purple-500/25">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Sells</p>
+                        <p className="text-lg font-bold font-mono tabular-nums text-purple-400">
+                            ${fmt2(txSummary.sells)}
+                        </p>
                     </div>
-                    <div className="bg-slate-800/60 rounded-lg p-3 border border-yellow-500/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Dividends</p>
-                        <p className="text-lg font-bold font-mono text-yellow-400">${txSummary.dividends.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-amber-500/25">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Dividends</p>
+                        <p className="text-lg font-bold font-mono tabular-nums text-amber-400">
+                            ${fmt2(txSummary.dividends)}
+                        </p>
                     </div>
-                    <div className={`bg-slate-800/60 rounded-lg p-3 border ${txSummary.realizedGains >= 0 ? 'border-green-500/10' : 'border-red-500/10'}`}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Realized P/L</p>
-                        <p className={`text-lg font-bold font-mono ${txSummary.realizedGains >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {txSummary.realizedGains >= 0 ? '+' : '-'}${Math.abs(txSummary.realizedGains).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div
+                        className={`bg-slate-900/75 rounded-xl p-3.5 border ${
+                            txSummary.realizedGains >= 0 ? 'border-green-500/25' : 'border-red-500/25'
+                        }`}
+                    >
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Realized P/L</p>
+                        <p
+                            className={`text-lg font-bold font-mono tabular-nums ${
+                                txSummary.realizedGains >= 0 ? 'text-green-400' : 'text-red-400'
+                            }`}
+                        >
+                            {txSummary.realizedGains >= 0 ? '+' : '-'}${fmt2(Math.abs(txSummary.realizedGains))}
                         </p>
                     </div>
                 </div>
             </div>
 
             {/* Actions Bar & Navigation */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
-                <div className="flex bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex bg-slate-900 border border-slate-700/90 p-1 rounded-xl">
                     <button
-                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'assets' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
+                        style={activeTab === 'assets' ? { color: '#ffffff' } : undefined}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${
+                            activeTab === 'assets'
+                                ? 'bg-blue-600 shadow-sm'
+                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                        }`}
                         onClick={() => setActiveTab('assets')}
                     >
-                        Assets
+                        Assets ({assets.length})
                     </button>
                     <button
-                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'transactions' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
+                        style={activeTab === 'transactions' ? { color: '#ffffff' } : undefined}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${
+                            activeTab === 'transactions'
+                                ? 'bg-blue-600 shadow-sm'
+                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                        }`}
                         onClick={() => setActiveTab('transactions')}
                     >
-                        Transactions
+                        Transactions ({accountTxs.length})
                     </button>
                 </div>
 
-                <div className="flex gap-3">
-                    <button className="btn btn-primary shadow-lg shadow-blue-900/20 flex items-center gap-2" onClick={() => setIsAdding(true)}>
-                        <Plus size={18} /> Add Transaction
-                    </button>
-                </div>
+                <button
+                    style={{ color: '#ffffff' }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                    onClick={() => setIsAdding(true)}
+                >
+                    <Plus size={18} /> Add Transaction
+                </button>
             </div>
 
             {/* Add Transaction Modal */}
             {isAdding && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="glass-panel w-full max-w-2xl p-6 border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-700/50">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+                    <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-700/80">
                             <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                {editingTxId ? <Pencil size={20} className="text-blue-400" /> : <Plus size={20} className="text-blue-400" />}
+                                {editingTxId ? (
+                                    <Pencil size={20} className="text-blue-400" />
+                                ) : (
+                                    <Plus size={20} className="text-blue-400" />
+                                )}
                                 {editingTxId ? 'Edit Transaction' : 'Add Transaction'}
                             </h3>
-                            <button onClick={closeForm} className="p-1 hover:bg-slate-700 rounded-full transition-colors"><X size={24} className="text-slate-400 hover:text-white" /></button>
+                            <button
+                                onClick={closeForm}
+                                className="p-1.5 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-lg text-slate-300 hover:text-white transition-colors"
+                                aria-label="Close modal"
+                            >
+                                <X size={18} />
+                            </button>
                         </div>
-                        <form onSubmit={handleTransaction} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form onSubmit={handleTransaction} className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Type</label>
-                                <select className="input" value={type} onChange={e => {
-                                    const newType = e.target.value as TransactionType;
-                                    setType(newType);
-                                    // Clear ticker if switching to cash transaction
-                                    if (newType === 'Deposit' || newType === 'Withdrawal') {
-                                        setTicker('');
-                                        setShares('');
-                                        setPrice('');
-                                        setCommission('0');
-                                    }
-                                }}>
+                                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                    Type
+                                </label>
+                                <select
+                                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500"
+                                    value={type}
+                                    onChange={e => {
+                                        const newType = e.target.value as TransactionType;
+                                        setType(newType);
+                                        if (newType === 'Deposit' || newType === 'Withdrawal') {
+                                            setTicker('');
+                                            setShares('');
+                                            setPrice('');
+                                            setCommission('0');
+                                        }
+                                    }}
+                                >
                                     <option value="Buy">Buy</option>
                                     <option value="Sell">Sell</option>
                                     <option value="Deposit">Deposit</option>
@@ -417,42 +616,64 @@ const AccountDetails = () => {
                                 </select>
                             </div>
 
-                            <div className="col-span-full md:col-span-1">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Date</label>
-                                <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} required />
+                            <div>
+                                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                    Date
+                                </label>
+                                <input
+                                    type="date"
+                                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
+                                    value={date}
+                                    onChange={e => setDate(e.target.value)}
+                                    required
+                                />
                             </div>
 
-                            {(type === 'Deposit' || type === 'Withdrawal') ? (
-                                /* Cash Transaction Fields */
+                            {type === 'Deposit' || type === 'Withdrawal' ? (
                                 <div className="col-span-full">
-                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Amount ($)</label>
+                                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                        Amount ($)
+                                    </label>
                                     <input
                                         type="number"
                                         step="any"
-                                        className="input text-lg font-bold text-green-400"
+                                        className="input-no-spinner w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-lg font-mono font-bold text-green-400 focus:outline-none focus:border-blue-500"
                                         placeholder="0.00"
-                                        value={price} // Reusing price state for raw amount in cash tx
+                                        value={price}
                                         onChange={e => setPrice(e.target.value)}
                                         required
                                         autoFocus
                                     />
-                                    <p className="text-xs text-slate-500 mt-2">
-                                        {type === 'Deposit' ? 'Add cash to your account balance.' : 'Remove cash from your account balance.'}
+                                    <p className="text-xs text-slate-300 mt-2">
+                                        {type === 'Deposit'
+                                            ? 'Add cash to your account balance.'
+                                            : 'Remove cash from your account balance.'}
                                     </p>
                                 </div>
-                            ) : (type === 'Dividend' || type === 'Dividend Income') ? (
-                                /* Cash Dividend Fields: Ticker + Amount */
+                            ) : type === 'Dividend' || type === 'Dividend Income' ? (
                                 <>
-                                    <div className="col-span-full md:col-span-1">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Ticker Symbol</label>
-                                        <input type="text" className="input" placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} required autoFocus />
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Ticker Symbol
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
+                                            placeholder="e.g. AAPL"
+                                            value={ticker}
+                                            onChange={e => setTicker(e.target.value.toUpperCase())}
+                                            required
+                                            autoFocus
+                                        />
                                     </div>
-                                    <div className="col-span-full md:col-span-1">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Dividend Amount Total ($)</label>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Dividend Amount Total ($)
+                                        </label>
                                         <input
                                             type="number"
                                             step="any"
-                                            className="input"
+                                            className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
                                             placeholder="0.00"
                                             value={price}
                                             onChange={e => setPrice(e.target.value)}
@@ -461,50 +682,129 @@ const AccountDetails = () => {
                                     </div>
                                 </>
                             ) : type === 'Stock Split' ? (
-                                /* Stock Split Fields: Ticker + Ratio */
                                 <>
                                     <div className="col-span-full">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Ticker Symbol</label>
-                                        <input type="text" className="input" placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} required autoFocus />
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Ticker Symbol
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
+                                            placeholder="e.g. AAPL"
+                                            value={ticker}
+                                            onChange={e => setTicker(e.target.value.toUpperCase())}
+                                            required
+                                            autoFocus
+                                        />
                                     </div>
-                                    <div className="col-span-full md:col-span-1">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Old Shares (From)</label>
-                                        <input type="number" step="any" min="0.0001" className="input" placeholder="e.g. 3" value={splitFrom} onChange={e => setSplitFrom(e.target.value)} required />
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Old Shares (From)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            min="0.0001"
+                                            className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
+                                            placeholder="e.g. 3"
+                                            value={splitFrom}
+                                            onChange={e => setSplitFrom(e.target.value)}
+                                            required
+                                        />
                                     </div>
-                                    <div className="col-span-full md:col-span-1">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">New Shares (To)</label>
-                                        <input type="number" step="any" min="0.0001" className="input" placeholder="e.g. 1" value={splitTo} onChange={e => setSplitTo(e.target.value)} required />
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            New Shares (To)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            min="0.0001"
+                                            className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
+                                            placeholder="e.g. 1"
+                                            value={splitTo}
+                                            onChange={e => setSplitTo(e.target.value)}
+                                            required
+                                        />
                                     </div>
-                                    <p className="col-span-full text-xs text-slate-500 italic mt-1">
+                                    <p className="col-span-full text-xs text-slate-300 italic">
                                         Example: For a 2-for-1 split, Old Shares = 1, New Shares = 2. For a 1-for-3 reverse split, Old Shares = 3, New Shares = 1.
                                     </p>
                                 </>
                             ) : (
-                                /* Asset Transaction Fields (Buy, Sell, DRIP) */
                                 <>
-                                    <div className="col-span-full md:col-span-1">
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Ticker Symbol</label>
-                                        <input type="text" className="input" placeholder="e.g. AAPL" value={ticker} onChange={e => setTicker(e.target.value)} required autoFocus />
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Ticker Symbol
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
+                                            placeholder="e.g. AAPL"
+                                            value={ticker}
+                                            onChange={e => setTicker(e.target.value.toUpperCase())}
+                                            required
+                                            autoFocus
+                                        />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Shares</label>
-                                        <input type="number" step="any" className="input" placeholder="0" value={shares} onChange={e => setShares(e.target.value)} required />
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Shares
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
+                                            placeholder="0"
+                                            value={shares}
+                                            onChange={e => setShares(e.target.value)}
+                                            required
+                                        />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Price per Share</label>
-                                        <input type="number" step="any" className="input" placeholder="0.00" value={price} onChange={e => setPrice(e.target.value)} required />
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Price per Share
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
+                                            placeholder="0.00"
+                                            value={price}
+                                            onChange={e => setPrice(e.target.value)}
+                                            required
+                                        />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Commission</label>
-                                        <input type="number" step="any" className="input" placeholder="0.00" value={commission} onChange={e => setCommission(e.target.value)} />
+                                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
+                                            Commission
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            className="input-no-spinner w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500"
+                                            placeholder="0.00"
+                                            value={commission}
+                                            onChange={e => setCommission(e.target.value)}
+                                        />
                                     </div>
                                 </>
                             )}
 
-                            <div className="col-span-full flex justify-end gap-3 mt-4 pt-4 border-t border-slate-700/50">
-                                <button type="button" className="btn btn-secondary px-6" onClick={closeForm}>Cancel</button>
-                                <button type="submit" className="btn btn-primary px-6 shadow-lg shadow-blue-900/20">
-                                    <Save size={18} className="mr-2" /> {editingTxId ? 'Update' : 'Save'}
+                            <div className="col-span-full flex justify-end gap-3 mt-2 pt-4 border-t border-slate-700/80">
+                                <button
+                                    type="button"
+                                    className="px-5 py-2 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-sm font-semibold transition-colors"
+                                    onClick={closeForm}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    style={{ color: '#ffffff' }}
+                                    className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors"
+                                >
+                                    <Save size={16} /> {editingTxId ? 'Update' : 'Save'}
                                 </button>
                             </div>
                         </form>
@@ -518,125 +818,178 @@ const AccountDetails = () => {
                     {assets.map(asset => {
                         const sPrice = simSellPrice[asset.id] || '';
                         const bAmount = simBuyAmount[asset.id] || '';
+                        const effectiveBookCost =
+                            asset.customBookCost !== undefined && asset.customBookCost !== null
+                                ? asset.customBookCost
+                                : asset.totalCost;
+                        const impliedAvgCost = asset.quantity > 0 ? effectiveBookCost / asset.quantity : asset.averageCost;
 
                         return (
-                            <div key={asset.id} className="glass-panel p-0 overflow-hidden border border-slate-700/50 bg-slate-800/40 hover:bg-slate-800/50 transition-all duration-300 shadow-xl">
+                            <div
+                                key={asset.id}
+                                className="bg-slate-800/95 border border-slate-700/90 rounded-2xl overflow-hidden shadow-xl"
+                            >
                                 {/* Header Row - All Key Metrics */}
-                                <div className="p-5 bg-slate-800/30 border-b border-slate-700/50">
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
+                                <div className="p-5 bg-slate-900/65 border-b border-slate-700/80">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-5 items-center">
                                         {/* 1. Stock Symbol/Shares */}
                                         <div>
-                                            <h3 className="text-2xl font-bold text-white leading-none flex items-center gap-2">
-                                                {asset.ticker}
-                                                {asset.currency === 'USD' && <span title="USD Asset" className="text-sm">🇺🇸</span>}
+                                            <h3 className="text-xl sm:text-2xl font-bold font-mono text-white leading-none flex items-center gap-2">
+                                                <span>{asset.ticker}</span>
+                                                {asset.currency === 'USD' && (
+                                                    <span className="text-[11px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/35 text-blue-400">
+                                                        USD
+                                                    </span>
+                                                )}
                                             </h3>
-                                            <p className="text-sm text-slate-300 font-medium mt-1">{asset.quantity.toLocaleString()} shares</p>
+                                            <p className="text-xs text-slate-300 font-mono font-semibold mt-1.5">
+                                                {asset.quantity.toLocaleString()} shares
+                                            </p>
                                             <div className="mt-2 flex items-center gap-1 flex-wrap">
                                                 {asset.goldenCross ? (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400 uppercase border border-blue-500/30 whitespace-nowrap">Golden Cross</span>
-                                                ) : (asset.signal === 'buy' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30)) ? (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/20 text-green-400 uppercase border border-green-500/30 whitespace-nowrap">Buy Signal</span>
-                                                ) : (asset.signal === 'sell' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70)) ? (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 uppercase border border-red-500/30 whitespace-nowrap">Sell Signal</span>
+                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 uppercase border border-blue-500/35 whitespace-nowrap">
+                                                        Golden Cross
+                                                    </span>
+                                                ) : asset.signal === 'buy' ||
+                                                  (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30) ? (
+                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/15 text-green-400 uppercase border border-green-500/35 whitespace-nowrap">
+                                                        Buy Signal
+                                                    </span>
+                                                ) : asset.signal === 'sell' ||
+                                                  (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70) ? (
+                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-500/15 text-red-400 uppercase border border-red-500/35 whitespace-nowrap">
+                                                        Sell Signal
+                                                    </span>
                                                 ) : typeof asset.signal === 'string' ? (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-700/50 text-slate-400 uppercase border border-slate-600/50 whitespace-nowrap">Neutral</span>
+                                                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-300 uppercase border border-slate-700 whitespace-nowrap">
+                                                        Neutral
+                                                    </span>
                                                 ) : null}
                                             </div>
                                         </div>
 
                                         {/* 2. Avg. Cost */}
-                                        <div className="text-center">
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Avg. Cost</p>
-                                            <p className="text-2xl font-mono font-bold text-slate-200">${asset.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <div className="md:text-center">
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                Avg. Cost
+                                            </p>
+                                            <p className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-slate-200">
+                                                ${fmt2(asset.averageCost)}
+                                            </p>
                                         </div>
 
                                         {/* 3. Current Price */}
-                                        <div className="text-center">
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Current Price</p>
-                                            <div className="flex items-center justify-center gap-2">
-                                                <span className="text-2xl font-mono font-bold text-white">${asset.currentPrice.toFixed(2)}</span>
-                                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${asset.todayChangePercent >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                                    {asset.todayChangePercent > 0 ? '+' : ''}{asset.todayChangePercent?.toFixed(2)}%
+                                        <div className="md:text-center">
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                Current Price
+                                            </p>
+                                            <div className="flex flex-wrap items-center md:justify-center gap-1.5">
+                                                <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-white">
+                                                    ${asset.currentPrice.toFixed(2)}
+                                                </span>
+                                                <span
+                                                    className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                                        asset.todayChangePercent >= 0
+                                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                            : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                    }`}
+                                                >
+                                                    {asset.todayChangePercent > 0 ? '+' : ''}
+                                                    {asset.todayChangePercent?.toFixed(2)}%
                                                 </span>
                                             </div>
                                         </div>
 
                                         {/* 4. Book Cost */}
-                                        <div className="text-center">
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
-                                                Book Cost
+                                        <div className="md:text-center">
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1 flex items-center md:justify-center gap-1.5">
+                                                <span>Book Cost</span>
                                                 {asset.customBookCost !== undefined && asset.customBookCost !== null && (
-                                                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded">Custom</span>
+                                                    <span className="text-[11px] bg-blue-500/15 border border-blue-500/35 text-blue-400 px-1.5 py-0.5 rounded">
+                                                        Custom
+                                                    </span>
                                                 )}
                                             </p>
                                             {editingBookCostId === asset.id ? (
-                                                <div className="flex items-center justify-center gap-2">
+                                                <div className="flex items-center md:justify-center gap-1.5">
                                                     <input
                                                         type="number"
                                                         step="any"
-                                                        className="w-32 bg-slate-900 border border-blue-500 rounded px-2 py-1 text-base text-white font-mono focus:outline-none input-no-spinner"
+                                                        className="w-28 bg-slate-900 border border-blue-500 rounded-lg px-2 py-1 text-sm text-white font-mono focus:outline-none input-no-spinner"
                                                         value={customBookCostInput[asset.id] || ''}
-                                                        onChange={(e) => setCustomBookCostInput({ ...customBookCostInput, [asset.id]: e.target.value })}
+                                                        onChange={e =>
+                                                            setCustomBookCostInput({
+                                                                ...customBookCostInput,
+                                                                [asset.id]: e.target.value,
+                                                            })
+                                                        }
                                                         autoFocus
                                                     />
                                                     <button
                                                         onClick={() => {
                                                             const rawInput = customBookCostInput[asset.id];
-                                                            // Remove commas and dollar signs just in case
-                                                            const cleaned = rawInput ? rawInput.toString().replace(/[,$]/g, '') : '';
+                                                            const cleaned = rawInput
+                                                                ? rawInput.toString().replace(/[,$]/g, '')
+                                                                : '';
                                                             const value = parseFloat(cleaned);
-
-                                                            console.log(`[UI] Setting Custom Book Cost for ${asset.ticker}: Input='${rawInput}' Parsed=${value}`);
 
                                                             if (!isNaN(value) && value >= 0) {
                                                                 updateAssetCustomBookCost(asset.id, value);
                                                             } else {
-                                                                console.warn(`[UI] Invalid custom cost input: ${rawInput}`);
-                                                                alert("Please enter a valid number (e.g. 18240.08)");
+                                                                alert('Please enter a valid number (e.g. 18240.08)');
                                                             }
                                                             setEditingBookCostId(null);
                                                         }}
-                                                        className="p-1 hover:bg-green-700 rounded text-green-400 hover:text-white transition-all"
+                                                        className="p-1.5 bg-green-500/15 hover:bg-green-500/25 rounded-lg text-green-400 transition-colors"
+                                                        title="Save custom book cost"
                                                     >
-                                                        <Save size={16} />
+                                                        <Save size={15} />
                                                     </button>
                                                     <button
                                                         onClick={() => {
                                                             setEditingBookCostId(null);
-                                                            setCustomBookCostInput({ ...customBookCostInput, [asset.id]: '' });
+                                                            setCustomBookCostInput({
+                                                                ...customBookCostInput,
+                                                                [asset.id]: '',
+                                                            });
                                                         }}
-                                                        className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-all"
+                                                        className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors"
+                                                        title="Cancel"
                                                     >
-                                                        <X size={16} />
+                                                        <X size={15} />
                                                     </button>
                                                     {asset.customBookCost !== undefined && asset.customBookCost !== null && (
                                                         <button
                                                             onClick={() => {
                                                                 updateAssetCustomBookCost(asset.id, null);
                                                                 setEditingBookCostId(null);
-                                                                setCustomBookCostInput({ ...customBookCostInput, [asset.id]: '' });
+                                                                setCustomBookCostInput({
+                                                                    ...customBookCostInput,
+                                                                    [asset.id]: '',
+                                                                });
                                                             }}
-                                                            className="p-1 hover:bg-red-700 rounded text-red-400 hover:text-white transition-all"
+                                                            className="p-1.5 bg-red-500/15 hover:bg-red-500/25 rounded-lg text-red-400 transition-colors"
                                                             title="Reset to calculated"
                                                         >
-                                                            <RotateCcw size={16} />
+                                                            <RotateCcw size={15} />
                                                         </button>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <p className="text-2xl font-mono font-bold text-slate-200">
-                                                        ${(asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                <div className="flex items-center md:justify-center gap-1.5">
+                                                    <p className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-slate-200">
+                                                        ${fmt2(effectiveBookCost)}
                                                     </p>
                                                     <button
                                                         onClick={() => {
                                                             setEditingBookCostId(asset.id);
                                                             setCustomBookCostInput({
                                                                 ...customBookCostInput,
-                                                                [asset.id]: (asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost).toString()
+                                                                [asset.id]: effectiveBookCost.toString(),
                                                             });
                                                         }}
-                                                        className="p-1 hover:bg-slate-700 rounded text-slate-500 hover:text-white transition-all"
+                                                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors"
+                                                        title="Edit book cost"
                                                     >
                                                         <Pencil size={14} />
                                                     </button>
@@ -645,260 +998,343 @@ const AccountDetails = () => {
                                         </div>
 
                                         {/* 5. Market Value */}
-                                        <div className="text-center">
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Market Value</p>
-                                            <p className={`text-2xl font-mono font-bold ${asset.marketValue >= (asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost) ? 'text-green-400' : 'text-red-400'}`}>
-                                                ${asset.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <div className="md:text-center">
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                Market Value
+                                            </p>
+                                            <p
+                                                className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
+                                                    asset.marketValue >= effectiveBookCost ? 'text-green-400' : 'text-red-400'
+                                                }`}
+                                            >
+                                                ${fmt2(asset.marketValue)}
                                             </p>
                                         </div>
 
                                         {/* 6. P/L ($) */}
-                                        <div className="text-center">
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">P/L ($)</p>
-                                            <p className={`text-2xl font-mono font-bold ${asset.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {asset.profit >= 0 ? '+' : '-'}${Math.abs(asset.profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <div className="md:text-center">
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                P/L ($)
+                                            </p>
+                                            <p
+                                                className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
+                                                    asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                                }`}
+                                            >
+                                                {asset.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(asset.profit))}
                                             </p>
                                         </div>
 
                                         {/* 7. P/L (%) */}
-                                        <div className="text-center">
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">P/L (%)</p>
-                                            <p className={`text-2xl font-mono font-bold ${asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {asset.profitPercent >= 0 ? '+' : ''}{asset.profitPercent.toFixed(2)}%
+                                        <div className="md:text-center">
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                P/L (%)
+                                            </p>
+                                            <p
+                                                className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
+                                                    asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                                }`}
+                                            >
+                                                {asset.profitPercent >= 0 ? '+' : ''}
+                                                {asset.profitPercent.toFixed(2)}%
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Content Grid */}
-                                <div className="p-4 grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
+                                <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-6">
                                     {/* Left Content Area */}
-                                    <div className="space-y-6">
-
-                                        {/* Row 2: 52W Stats */}
-                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 pb-4 border-b border-slate-700/30 bg-slate-800/10 p-3 rounded-lg">
+                                    <div className="space-y-5">
+                                        {/* 52W Stats */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-900/60 border border-slate-700/70 p-3.5 rounded-xl">
                                             <div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">52W High</p>
-                                                <p className="font-mono text-white text-base font-bold">${asset.high52Week?.toFixed(2) || '-'}</p>
+                                                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                    52W High
+                                                </p>
+                                                <p className="font-mono tabular-nums text-white text-base font-bold">
+                                                    {asset.high52Week ? `$${asset.high52Week.toFixed(2)}` : '—'}
+                                                </p>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">52W Low</p>
-                                                <p className="font-mono text-white text-base font-bold">${asset.low52Week?.toFixed(2) || '-'}</p>
+                                                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                    52W Low
+                                                </p>
+                                                <p className="font-mono tabular-nums text-white text-base font-bold">
+                                                    {asset.low52Week ? `$${asset.low52Week.toFixed(2)}` : '—'}
+                                                </p>
                                             </div>
-                                            <div className="col-span-1">
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">% to High</p>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                            <div className="col-span-2 sm:col-span-1">
+                                                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">
+                                                    % to 52W High
+                                                </p>
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="flex-1 h-2 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-blue-500/80"
-                                                            style={{ width: `${Math.max(0, Math.min(100, (asset.currentPrice / (asset.high52Week || 1)) * 100))}%` }}
-                                                        ></div>
+                                                            className="h-full bg-blue-500 rounded-full"
+                                                            style={{
+                                                                width: `${Math.max(
+                                                                    0,
+                                                                    Math.min(100, (asset.currentPrice / (asset.high52Week || 1)) * 100)
+                                                                )}%`,
+                                                            }}
+                                                        />
                                                     </div>
-                                                    <span className="text-xs text-white font-mono font-bold">
-                                                        {asset.high52Week ? (100 - (asset.currentPrice / asset.high52Week * 100)).toFixed(1) : '-'}%
+                                                    <span className="text-xs text-white font-mono tabular-nums font-bold">
+                                                        {asset.high52Week
+                                                            ? `${(100 - (asset.currentPrice / asset.high52Week) * 100).toFixed(1)}%`
+                                                            : '—'}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Row 3: Simulators */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Simulators */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {/* Sell Simulator */}
-                                            <div>
-                                                <h4 className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><Calculator size={12} /> Sell Simulator</h4>
-                                                
-                                                <div className="relative mb-3">
-                                                    <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                            <div className="space-y-2.5">
+                                                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                                    <Calculator size={13} className="text-blue-400" />
+                                                    <span>Sell Simulator</span>
+                                                </h4>
+
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-2 text-slate-300 text-xs font-semibold">
+                                                        $
+                                                    </span>
                                                     <input
                                                         type="number"
-                                                        className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                        className="bg-slate-900 border border-slate-700 rounded-xl pl-6 pr-3 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
                                                         placeholder={`Target Price (Cur: $${asset.currentPrice.toFixed(2)})`}
                                                         value={simTargetPrice[asset.id] || ''}
-                                                        onChange={(e) => setSimTargetPrice({ ...simTargetPrice, [asset.id]: e.target.value })}
+                                                        onChange={e =>
+                                                            setSimTargetPrice({ ...simTargetPrice, [asset.id]: e.target.value })
+                                                        }
                                                     />
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <div className="relative mb-2">
-                                                            <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                    <div className="space-y-2">
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-2 text-slate-300 text-xs font-semibold">
+                                                                $
+                                                            </span>
                                                             <input
                                                                 type="number"
-                                                                className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                                className="bg-slate-900 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
                                                                 placeholder="Sell Amount"
                                                                 value={sPrice}
-                                                                onChange={(e) => setSimSellPrice({ ...simSellPrice, [asset.id]: e.target.value })}
+                                                                onChange={e =>
+                                                                    setSimSellPrice({ ...simSellPrice, [asset.id]: e.target.value })
+                                                                }
                                                             />
                                                         </div>
-                                                        {sPrice && (() => {
-                                                            const amountVal = parseFloat(sPrice);
-                                                            if (isNaN(amountVal) || amountVal <= 0) return null;
-                                                            const targetPriceVal = simTargetPrice[asset.id] ? parseFloat(simTargetPrice[asset.id]) : NaN;
-                                                            const sellPriceUsed = !isNaN(targetPriceVal) && targetPriceVal > 0 ? targetPriceVal : (asset.currentPrice || 1);
-                                                            const sharesNum = amountVal / sellPriceUsed;
-                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
-                                                            const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
-                                                            const profit = (sellPriceUsed - impliedAvgCost) * sharesNum;
-                                                            const profitPercent = impliedAvgCost > 0 ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100 : 0;
+                                                        {sPrice &&
+                                                            (() => {
+                                                                const amountVal = parseFloat(sPrice);
+                                                                if (isNaN(amountVal) || amountVal <= 0) return null;
+                                                                const targetPriceVal = simTargetPrice[asset.id]
+                                                                    ? parseFloat(simTargetPrice[asset.id])
+                                                                    : NaN;
+                                                                const sellPriceUsed =
+                                                                    !isNaN(targetPriceVal) && targetPriceVal > 0
+                                                                        ? targetPriceVal
+                                                                        : asset.currentPrice || 1;
+                                                                const sharesNum = amountVal / sellPriceUsed;
+                                                                const profit = (sellPriceUsed - impliedAvgCost) * sharesNum;
+                                                                const profitPercent =
+                                                                    impliedAvgCost > 0
+                                                                        ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100
+                                                                        : 0;
 
-                                                            const newQuantity = asset.quantity - sharesNum;
-                                                            const newBookCost = effectiveBookCost - (sharesNum * impliedAvgCost);
-                                                            const newMarketValue = newQuantity * asset.currentPrice;
-                                                            const newAvg = newQuantity > 0 ? (newBookCost / newQuantity) : impliedAvgCost;
-                                                            const newProfit = newMarketValue - newBookCost;
-                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
+                                                                const newQuantity = asset.quantity - sharesNum;
+                                                                const newBookCost = effectiveBookCost - sharesNum * impliedAvgCost;
+                                                                const newMarketValue = newQuantity * asset.currentPrice;
+                                                                const newAvg =
+                                                                    newQuantity > 0 ? newBookCost / newQuantity : impliedAvgCost;
+                                                                const newProfit = newMarketValue - newBookCost;
+                                                                const newProfitPercent =
+                                                                    Math.abs(newBookCost) > 0.01
+                                                                        ? (newProfit / newBookCost) * 100
+                                                                        : 0;
 
-                                                            return (
-                                                                <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <div className="flex justify-between">
-                                                                        <p className="text-slate-400">Sells: <span className="text-white font-mono">{sharesNum.toFixed(2)} sh</span></p>
-                                                                        <p className={`font-bold font-mono ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%)
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                                return (
+                                                                    <SimProjected
+                                                                        summaryLabel="Sells"
+                                                                        summaryValue={`${sharesNum.toFixed(2)} sh`}
+                                                                        tradeProfit={profit}
+                                                                        tradeProfitPct={profitPercent}
+                                                                        newBookCost={newBookCost}
+                                                                        newMarketValue={newMarketValue}
+                                                                        newProfit={newProfit}
+                                                                        newProfitPercent={newProfitPercent}
+                                                                        newAvg={newAvg}
+                                                                    />
+                                                                );
+                                                            })()}
                                                     </div>
-                                                    <div>
-                                                        <div className="relative mb-2">
+
+                                                    <div className="space-y-2">
+                                                        <div className="relative">
                                                             <input
                                                                 type="number"
-                                                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                                className="bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-10 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
                                                                 placeholder="Shares"
                                                                 value={simSellShares[asset.id] || ''}
-                                                                onChange={(e) => setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })}
+                                                                onChange={e =>
+                                                                    setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })
+                                                                }
                                                             />
                                                             <button
-                                                                className="absolute right-1 top-1 text-[9px] bg-slate-800 text-slate-400 hover:text-white px-1.5 py-0.5 rounded transition-colors"
-                                                                onClick={() => setSimSellShares({ ...simSellShares, [asset.id]: asset.quantity.toString() })}
+                                                                type="button"
+                                                                className="absolute right-1.5 top-1 text-[11px] font-bold bg-slate-800 border border-slate-700 text-slate-200 hover:text-white px-2 py-0.5 rounded-lg transition-colors"
+                                                                onClick={() =>
+                                                                    setSimSellShares({
+                                                                        ...simSellShares,
+                                                                        [asset.id]: asset.quantity.toString(),
+                                                                    })
+                                                                }
                                                             >
                                                                 All
                                                             </button>
                                                         </div>
-                                                        {simSellShares[asset.id] && (() => {
-                                                            const sharesVal = parseFloat(simSellShares[asset.id]);
-                                                            if (isNaN(sharesVal) || sharesVal <= 0) return null;
-                                                            const targetPriceVal = simTargetPrice[asset.id] ? parseFloat(simTargetPrice[asset.id]) : NaN;
-                                                            const sellPriceUsed = !isNaN(targetPriceVal) && targetPriceVal > 0 ? targetPriceVal : (asset.currentPrice || 1);
-                                                            const proceeds = sharesVal * sellPriceUsed;
-                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
-                                                            const impliedAvgCost = asset.quantity > 0 ? (effectiveBookCost / asset.quantity) : asset.averageCost;
-                                                            const profit = (sellPriceUsed - impliedAvgCost) * sharesVal;
-                                                            const profitPercent = impliedAvgCost > 0 ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100 : 0;
+                                                        {simSellShares[asset.id] &&
+                                                            (() => {
+                                                                const sharesVal = parseFloat(simSellShares[asset.id]);
+                                                                if (isNaN(sharesVal) || sharesVal <= 0) return null;
+                                                                const targetPriceVal = simTargetPrice[asset.id]
+                                                                    ? parseFloat(simTargetPrice[asset.id])
+                                                                    : NaN;
+                                                                const sellPriceUsed =
+                                                                    !isNaN(targetPriceVal) && targetPriceVal > 0
+                                                                        ? targetPriceVal
+                                                                        : asset.currentPrice || 1;
+                                                                const proceeds = sharesVal * sellPriceUsed;
+                                                                const profit = (sellPriceUsed - impliedAvgCost) * sharesVal;
+                                                                const profitPercent =
+                                                                    impliedAvgCost > 0
+                                                                        ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100
+                                                                        : 0;
 
-                                                            const newQuantity = asset.quantity - sharesVal;
-                                                            const newBookCost = effectiveBookCost - (sharesVal * impliedAvgCost);
-                                                            const newMarketValue = newQuantity * asset.currentPrice;
-                                                            const newAvg = newQuantity > 0 ? (newBookCost / newQuantity) : impliedAvgCost;
-                                                            const newProfit = newMarketValue - newBookCost;
-                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
+                                                                const newQuantity = asset.quantity - sharesVal;
+                                                                const newBookCost = effectiveBookCost - sharesVal * impliedAvgCost;
+                                                                const newMarketValue = newQuantity * asset.currentPrice;
+                                                                const newAvg =
+                                                                    newQuantity > 0 ? newBookCost / newQuantity : impliedAvgCost;
+                                                                const newProfit = newMarketValue - newBookCost;
+                                                                const newProfitPercent =
+                                                                    Math.abs(newBookCost) > 0.01
+                                                                        ? (newProfit / newBookCost) * 100
+                                                                        : 0;
 
-                                                            return (
-                                                                <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <div className="flex justify-between">
-                                                                        <p className="text-slate-400">Proc: <span className="text-white font-mono">${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className={`font-bold font-mono ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                                            {profit >= 0 ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%)
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                                return (
+                                                                    <SimProjected
+                                                                        summaryLabel="Proc"
+                                                                        summaryValue={`$${fmt2(proceeds)}`}
+                                                                        tradeProfit={profit}
+                                                                        tradeProfitPct={profitPercent}
+                                                                        newBookCost={newBookCost}
+                                                                        newMarketValue={newMarketValue}
+                                                                        newProfit={newProfit}
+                                                                        newProfitPercent={newProfitPercent}
+                                                                        newAvg={newAvg}
+                                                                    />
+                                                                );
+                                                            })()}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Buy Simulator */}
-                                            <div>
-                                                <h4 className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-2"><RefreshCw size={12} /> Buy Simulator</h4>
+                                            <div className="space-y-2.5">
+                                                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                                    <RefreshCw size={13} className="text-green-400" />
+                                                    <span>Buy Simulator</span>
+                                                </h4>
                                                 <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <div className="relative mb-2">
-                                                            <span className="absolute left-2.5 top-1.5 text-slate-500 text-[10px]">$</span>
+                                                    <div className="space-y-2">
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-2 text-slate-300 text-xs font-semibold">
+                                                                $
+                                                            </span>
                                                             <input
                                                                 type="number"
-                                                                className="bg-slate-900 border border-slate-700 rounded px-5 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner"
+                                                                className="bg-slate-900 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
                                                                 placeholder="Invest Amount"
                                                                 value={bAmount}
-                                                                onChange={(e) => setSimBuyAmount({ ...simBuyAmount, [asset.id]: e.target.value })}
+                                                                onChange={e =>
+                                                                    setSimBuyAmount({ ...simBuyAmount, [asset.id]: e.target.value })
+                                                                }
                                                             />
                                                         </div>
-                                                        {bAmount && (() => {
-                                                            const investVal = parseFloat(bAmount);
-                                                            if (isNaN(investVal) || investVal <= 0) return null;
-                                                            const sharesNum = investVal / (asset.currentPrice || 1);
-                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
-                                                            const newAvg = (effectiveBookCost + investVal) / (asset.quantity + sharesNum);
+                                                        {bAmount &&
+                                                            (() => {
+                                                                const investVal = parseFloat(bAmount);
+                                                                if (isNaN(investVal) || investVal <= 0) return null;
+                                                                const sharesNum = investVal / (asset.currentPrice || 1);
+                                                                const newAvg =
+                                                                    (effectiveBookCost + investVal) / (asset.quantity + sharesNum);
+                                                                const newQuantity = asset.quantity + sharesNum;
+                                                                const newBookCost = effectiveBookCost + investVal;
+                                                                const newMarketValue = newQuantity * asset.currentPrice;
+                                                                const newProfit = newMarketValue - newBookCost;
+                                                                const newProfitPercent =
+                                                                    Math.abs(newBookCost) > 0.01
+                                                                        ? (newProfit / newBookCost) * 100
+                                                                        : 0;
 
-                                                            const newQuantity = asset.quantity + sharesNum;
-                                                            const newBookCost = effectiveBookCost + investVal;
-                                                            const newMarketValue = newQuantity * asset.currentPrice;
-                                                            const newProfit = newMarketValue - newBookCost;
-                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
-
-                                                            return (
-                                                                <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <div className="flex justify-between">
-                                                                        <p className="text-slate-400 flex justify-between"><span>Buys:</span> <span className="text-white font-mono ml-1">{sharesNum.toFixed(2)} sh</span></p>
-                                                                    </div>
-                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                                return (
+                                                                    <SimProjected
+                                                                        summaryLabel="Buys"
+                                                                        summaryValue={`${sharesNum.toFixed(2)} sh`}
+                                                                        newBookCost={newBookCost}
+                                                                        newMarketValue={newMarketValue}
+                                                                        newProfit={newProfit}
+                                                                        newProfitPercent={newProfitPercent}
+                                                                        newAvg={newAvg}
+                                                                    />
+                                                                );
+                                                            })()}
                                                     </div>
-                                                    <div>
+
+                                                    <div className="space-y-2">
                                                         <input
                                                             type="number"
-                                                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:border-blue-500 input-no-spinner mb-2"
+                                                            className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
                                                             placeholder="Shares"
                                                             value={simBuyShares[asset.id] || ''}
-                                                            onChange={(e) => setSimBuyShares({ ...simBuyShares, [asset.id]: e.target.value })}
+                                                            onChange={e =>
+                                                                setSimBuyShares({ ...simBuyShares, [asset.id]: e.target.value })
+                                                            }
                                                         />
-                                                        {simBuyShares[asset.id] && (() => {
-                                                            const sharesVal = parseFloat(simBuyShares[asset.id]);
-                                                            if (isNaN(sharesVal) || sharesVal <= 0) return null;
-                                                            const costVal = sharesVal * asset.currentPrice;
-                                                            const effectiveBookCost = asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
-                                                            const newAvg = (effectiveBookCost + costVal) / (asset.quantity + sharesVal);
+                                                        {simBuyShares[asset.id] &&
+                                                            (() => {
+                                                                const sharesVal = parseFloat(simBuyShares[asset.id]);
+                                                                if (isNaN(sharesVal) || sharesVal <= 0) return null;
+                                                                const costVal = sharesVal * asset.currentPrice;
+                                                                const newAvg =
+                                                                    (effectiveBookCost + costVal) / (asset.quantity + sharesVal);
+                                                                const newQuantity = asset.quantity + sharesVal;
+                                                                const newBookCost = effectiveBookCost + costVal;
+                                                                const newMarketValue = newQuantity * asset.currentPrice;
+                                                                const newProfit = newMarketValue - newBookCost;
+                                                                const newProfitPercent =
+                                                                    Math.abs(newBookCost) > 0.01
+                                                                        ? (newProfit / newBookCost) * 100
+                                                                        : 0;
 
-                                                            const newQuantity = asset.quantity + sharesVal;
-                                                            const newBookCost = effectiveBookCost + costVal;
-                                                            const newMarketValue = newQuantity * asset.currentPrice;
-                                                            const newProfit = newMarketValue - newBookCost;
-                                                            const newProfitPercent = Math.abs(newBookCost) > 0.01 ? (newProfit / newBookCost) * 100 : 0;
-
-                                                            return (
-                                                                <div className="text-[10px] space-y-0.5 px-1">
-                                                                    <div className="flex justify-between">
-                                                                        <p className="text-slate-400">Cost: <span className="text-white font-mono">${costVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    </div>
-                                                                    <div className="border-t border-slate-700/50 pt-1 mt-1 space-y-0.5">
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Book:</span> <span className="text-white font-mono">${newBookCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New MV:</span> <span className="text-white font-mono">${newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New P/L:</span> <span className={`${newProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-bold font-mono`}>{newProfit >= 0 ? '+' : '-'}${Math.abs(newProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({newProfitPercent.toFixed(2)}%)</span></p>
-                                                                        <p className="text-slate-500 flex justify-between"><span>New Avg:</span> <span className="text-blue-400 font-bold font-mono">${newAvg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                                return (
+                                                                    <SimProjected
+                                                                        summaryLabel="Cost"
+                                                                        summaryValue={`$${fmt2(costVal)}`}
+                                                                        newBookCost={newBookCost}
+                                                                        newMarketValue={newMarketValue}
+                                                                        newProfit={newProfit}
+                                                                        newProfitPercent={newProfitPercent}
+                                                                        newAvg={newAvg}
+                                                                    />
+                                                                );
+                                                            })()}
                                                     </div>
                                                 </div>
                                             </div>
@@ -906,31 +1342,37 @@ const AccountDetails = () => {
                                     </div>
 
                                     {/* Right Content Area: Sparkline */}
-                                    {/* Right Content Area: Sparkline */}
-                                    <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-700/30 flex flex-col justify-between">
+                                    <div className="bg-slate-900/65 rounded-xl p-3.5 border border-slate-700/80 flex flex-col justify-between">
                                         <div className="flex justify-between items-center mb-2">
-                                            <p className="text-[9px] text-slate-500 font-bold uppercase">{asset.chartRange || '1MO'} Trend</p>
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                                                {asset.chartRange || '1MO'} Trend
+                                            </p>
                                             <div className="flex gap-1">
-                                                {['1mo', '3mo', '1y', '5y'].map((range) => (
-                                                    <button
-                                                        key={range}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            // Only refresh THIS asset alone
-                                                            refreshAsset(asset.id, range);
-                                                        }}
-                                                        className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-bold transition-colors ${asset.chartRange === range || (!asset.chartRange && range === '1mo')
-                                                            ? 'bg-blue-600/20 text-blue-400'
-                                                            : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'
+                                                {['1mo', '3mo', '1y', '5y'].map(range => {
+                                                    const isActiveRange =
+                                                        asset.chartRange === range || (!asset.chartRange && range === '1mo');
+                                                    return (
+                                                        <button
+                                                            key={range}
+                                                            onClick={e => {
+                                                                e.preventDefault();
+                                                                refreshAsset(asset.id, range);
+                                                            }}
+                                                            style={isActiveRange ? { color: '#ffffff' } : undefined}
+                                                            className={`text-[11px] px-1.5 py-0.5 rounded-md uppercase font-bold transition-colors ${
+                                                                isActiveRange
+                                                                    ? 'bg-blue-600'
+                                                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
                                                             }`}
-                                                    >
-                                                        {range}
-                                                    </button>
-                                                ))}
+                                                        >
+                                                            {range}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                        <div 
-                                            className="w-full h-24 cursor-pointer hover:opacity-80 transition-opacity"
+                                        <div
+                                            className="w-full h-24 cursor-pointer hover:opacity-85 transition-opacity"
                                             onClick={() => handleResearchClick(asset.ticker)}
                                             title="Click to view detailed chart and research"
                                         >
@@ -939,15 +1381,23 @@ const AccountDetails = () => {
                                                     <AreaChart data={asset.sparkline} style={{ cursor: 'pointer' }}>
                                                         <defs>
                                                             <linearGradient id={`grad-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'} stopOpacity={0.4} />
-                                                                <stop offset="95%" stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'} stopOpacity={0} />
+                                                                <stop
+                                                                    offset="5%"
+                                                                    stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
+                                                                    stopOpacity={0.35}
+                                                                />
+                                                                <stop
+                                                                    offset="95%"
+                                                                    stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
+                                                                    stopOpacity={0}
+                                                                />
                                                             </linearGradient>
                                                         </defs>
                                                         <Tooltip
-                                                            cursor={{ stroke: '#475569', strokeWidth: 1 }}
-                                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', fontSize: '12px', padding: '8px' }}
-                                                            itemStyle={{ color: '#f8fafc' }}
-                                                            formatter={(value: any) => [`$${parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Price']}
+                                                            cursor={{ stroke: isDark ? '#64748b' : '#94a3b8', strokeWidth: 1 }}
+                                                            contentStyle={tooltipContentStyle}
+                                                            itemStyle={tooltipItemStyle}
+                                                            formatter={value => [`$${fmt2(Number(value))}`, 'Price']}
                                                             labelStyle={{ display: 'none' }}
                                                         />
                                                         <Area
@@ -962,10 +1412,9 @@ const AccountDetails = () => {
                                                     </AreaChart>
                                                 </ResponsiveContainer>
                                             ) : (
-                                                <div className="h-full flex flex-col items-center justify-center text-slate-600 text-[10px] italic text-center">
-                                                    <RotateCcw size={16} className="mb-1 opacity-50" />
-                                                    <span>Click "Refresh Prices"</span>
-                                                    <span className="text-[8px]">to load chart</span>
+                                                <div className="h-full flex flex-col items-center justify-center text-slate-300 text-xs text-center gap-1">
+                                                    <RotateCcw size={16} className="text-slate-400" />
+                                                    <span>Click &ldquo;Refresh Prices&rdquo; to load chart</span>
                                                 </div>
                                             )}
                                         </div>
@@ -976,76 +1425,114 @@ const AccountDetails = () => {
                     })}
 
                     {assets.length === 0 && (
-                        <div className="text-center py-20 bg-slate-800/20 rounded-2xl border border-dashed border-slate-700">
-                            <Plus size={48} className="text-slate-600 mx-auto mb-4 opacity-50" />
-                            <p className="text-slate-400 font-medium">No assets in this account yet.</p>
-                            <button onClick={() => setIsAdding(true)} className="text-blue-400 hover:text-blue-300 text-sm mt-2 font-bold decoration-dotted underline underline-offset-4 tracking-wide">
+                        <div className="text-center py-16 bg-slate-800/95 rounded-2xl border border-dashed border-slate-700">
+                            <Plus size={40} className="text-slate-400 mx-auto mb-3" />
+                            <p className="text-slate-200 font-medium">No assets in this account yet.</p>
+                            <button
+                                onClick={() => setIsAdding(true)}
+                                className="text-blue-400 hover:underline text-sm mt-2 font-bold"
+                            >
                                 Add your first transaction
                             </button>
                         </div>
                     )}
                 </div>
-            )
-            }
+            )}
 
-            {/* Transactions History Implementation */}
+            {/* Transactions History */}
             {activeTab === 'transactions' && (
-                <div className="glass-panel overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="bg-slate-800/50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700/50">
-                            <tr>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Ticker</th>
-                                <th className="px-6 py-4">Type</th>
-                                <th className="px-6 py-4 text-right">Shares</th>
-                                <th className="px-6 py-4 text-right">Price</th>
-                                <th className="px-6 py-4 text-right">Amount</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-700/30">
-                            {transactions
-                                .filter(t => t.accountId === account.id)
-                                .map((t, index) => ({ ...t, _originalIndex: index }))
-                                .sort((a, b) => {
-                                    const dateA = new Date(a.date).getTime();
-                                    const dateB = new Date(b.date).getTime();
-                                    if (dateA !== dateB) {
-                                        return dateB - dateA;
-                                    }
-                                    return b._originalIndex - a._originalIndex;
-                                })
-                                .map(tx => (
-                                    <tr key={tx.id} className="hover:bg-slate-800/20 transition-colors">
-                                        <td className="px-6 py-4 text-sm text-slate-400 font-mono">{tx.date}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-white">{tx.ticker}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${tx.type === 'Buy' || tx.type === 'DRIP' || tx.type === 'Dividend Reinvested' || tx.type === 'Stock Split' ? 'bg-green-500/10 text-green-400' : tx.type === 'Sell' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                                                {tx.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">
-                                            {tx.type === 'Stock Split' && tx.splitFrom && tx.splitTo ? (
-                                                `${tx.splitTo} : ${tx.splitFrom}`
-                                            ) : tx.shares ? (tx.type === 'Sell' ? '-' : '+') + tx.shares.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '-'}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-slate-300">${tx.pricePerShare ? tx.pricePerShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
-                                        <td className="px-6 py-4 text-sm text-right font-mono text-white font-bold">${tx.amount ? tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => startEditTx(tx)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-all"><Pencil size={14} /></button>
-                                                <button onClick={() => deleteTransaction(tx.id)} className="p-1.5 hover:bg-red-900/30 rounded text-slate-400 hover:text-red-400 transition-all"><Trash2 size={14} /></button>
-                                            </div>
+                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-slate-900/90 text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700/80">
+                                <tr>
+                                    <th className="px-6 py-3.5">Date</th>
+                                    <th className="px-6 py-3.5">Ticker</th>
+                                    <th className="px-6 py-3.5">Type</th>
+                                    <th className="px-6 py-3.5 text-right">Shares</th>
+                                    <th className="px-6 py-3.5 text-right">Price</th>
+                                    <th className="px-6 py-3.5 text-right">Amount</th>
+                                    <th className="px-6 py-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-700/60 text-sm">
+                                {transactions
+                                    .filter(t => t.accountId === account.id)
+                                    .map((t, index) => ({ ...t, _originalIndex: index }))
+                                    .sort((a, b) => {
+                                        const dateA = new Date(a.date).getTime();
+                                        const dateB = new Date(b.date).getTime();
+                                        if (dateA !== dateB) return dateB - dateA;
+                                        return b._originalIndex - a._originalIndex;
+                                    })
+                                    .map(tx => (
+                                        <tr key={tx.id} className="hover:bg-slate-750/60 transition-colors">
+                                            <td className="px-6 py-4 text-slate-300 font-mono tabular-nums">{tx.date}</td>
+                                            <td className="px-6 py-4 font-bold font-mono text-white">
+                                                {tx.ticker || '—'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span
+                                                    className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase border ${
+                                                        tx.type === 'Buy' ||
+                                                        tx.type === 'DRIP' ||
+                                                        tx.type === 'Dividend Reinvested' ||
+                                                        tx.type === 'Stock Split'
+                                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                            : tx.type === 'Sell'
+                                                            ? 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
+                                                    }`}
+                                                >
+                                                    {tx.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-slate-200">
+                                                {tx.type === 'Stock Split' && tx.splitFrom && tx.splitTo
+                                                    ? `${tx.splitTo} : ${tx.splitFrom}`
+                                                    : tx.shares
+                                                    ? (tx.type === 'Sell' ? '-' : '+') +
+                                                      tx.shares.toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                                    : '—'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-slate-300">
+                                                ${tx.pricePerShare ? fmt2(tx.pricePerShare) : '0.00'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-white font-bold">
+                                                ${tx.amount ? fmt2(tx.amount) : '0.00'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => startEditTx(tx)}
+                                                        className="p-2 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-lg text-slate-300 hover:text-white transition-colors"
+                                                        title="Edit transaction"
+                                                        aria-label="Edit transaction"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteTransaction(tx.id)}
+                                                        className="p-2 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 rounded-lg text-red-400 transition-colors"
+                                                        title="Delete transaction"
+                                                        aria-label="Delete transaction"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                {accountTxs.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-12 text-center text-slate-300 text-sm">
+                                            No transaction history found.
                                         </td>
                                     </tr>
-                                ))}
-                            {transactions.filter(t => t.accountId === account.id).length === 0 && (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-10 text-center text-slate-500 italic text-sm">No transaction history found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
@@ -1063,20 +1550,16 @@ const AccountDetails = () => {
                     </div>
                 </div>
             )}
-            
+
             {loadingResearch && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-slate-800 text-white p-6 rounded-xl flex items-center gap-3">
-                        <RefreshCw size={24} className="animate-spin text-blue-500" />
+                    <div className="bg-slate-800 border border-slate-700 text-white p-6 rounded-2xl shadow-2xl flex items-center gap-3">
+                        <RefreshCw size={22} className="animate-spin text-blue-400" />
                         <span className="font-semibold">Loading research...</span>
                     </div>
                 </div>
             )}
-            {showMigrationModal && (
-                <CurrencyMigrationModal
-                    onClose={() => setShowMigrationModal(false)}
-                />
-            )}
+            {showMigrationModal && <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />}
         </div>
     );
 };
