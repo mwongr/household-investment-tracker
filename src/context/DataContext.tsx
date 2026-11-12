@@ -44,6 +44,7 @@ interface DataContextType {
     addTransactions: (transactions: Omit<Transaction, 'id'>[], options?: { updateCashBalance?: boolean }) => void;
     updateTransaction: (id: string, transaction: Omit<Transaction, 'id'>) => void;
     deleteTransaction: (id: string) => void;
+    renameTicker: (accountId: string, oldTicker: string, newTicker: string, newCurrency?: 'CAD' | 'USD') => void;
 
     updateAssetCustomBookCost: (assetId: string, customBookCost: number | null) => void;
 
@@ -607,6 +608,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const renameTicker = (accountId: string, oldTicker: string, newTicker: string, newCurrency?: 'CAD' | 'USD') => {
+        const cleanOld = oldTicker.trim().toUpperCase();
+        const cleanNew = newTicker.trim().toUpperCase();
+        if (!cleanOld || !cleanNew || cleanOld === cleanNew) return;
+
+        setTransactions(prev => {
+            const updated = prev.map(tx => {
+                if (tx.accountId === accountId && tx.ticker && tx.ticker.trim().toUpperCase() === cleanOld) {
+                    return {
+                        ...tx,
+                        ticker: cleanNew,
+                        currency: newCurrency || tx.currency,
+                        previousTicker: cleanOld,
+                    };
+                }
+                return tx;
+            });
+            recalculateAssets(updated);
+            return updated;
+        });
+
+        pendingRefreshRef.current = true;
+    };
+
     // Completely rebuild assets from transactions to ensure consistency on edits/deletes
     const recalculateAssets = (currentTransactions: Transaction[], ignoreCustomBookCostAdjustment: boolean = false) => {
         const newAssetsMap = new Map<string, Asset>();
@@ -1095,6 +1120,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addTransactions,
             updateTransaction,
             deleteTransaction,
+            renameTicker,
             updateAssetCustomBookCost,
             getAssetsByAccount,
             refreshPrices,

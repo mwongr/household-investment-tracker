@@ -103,6 +103,7 @@ const AccountDetails = () => {
         addTransaction,
         updateTransaction,
         deleteTransaction,
+        renameTicker,
         transactions,
         refreshPrices,
         refreshAsset,
@@ -121,6 +122,26 @@ const AccountDetails = () => {
     const [activeTab, setActiveTab] = useState<'assets' | 'transactions'>('assets');
     const [editingTxId, setEditingTxId] = useState<string | null>(null);
     const [selectedYear, setSelectedYear] = useState<number | 'All'>(new Date().getFullYear());
+
+    // Rename / Merge Ticker Modal State
+    const [renameModalOpen, setRenameModalOpen] = useState(false);
+    const [renameOldTicker, setRenameOldTicker] = useState('');
+    const [renameNewTicker, setRenameNewTicker] = useState('');
+    const [renameNewCurrency, setRenameNewCurrency] = useState<'CAD' | 'USD'>('CAD');
+
+    const openRenameModal = (oldTicker: string, currentCurrency: 'CAD' | 'USD') => {
+        setRenameOldTicker(oldTicker);
+        setRenameNewTicker(oldTicker);
+        setRenameNewCurrency(currentCurrency);
+        setRenameModalOpen(true);
+    };
+
+    const handleRenameSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!account || !renameOldTicker || !renameNewTicker.trim()) return;
+        renameTicker(account.id, renameOldTicker, renameNewTicker.trim().toUpperCase(), renameNewCurrency);
+        setRenameModalOpen(false);
+    };
 
     // Transaction Form State
     const [ticker, setTicker] = useState('');
@@ -855,6 +876,14 @@ const AccountDetails = () => {
                                                         USD
                                                     </span>
                                                 )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
+                                                    className="p-1 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                                    title={`Rename or Merge ${asset.ticker} (e.g. after uplisting or symbol change)`}
+                                                >
+                                                    <Pencil size={13} />
+                                                </button>
                                             </h3>
                                             <p className="text-xs text-slate-300 font-mono font-semibold mt-1.5">
                                                 {asset.quantity.toLocaleString()} shares
@@ -1605,6 +1634,110 @@ const AccountDetails = () => {
             )}
             {showMigrationModal && <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />}
             
+            {/* Rename / Merge Ticker Modal */}
+            {renameModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                    <div className="relative w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                    <Pencil size={16} />
+                                </div>
+                                <h3 className="text-base font-bold text-white">
+                                    Rename / Merge Ticker Symbol
+                                </h3>
+                            </div>
+                            <button
+                                onClick={() => setRenameModalOpen(false)}
+                                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                            Use this when a company uplisted, reorganized, or changed symbols (e.g. <span className="font-mono text-white font-bold">TRUL</span> &rarr; <span className="font-mono text-white font-bold">TRLV</span> or <span className="font-mono text-white font-bold">CL</span> &rarr; <span className="font-mono text-white font-bold">CL.CN</span>). All past transactions in this account will be updated to the new symbol, merging shares and ACB, and live quotes will refresh immediately.
+                        </p>
+
+                        <form onSubmit={handleRenameSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                    Current Symbol in Account
+                                </label>
+                                <input
+                                    type="text"
+                                    disabled
+                                    value={renameOldTicker}
+                                    className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 text-slate-400 rounded-xl text-sm font-mono font-bold cursor-not-allowed"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                                    New Target Symbol (e.g. TRLV, CL.CN, AYR-A.CN)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={renameNewTicker}
+                                    onChange={e => setRenameNewTicker(e.target.value.toUpperCase())}
+                                    placeholder="e.g. TRLV"
+                                    autoFocus
+                                    required
+                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 focus:border-blue-500 text-white rounded-xl text-sm font-mono font-bold outline-none uppercase"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                                    Trading Currency
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRenameNewCurrency('CAD')}
+                                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                            renameNewCurrency === 'CAD'
+                                                ? 'bg-blue-600/20 border-blue-500 text-white'
+                                                : 'bg-slate-800 border-slate-750 text-slate-400 hover:text-white'
+                                        }`}
+                                    >
+                                        CAD ($)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRenameNewCurrency('USD')}
+                                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                            renameNewCurrency === 'USD'
+                                                ? 'bg-emerald-600/20 border-emerald-500 text-white'
+                                                : 'bg-slate-800 border-slate-750 text-slate-400 hover:text-white'
+                                        }`}
+                                    >
+                                        USD ($)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setRenameModalOpen(false)}
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!renameNewTicker.trim() || renameNewTicker.trim() === renameOldTicker}
+                                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
+                                >
+                                    Apply &amp; Merge
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* CSV Import Modal */}
             <CsvImportModal
                 isOpen={isImportModalOpen}
