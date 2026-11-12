@@ -10,6 +10,9 @@ import {
     ChevronUp,
     RefreshCw,
     Wallet,
+    Tag,
+    ArrowRight,
+    RotateCcw,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import {
@@ -18,6 +21,7 @@ import {
     type ImportMode,
     type ColumnMapping,
     type CsvParseResult,
+    type TickerOverridesMap,
 } from '../utils/csvImport';
 import type { AccountType } from '../types';
 
@@ -70,9 +74,20 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const [mode, setMode] = useState<ImportMode | null>(null);
     const [customMapping, setCustomMapping] = useState<ColumnMapping>({});
     const [showMappingConfig, setShowMappingConfig] = useState(false);
+    const [showTickerReview, setShowTickerReview] = useState(true);
     const [updateCashBalance, setUpdateCashBalance] = useState<boolean>(true);
     const [autoFetchPrices, setAutoFetchPrices] = useState<boolean>(true);
     const [skipInvalidRows, setSkipInvalidRows] = useState<boolean>(true);
+
+    // Ticker Symbol & Currency Overrides (saved across sessions)
+    const [tickerOverrides, setTickerOverrides] = useState<TickerOverridesMap>(() => {
+        try {
+            const saved = localStorage.getItem('investment_tracker_ticker_overrides');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
 
     // Status State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,7 +117,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         reader.readAsText(file);
     }, [file]);
 
-    // Parse CSV dynamically whenever content, mode override, or mapping changes
+    // Parse CSV dynamically whenever content, mode override, mapping, or ticker overrides change
     const parseResult: CsvParseResult | null = useMemo(() => {
         if (!csvText.trim()) return null;
         try {
@@ -111,14 +126,16 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 csvText,
                 activeAccountId,
                 mode || undefined,
-                customMapping
+                customMapping,
+                'CAD',
+                tickerOverrides
             );
             return res;
         } catch (err: any) {
             console.error('CSV parse error:', err);
             return null;
         }
-    }, [csvText, mode, customMapping, targetType, selectedAccountId]);
+    }, [csvText, mode, customMapping, targetType, selectedAccountId, tickerOverrides]);
 
     // Sync detected mode if mode is not manually overridden yet
     useEffect(() => {
@@ -191,6 +208,68 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             ...prev,
             [field]: value === '__NONE__' ? undefined : value,
         }));
+    };
+
+    const handleUpdateTicker = (rawTicker: string, newTarget: string) => {
+        const trimmed = newTarget.trim().toUpperCase();
+        setTickerOverrides(prev => {
+            const current = prev[rawTicker] || { targetTicker: rawTicker };
+            const updated = {
+                ...prev,
+                [rawTicker]: {
+                    ...current,
+                    targetTicker: trimmed,
+                },
+            };
+            try {
+                localStorage.setItem('investment_tracker_ticker_overrides', JSON.stringify(updated));
+            } catch (e) {
+                console.error('Failed to save ticker overrides', e);
+            }
+            return updated;
+        });
+    };
+
+    const handleUpdateCurrency = (rawTicker: string, newCurrency: 'CAD' | 'USD') => {
+        setTickerOverrides(prev => {
+            const current = prev[rawTicker] || { targetTicker: rawTicker };
+            const updated = {
+                ...prev,
+                [rawTicker]: {
+                    ...current,
+                    currency: newCurrency,
+                },
+            };
+            try {
+                localStorage.setItem('investment_tracker_ticker_overrides', JSON.stringify(updated));
+            } catch (e) {
+                console.error('Failed to save ticker overrides', e);
+            }
+            return updated;
+        });
+    };
+
+    const handleApplySuffix = (rawTicker: string, currentTarget: string, suffix: string) => {
+        const base = currentTarget.replace(/\.(TO|CN|NE|V|VN)$/i, '');
+        if (suffix === 'NONE') {
+            handleUpdateTicker(rawTicker, base);
+        } else {
+            handleUpdateTicker(rawTicker, `${base}${suffix}`);
+            handleUpdateCurrency(rawTicker, 'CAD');
+        }
+    };
+
+    const handleResetTicker = (rawTicker: string) => {
+        setTickerOverrides(prev => {
+            const updated = { ...prev };
+            delete updated[rawTicker];
+            try {
+                localStorage.setItem('investment_tracker_ticker_overrides', JSON.stringify(updated));
+            } catch (e) {
+                console.error('Failed to save ticker overrides', e);
+            }
+            return updated;
+        });
     };
 
     const resetImporter = () => {
@@ -892,6 +971,199 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                 </div>
                             )}
 
+                            {/* Review & Correct Ticker Symbols */}
+                            {parseResult.detectedTickers.length > 0 && (
+                                <div className="bg-slate-900 border border-slate-700/80 rounded-xl overflow-hidden shadow-lg">
+                                    <div className="px-4 py-3 bg-slate-800/80 border-b border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                                <Tag size={16} />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold uppercase tracking-wider text-white">
+                                                        Review &amp; Correct Stock Symbols
+                                                    </span>
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">
+                                                        {parseResult.detectedTickers.length} Symbols
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                                    Assign exchange suffixes (e.g. <span className="font-mono text-slate-200">CL.CN</span>, <span className="font-mono text-slate-200">AYR-A.CN</span>) or set currency (e.g. <span className="font-mono text-slate-200">TRUL</span> in USD). Mappings are saved for future imports.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowTickerReview(!showTickerReview)}
+                                            className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1 self-start sm:self-auto shrink-0"
+                                        >
+                                            {showTickerReview ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                            {showTickerReview ? 'Hide Symbols' : 'Show Symbols'}
+                                        </button>
+                                    </div>
+
+                                    {showTickerReview && (
+                                        <div className="p-3 divide-y divide-slate-800/60 max-h-72 overflow-y-auto space-y-2">
+                                            {parseResult.detectedTickers.map(item => {
+                                                const currentTarget = tickerOverrides[item.rawTicker]?.targetTicker || item.rawTicker;
+                                                const currentCurrency = tickerOverrides[item.rawTicker]?.currency || item.defaultCurrency;
+                                                const isCustomized = Boolean(tickerOverrides[item.rawTicker]);
+
+                                                return (
+                                                    <div
+                                                        key={item.rawTicker}
+                                                        className={`pt-2 first:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-3 p-2.5 rounded-xl transition-all ${
+                                                            isCustomized
+                                                                ? 'bg-blue-950/30 border border-blue-500/30 shadow-sm'
+                                                                : 'hover:bg-slate-800/40 border border-transparent'
+                                                        }`}
+                                                    >
+                                                        {/* Raw CSV Symbol Info */}
+                                                        <div className="flex items-center gap-2.5 min-w-[220px]">
+                                                            <span className="px-2.5 py-1 rounded-lg bg-slate-800 text-white font-mono font-bold text-xs border border-slate-700 shadow-sm">
+                                                                {item.rawTicker}
+                                                            </span>
+                                                            <div className="min-w-0">
+                                                                {item.sampleName && (
+                                                                    <div className="text-xs font-semibold text-slate-200 truncate max-w-[200px]" title={item.sampleName}>
+                                                                        {item.sampleName}
+                                                                    </div>
+                                                                )}
+                                                                <span className="text-[11px] text-slate-400 font-mono">
+                                                                    {item.count} {item.count === 1 ? 'transaction' : 'transactions'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <ArrowRight size={14} className="text-slate-600 hidden md:block shrink-0" />
+
+                                                        {/* Target Symbol & Controls */}
+                                                        <div className="flex flex-wrap items-center gap-2 flex-1 justify-start md:justify-end">
+                                                            {/* Editable Target Symbol Input */}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <label className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">
+                                                                    Map to:
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={currentTarget}
+                                                                    onChange={e => handleUpdateTicker(item.rawTicker, e.target.value)}
+                                                                    placeholder="Target Ticker"
+                                                                    className="w-28 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 focus:border-blue-500 text-white font-mono font-bold text-xs outline-none shadow-inner"
+                                                                />
+                                                            </div>
+
+                                                            {/* Quick Exchange Suffix Buttons */}
+                                                            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800 text-[10px] font-mono">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApplySuffix(item.rawTicker, currentTarget, '.CN')}
+                                                                    title="Canadian Securities Exchange (.CN)"
+                                                                    className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                                                                        currentTarget.endsWith('.CN')
+                                                                            ? 'bg-emerald-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                                                    }`}
+                                                                >
+                                                                    .CN
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApplySuffix(item.rawTicker, currentTarget, '.TO')}
+                                                                    title="Toronto Stock Exchange (.TO)"
+                                                                    className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                                                                        currentTarget.endsWith('.TO')
+                                                                            ? 'bg-blue-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                                                    }`}
+                                                                >
+                                                                    .TO
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApplySuffix(item.rawTicker, currentTarget, '.V')}
+                                                                    title="TSX Venture (.V)"
+                                                                    className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                                                                        currentTarget.endsWith('.V')
+                                                                            ? 'bg-purple-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                                                    }`}
+                                                                >
+                                                                    .V
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApplySuffix(item.rawTicker, currentTarget, '.NE')}
+                                                                    title="NEO / Cboe Canada (.NE)"
+                                                                    className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                                                                        currentTarget.endsWith('.NE')
+                                                                            ? 'bg-cyan-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                                                    }`}
+                                                                >
+                                                                    .NE
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApplySuffix(item.rawTicker, currentTarget, 'NONE')}
+                                                                    title="US or raw unsuffixed symbol (e.g. TRUL, AAPL)"
+                                                                    className={`px-1.5 py-0.5 rounded font-bold transition-colors ${
+                                                                        !/\.(TO|CN|NE|V|VN)$/i.test(currentTarget)
+                                                                            ? 'bg-amber-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                                                    }`}
+                                                                >
+                                                                    US / Raw
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Currency Selector */}
+                                                            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800 text-[10px] font-bold">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleUpdateCurrency(item.rawTicker, 'CAD')}
+                                                                    className={`px-2 py-0.5 rounded transition-colors ${
+                                                                        currentCurrency === 'CAD'
+                                                                            ? 'bg-blue-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white'
+                                                                    }`}
+                                                                >
+                                                                    CAD
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleUpdateCurrency(item.rawTicker, 'USD')}
+                                                                    className={`px-2 py-0.5 rounded transition-colors ${
+                                                                        currentCurrency === 'USD'
+                                                                            ? 'bg-emerald-600 text-white'
+                                                                            : 'text-slate-400 hover:text-white'
+                                                                    }`}
+                                                                >
+                                                                    USD
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Reset Button */}
+                                                            {isCustomized && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleResetTicker(item.rawTicker)}
+                                                                    title="Reset to original symbol"
+                                                                    className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                                                >
+                                                                    <RotateCcw size={13} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Preview Table */}
                             <div className="bg-slate-900 border border-slate-700/80 rounded-xl overflow-hidden">
                                 <div className="px-4 py-2.5 bg-slate-800/80 border-b border-slate-700/80 flex items-center justify-between">
@@ -948,7 +1220,15 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                                             </td>
                                                         )}
                                                         <td className="px-3 py-2 font-bold text-white">
-                                                            {tx?.ticker || holding?.ticker || '-'}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span>{tx?.ticker || holding?.ticker || '-'}</span>
+                                                                {row.raw && (row.raw.symbol || row.raw.Symbol || row.raw.ticker || row.raw.Ticker) &&
+                                                                 (tx?.ticker || holding?.ticker) !== (row.raw.symbol || row.raw.Symbol || row.raw.ticker || row.raw.Ticker)?.trim()?.toUpperCase() && (
+                                                                    <span className="text-[9px] font-sans font-bold px-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30" title="Symbol customized">
+                                                                        Mapped
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="px-3 py-2 font-sans">
                                                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-200">
@@ -964,8 +1244,14 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                                         <td className="px-3 py-2 text-right font-bold text-white">
                                                             ${(tx?.amount || holding?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
-                                                        <td className="px-3 py-2 text-slate-400">
-                                                            {tx?.currency || holding?.currency || 'CAD'}
+                                                        <td className="px-3 py-2 font-mono">
+                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                                (tx?.currency || holding?.currency) === 'USD'
+                                                                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                                                    : 'text-slate-400'
+                                                            }`}>
+                                                                {tx?.currency || holding?.currency || 'CAD'}
+                                                            </span>
                                                         </td>
                                                     </tr>
                                                 );

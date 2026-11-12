@@ -39,6 +39,21 @@ export interface ValidatedRow {
     };
 }
 
+export interface TickerOverride {
+    targetTicker: string;
+    currency?: 'CAD' | 'USD';
+}
+
+export type TickerOverridesMap = Record<string, TickerOverride>;
+
+export interface DetectedTickerInfo {
+    rawTicker: string;
+    count: number;
+    sampleName?: string;
+    defaultTarget: string;
+    defaultCurrency: 'CAD' | 'USD';
+}
+
 export interface CsvParseResult {
     headers: string[];
     rawRows: Record<string, string>[];
@@ -48,6 +63,7 @@ export interface CsvParseResult {
     detectedInstitution?: string;
     mapping: ColumnMapping;
     validatedRows: ValidatedRow[];
+    detectedTickers: DetectedTickerInfo[];
     stats: {
         totalRows: number;
         validRows: number;
@@ -252,20 +268,42 @@ export const detectImportMode = (mapping: ColumnMapping): ImportMode => {
 };
 
 /**
- * Helper to ensure Canadian stocks listed on TSX carry the .TO suffix
+ * Resolves a raw ticker symbol against user overrides or preserves it cleanly.
+ * Does NOT blindly append .TO to Canadian stocks so that CSE (.CN), NEO (.NE),
+ * Venture (.V), and US/OTC stocks (e.g. TRUL, CL.CN, AYR-A.CN) are accurately retained.
  */
-const normalizeTickerSymbol = (symbol: string, currency: 'CAD' | 'USD'): string => {
-    let t = symbol.trim().toUpperCase();
-    if (!t) return '';
-    // If it already has an exchange suffix like .TO, .CN, .NE, .V, .VN
-    if (/\.(TO|CN|NE|V|VN)$/.test(t)) {
-        return t;
+export const cleanTickerSymbol = (
+    symbol: string,
+    overrides?: TickerOverridesMap
+): { ticker: string; currency?: 'CAD' | 'USD' } => {
+    let t = (symbol || '').trim().toUpperCase();
+    if (!t) return { ticker: '' };
+
+    if (overrides) {
+        if (overrides[t]) {
+            return {
+                ticker: overrides[t].targetTicker.trim().toUpperCase(),
+                currency: overrides[t].currency,
+            };
+        }
+        // Normalize . vs - variants (e.g. AYR.A vs AYR-A)
+        const altDot = t.replace(/-/g, '.');
+        const altHyphen = t.replace(/\./g, '-');
+        if (overrides[altDot]) {
+            return {
+                ticker: overrides[altDot].targetTicker.trim().toUpperCase(),
+                currency: overrides[altDot].currency,
+            };
+        }
+        if (overrides[altHyphen]) {
+            return {
+                ticker: overrides[altHyphen].targetTicker.trim().toUpperCase(),
+                currency: overrides[altHyphen].currency,
+            };
+        }
     }
-    // Append .TO if currency is CAD and no suffix
-    if (currency === 'CAD') {
-        return `${t}.TO`;
-    }
-    return t;
+
+    return { ticker: t };
 };
 
 /**
@@ -275,21 +313,23 @@ export const parseWealthsimpleRow = (
     raw: Record<string, string>,
     rowNum: number,
     accountId: string,
-    todayDateIso: string
+    todayDateIso: string,
+    tickerOverrides?: TickerOverridesMap
 ): ValidatedRow | null => {
     const activityType = (raw.activity_type || raw['Activity Type'] || '').trim();
     const activitySubType = (raw.activity_sub_type || raw['Activity Sub Type'] || raw.activity_subtype || '').trim().toUpperCase();
     const rawDate = raw.effective_date || raw['Effective Date'] || raw.settlement_date || raw['Settlement Date'] || '';
     const date = parseDateToIso(rawDate) || todayDateIso;
     const rawSymbol = (raw.symbol || raw.Symbol || '').trim();
-    const currency: 'CAD' | 'USD' = (raw.currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
+    const rowCurrency: 'CAD' | 'USD' = (raw.currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
     const quantity = Math.abs(parseCleanNumber(raw.quantity));
     const unitPrice = Math.abs(parseCleanNumber(raw.unit_price));
     const commission = Math.abs(parseCleanNumber(raw.commission));
     const netCash = parseCleanNumber(raw.net_cash_amount);
     const absCash = Math.abs(netCash);
 
-    const cleanTicker = normalizeTickerSymbol(rawSymbol, currency);
+    const { ticker: cleanTicker, currency: overrideCurrency } = cleanTickerSymbol(rawSymbol, tickerOverrides);
+    const currency = overrideCurrency || rowCurrency;
     const lowerAct = activityType.toLowerCase();
 
     // 1. Trades (Buy / Sell)
@@ -465,7 +505,8 @@ export const parseQuestradeRow = (
     raw: Record<string, string>,
     rowNum: number,
     accountId: string,
-    todayDateIso: string
+    todayDateIso: string,
+    tickerOverrides?: TickerOverridesMap
 ): ValidatedRow | null => {
     const rawAction = (raw.Action || raw.action || '').trim();
     const activityType = (raw['Activity Type'] || raw.activity_type || '').trim();
@@ -473,7 +514,7 @@ export const parseQuestradeRow = (
     const date = parseDateToIso(rawDate) || todayDateIso;
     const rawSymbol = (raw.Symbol || raw.symbol || '').trim();
     const description = (raw.Description || raw.description || '').trim();
-    const currency: 'CAD' | 'USD' = (raw.Currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
+    const rowCurrency: 'CAD' | 'USD' = (raw.Currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
     const rawQuantity = parseCleanNumber(raw.Quantity);
     const quantity = Math.abs(rawQuantity);
     const unitPrice = Math.abs(parseCleanNumber(raw.Price));
@@ -486,7 +527,9 @@ export const parseQuestradeRow = (
         const symMatch = description.match(/Symbol[:\s-]+([A-Za-z0-9.]+)/i);
         if (symMatch) cleanTicker = symMatch[1].toUpperCase();
     }
-    cleanTicker = normalizeTickerSymbol(cleanTicker, currency);
+    const { ticker: resolvedTicker, currency: overrideCurrency } = cleanTickerSymbol(cleanTicker, tickerOverrides);
+    cleanTicker = resolvedTicker;
+    const currency: 'CAD' | 'USD' = overrideCurrency || rowCurrency;
 
     const actionUpper = rawAction.toUpperCase();
     const actLower = activityType.toLowerCase();
@@ -737,7 +780,8 @@ export const validateAndTransformRows = (
     mapping: ColumnMapping,
     accountId: string,
     defaultCurrency: 'CAD' | 'USD' = 'CAD',
-    todayDateIso: string = new Date().toISOString().split('T')[0]
+    todayDateIso: string = new Date().toISOString().split('T')[0],
+    tickerOverrides?: TickerOverridesMap
 ): ValidatedRow[] => {
     return rawRows.map((raw, idx) => {
         const rowNum = idx + 2; // Row 1 is header
@@ -752,15 +796,17 @@ export const validateAndTransformRows = (
         const rawCommission = mapping.commission ? raw[mapping.commission] : '';
         const rawCurrency = (mapping.currency ? raw[mapping.currency] : '') || '';
 
-        const cleanTicker = rawTicker.trim().toUpperCase();
-        let currency: 'CAD' | 'USD' = defaultCurrency;
-        const currUpper = rawCurrency.trim().toUpperCase();
-        if (currUpper === 'USD' || currUpper.includes('USD')) {
-            currency = 'USD';
-        } else if (currUpper === 'CAD' || currUpper.includes('CAD')) {
-            currency = 'CAD';
-        } else if (cleanTicker.endsWith('.TO') || cleanTicker.endsWith('.NE') || cleanTicker.endsWith('.CN') || cleanTicker.endsWith('.V')) {
-            currency = 'CAD';
+        const { ticker: cleanTicker, currency: overrideCurrency } = cleanTickerSymbol(rawTicker, tickerOverrides);
+        let currency: 'CAD' | 'USD' = overrideCurrency || defaultCurrency;
+        if (!overrideCurrency) {
+            const currUpper = rawCurrency.trim().toUpperCase();
+            if (currUpper === 'USD' || currUpper.includes('USD')) {
+                currency = 'USD';
+            } else if (currUpper === 'CAD' || currUpper.includes('CAD')) {
+                currency = 'CAD';
+            } else if (cleanTicker.endsWith('.TO') || cleanTicker.endsWith('.NE') || cleanTicker.endsWith('.CN') || cleanTicker.endsWith('.V')) {
+                currency = 'CAD';
+            }
         }
 
         if (mode === 'holdings') {
@@ -950,7 +996,8 @@ export const parseCsvContent = (
     accountId: string,
     forcedMode?: ImportMode,
     customMapping?: Partial<ColumnMapping>,
-    defaultCurrency: 'CAD' | 'USD' = 'CAD'
+    defaultCurrency: 'CAD' | 'USD' = 'CAD',
+    tickerOverrides?: TickerOverridesMap
 ): CsvParseResult => {
     const parsed = Papa.parse<Record<string, string>>(content, {
         header: true,
@@ -983,6 +1030,40 @@ export const parseCsvContent = (
     const mapping: ColumnMapping = { ...autoMapping, ...customMapping };
     const detectedMode = forcedMode || (brokerPreset !== 'generic' ? 'transactions' : detectImportMode(mapping));
 
+    // Scan unique tickers from raw rows for symbol review & correction UI
+    const tickerStats = new Map<string, { count: number; sampleName?: string; defaultCurrency: 'CAD' | 'USD' }>();
+    rawRows.forEach(row => {
+        let sym = (row.symbol || row.Symbol || row.ticker || row.Ticker || (mapping.ticker ? row[mapping.ticker] : '') || '').trim().toUpperCase();
+        if (!sym && (row.Description || row.description)) {
+            const symMatch = (row.Description || row.description).match(/Symbol[:\s-]+([A-Za-z0-9.]+)/i);
+            if (symMatch) sym = symMatch[1].trim().toUpperCase();
+        }
+        if (sym) {
+            const existing = tickerStats.get(sym);
+            const curr: 'CAD' | 'USD' = (row.currency || row.Currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
+            const name = (row.name || row.Name || row.description || row.Description || '').trim();
+            if (existing) {
+                existing.count++;
+                if (!existing.sampleName && name) existing.sampleName = name;
+            } else {
+                tickerStats.set(sym, { count: 1, sampleName: name, defaultCurrency: curr });
+            }
+        }
+    });
+
+    const detectedTickers: DetectedTickerInfo[] = Array.from(tickerStats.entries()).map(([rawTicker, info]) => {
+        const override = tickerOverrides
+            ? (tickerOverrides[rawTicker] || tickerOverrides[rawTicker.replace(/-/g, '.')] || tickerOverrides[rawTicker.replace(/\./g, '-')])
+            : undefined;
+        return {
+            rawTicker,
+            count: info.count,
+            sampleName: info.sampleName,
+            defaultTarget: override?.targetTicker || rawTicker,
+            defaultCurrency: override?.currency || info.defaultCurrency,
+        };
+    });
+
     let validatedRows: ValidatedRow[] = [];
     const todayDateIso = new Date().toISOString().split('T')[0];
 
@@ -991,14 +1072,14 @@ export const parseCsvContent = (
     // If native broker preset detected and not forced into holdings mode
     if (brokerPreset === 'wealthsimple' && forcedMode !== 'holdings' && !isManualMapping) {
         validatedRows = rawRows
-            .map((r, i) => parseWealthsimpleRow(r, i + 2, accountId, todayDateIso))
+            .map((r, i) => parseWealthsimpleRow(r, i + 2, accountId, todayDateIso, tickerOverrides))
             .filter((r): r is ValidatedRow => r !== null);
     } else if (brokerPreset === 'questrade' && forcedMode !== 'holdings' && !isManualMapping) {
         validatedRows = rawRows
-            .map((r, i) => parseQuestradeRow(r, i + 2, accountId, todayDateIso))
+            .map((r, i) => parseQuestradeRow(r, i + 2, accountId, todayDateIso, tickerOverrides))
             .filter((r): r is ValidatedRow => r !== null);
     } else {
-        validatedRows = validateAndTransformRows(rawRows, detectedMode, mapping, accountId, defaultCurrency, todayDateIso);
+        validatedRows = validateAndTransformRows(rawRows, detectedMode, mapping, accountId, defaultCurrency, todayDateIso, tickerOverrides);
     }
 
     const validRows = validatedRows.filter(r => r.isValid);
@@ -1023,6 +1104,7 @@ export const parseCsvContent = (
         detectedInstitution,
         mapping,
         validatedRows,
+        detectedTickers,
         stats: {
             totalRows: validatedRows.length,
             validRows: validRows.length,
