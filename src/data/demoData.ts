@@ -20,8 +20,8 @@ export interface DemoDataSet {
 
 export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
     const members: Member[] = [
-        { id: 'demo-member-1', name: 'Alex Chen' },
-        { id: 'demo-member-2', name: 'Jordan Chen' }
+        { id: 'demo-member-1', name: 'Alex Miller' },
+        { id: 'demo-member-2', name: 'Sarah Miller' }
     ];
 
     const institutions: Institution[] = [
@@ -37,7 +37,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             institutionId: 'demo-inst-1',
             type: 'TFSA',
             name: 'Alex TFSA (WS)',
-            cashBalance: 1450.00,
+            cashBalance: 3850.00,
             targetPcts: {
                 'demo-asset-1': 50,
                 'demo-asset-2': 30,
@@ -50,7 +50,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             institutionId: 'demo-inst-2',
             type: 'RRSP',
             name: 'Alex RRSP (QT)',
-            cashBalance: 3200.00,
+            cashBalance: 4200.00,
             targetPcts: {
                 'demo-asset-4': 40,
                 'demo-asset-5': 35,
@@ -62,8 +62,8 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             memberId: 'demo-member-2',
             institutionId: 'demo-inst-1',
             type: 'TFSA',
-            name: 'Jordan TFSA (WS)',
-            cashBalance: 980.00,
+            name: 'Sarah TFSA (WS)',
+            cashBalance: 2150.00,
             targetPcts: {
                 'demo-asset-7': 60,
                 'demo-asset-8': 40
@@ -75,7 +75,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             institutionId: 'demo-inst-3',
             type: 'Margin',
             name: 'Joint Taxable Margin (TD)',
-            cashBalance: 5500.00,
+            cashBalance: 5300.00,
             targetPcts: {
                 'demo-asset-9': 50,
                 'demo-asset-10': 50
@@ -84,7 +84,8 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
     ];
 
     const transactions: Transaction[] = [
-        // Alex TFSA
+        // ─── 2024 TRANSACTIONS ───
+        // Alex TFSA (demo-acc-1)
         {
             id: 'tx-1',
             accountId: 'demo-acc-1',
@@ -150,10 +151,27 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             date: '2024-06-15T14:30:00.000Z',
             currency: 'USD'
         },
-
-        // Alex RRSP
         {
             id: 'tx-7',
+            accountId: 'demo-acc-1',
+            ticker: 'VFV.TO',
+            type: 'Dividend',
+            amount: 35.20,
+            date: '2024-09-15T16:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-8',
+            accountId: 'demo-acc-1',
+            type: 'Deposit',
+            amount: 1500.00,
+            date: '2024-12-15T09:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Alex RRSP (demo-acc-2)
+        {
+            id: 'tx-9',
             accountId: 'demo-acc-2',
             type: 'Deposit',
             amount: 15000.00,
@@ -161,7 +179,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'CAD'
         },
         {
-            id: 'tx-8',
+            id: 'tx-10',
             accountId: 'demo-acc-2',
             ticker: 'MSFT',
             type: 'Buy',
@@ -173,7 +191,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'USD'
         },
         {
-            id: 'tx-9',
+            id: 'tx-11',
             accountId: 'demo-acc-2',
             ticker: 'XEI.TO',
             type: 'Buy',
@@ -185,7 +203,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'CAD'
         },
         {
-            id: 'tx-10',
+            id: 'tx-12',
             accountId: 'demo-acc-2',
             ticker: 'AMZN',
             type: 'Buy',
@@ -196,10 +214,19 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             date: '2024-05-10T13:00:00.000Z',
             currency: 'USD'
         },
-
-        // Jordan TFSA
         {
-            id: 'tx-11',
+            id: 'tx-13',
+            accountId: 'demo-acc-2',
+            ticker: 'XEI.TO',
+            type: 'Dividend',
+            amount: 48.00,
+            date: '2024-11-20T16:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Sarah TFSA (demo-acc-3)
+        {
+            id: 'tx-14',
             accountId: 'demo-acc-3',
             type: 'Deposit',
             amount: 8000.00,
@@ -207,7 +234,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'CAD'
         },
         {
-            id: 'tx-12',
+            id: 'tx-15',
             accountId: 'demo-acc-3',
             ticker: 'VDY.TO',
             type: 'Buy',
@@ -219,7 +246,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'CAD'
         },
         {
-            id: 'tx-13',
+            id: 'tx-16',
             accountId: 'demo-acc-3',
             ticker: 'GOOGL',
             type: 'Buy',
@@ -230,10 +257,22 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             date: '2024-03-15T15:00:00.000Z',
             currency: 'USD'
         },
-
-        // Joint Margin
         {
-            id: 'tx-14',
+            id: 'tx-17',
+            accountId: 'demo-acc-3',
+            ticker: 'VDY.TO',
+            type: 'Buy',
+            shares: 20,
+            pricePerShare: 45.20,
+            amount: 904.00,
+            commission: 0,
+            date: '2024-10-10T11:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Joint Margin (demo-acc-4)
+        {
+            id: 'tx-18',
             accountId: 'demo-acc-4',
             type: 'Deposit',
             amount: 15000.00,
@@ -241,7 +280,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'CAD'
         },
         {
-            id: 'tx-15',
+            id: 'tx-19',
             accountId: 'demo-acc-4',
             ticker: 'TD.TO',
             type: 'Buy',
@@ -253,7 +292,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             currency: 'CAD'
         },
         {
-            id: 'tx-16',
+            id: 'tx-20',
             accountId: 'demo-acc-4',
             ticker: 'CSU.TO',
             type: 'Buy',
@@ -262,6 +301,210 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             amount: 3659.99,
             commission: 9.99,
             date: '2024-03-01T14:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // ─── 2025 TRANSACTIONS ───
+        // Alex TFSA (demo-acc-1)
+        {
+            id: 'tx-21',
+            accountId: 'demo-acc-1',
+            type: 'Deposit',
+            amount: 3000.00,
+            date: '2025-01-15T09:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-22',
+            accountId: 'demo-acc-1',
+            ticker: 'XEQT.TO',
+            type: 'Buy',
+            shares: 50,
+            pricePerShare: 30.20,
+            amount: 1510.00,
+            commission: 0,
+            date: '2025-01-16T10:15:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-23',
+            accountId: 'demo-acc-1',
+            ticker: 'XEQT.TO',
+            type: 'Dividend',
+            amount: 82.00,
+            date: '2025-03-31T16:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-24',
+            accountId: 'demo-acc-1',
+            ticker: 'XEQT.TO',
+            type: 'DRIP',
+            shares: 2,
+            pricePerShare: 30.80,
+            amount: 61.60,
+            commission: 0,
+            date: '2025-04-15T10:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-25',
+            accountId: 'demo-acc-1',
+            ticker: 'VFV.TO',
+            type: 'Dividend',
+            amount: 42.50,
+            date: '2025-09-30T16:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Alex RRSP (demo-acc-2)
+        {
+            id: 'tx-26',
+            accountId: 'demo-acc-2',
+            type: 'Deposit',
+            amount: 4000.00,
+            date: '2025-05-20T09:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-27',
+            accountId: 'demo-acc-2',
+            ticker: 'MSFT',
+            type: 'Buy',
+            shares: 5,
+            pricePerShare: 418.00,
+            amount: 2094.95,
+            commission: 4.95,
+            date: '2025-05-25T11:30:00.000Z',
+            currency: 'USD'
+        },
+
+        // Sarah TFSA (demo-acc-3)
+        {
+            id: 'tx-28',
+            accountId: 'demo-acc-3',
+            type: 'Deposit',
+            amount: 3000.00,
+            date: '2025-02-10T09:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-29',
+            accountId: 'demo-acc-3',
+            ticker: 'VDY.TO',
+            type: 'Buy',
+            shares: 30,
+            pricePerShare: 46.00,
+            amount: 1380.00,
+            commission: 0,
+            date: '2025-02-12T10:30:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-30',
+            accountId: 'demo-acc-3',
+            ticker: 'GOOGL',
+            type: 'Buy',
+            shares: 5,
+            pricePerShare: 174.00,
+            amount: 870.00,
+            commission: 0,
+            date: '2025-11-10T14:00:00.000Z',
+            currency: 'USD'
+        },
+
+        // Joint Margin (demo-acc-4)
+        {
+            id: 'tx-31',
+            accountId: 'demo-acc-4',
+            ticker: 'TD.TO',
+            type: 'Dividend',
+            amount: 61.20,
+            date: '2025-07-15T16:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // ─── 2026 TRANSACTIONS ───
+        // Alex TFSA (demo-acc-1)
+        {
+            id: 'tx-32',
+            accountId: 'demo-acc-1',
+            type: 'Deposit',
+            amount: 3500.00,
+            date: '2026-01-15T09:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-33',
+            accountId: 'demo-acc-1',
+            ticker: 'VFV.TO',
+            type: 'Buy',
+            shares: 15,
+            pricePerShare: 138.50,
+            amount: 2077.50,
+            commission: 0,
+            date: '2026-01-20T10:45:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-34',
+            accountId: 'demo-acc-1',
+            ticker: 'XEQT.TO',
+            type: 'Dividend',
+            amount: 95.00,
+            date: '2026-03-31T16:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-35',
+            accountId: 'demo-acc-1',
+            ticker: 'VFV.TO',
+            type: 'Dividend',
+            amount: 46.80,
+            date: '2026-08-10T16:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Alex RRSP (demo-acc-2)
+        {
+            id: 'tx-36',
+            accountId: 'demo-acc-2',
+            type: 'Deposit',
+            amount: 2500.00,
+            date: '2026-05-15T09:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Sarah TFSA (demo-acc-3)
+        {
+            id: 'tx-37',
+            accountId: 'demo-acc-3',
+            type: 'Deposit',
+            amount: 3500.00,
+            date: '2026-02-10T09:00:00.000Z',
+            currency: 'CAD'
+        },
+        {
+            id: 'tx-38',
+            accountId: 'demo-acc-3',
+            ticker: 'VDY.TO',
+            type: 'Dividend',
+            amount: 52.40,
+            date: '2026-10-15T16:00:00.000Z',
+            currency: 'CAD'
+        },
+
+        // Joint Margin (demo-acc-4)
+        {
+            id: 'tx-39',
+            accountId: 'demo-acc-4',
+            ticker: 'TD.TO',
+            type: 'Buy',
+            shares: 15,
+            pricePerShare: 80.20,
+            amount: 1212.99,
+            commission: 9.99,
+            date: '2026-06-20T11:00:00.000Z',
             currency: 'CAD'
         }
     ];
@@ -272,16 +515,16 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             accountId: 'demo-acc-1',
             ticker: 'XEQT.TO',
             name: 'iShares Core Equity ETF Portfolio',
-            quantity: 152,
-            averageCost: 28.51,
+            quantity: 204,
+            averageCost: 28.95,
             currentPrice: 33.40,
-            totalCost: 4333.20,
-            marketValue: 5076.80,
-            cadMarketValue: 5076.80,
-            profit: 743.60,
-            profitPercent: 17.16,
+            totalCost: 5904.80,
+            marketValue: 6813.60,
+            cadMarketValue: 6813.60,
+            profit: 908.80,
+            profitPercent: 15.39,
             todayChangePercent: 0.42,
-            todayChangeDollar: 21.28,
+            todayChangeDollar: 28.60,
             currency: 'CAD',
             sparkline: [
                 { price: 31.8 }, { price: 32.1 }, { price: 32.5 }, { price: 32.9 }, { price: 33.4 }
@@ -292,16 +535,16 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             accountId: 'demo-acc-1',
             ticker: 'VFV.TO',
             name: 'Vanguard S&P 500 Index ETF',
-            quantity: 40,
-            averageCost: 118.25,
+            quantity: 55,
+            averageCost: 123.77,
             currentPrice: 144.10,
-            totalCost: 4730.00,
-            marketValue: 5764.00,
-            cadMarketValue: 5764.00,
-            profit: 1034.00,
-            profitPercent: 21.86,
+            totalCost: 6807.50,
+            marketValue: 7925.50,
+            cadMarketValue: 7925.50,
+            profit: 1118.00,
+            profitPercent: 16.42,
             todayChangePercent: 0.85,
-            todayChangeDollar: 48.80,
+            todayChangeDollar: 67.10,
             currency: 'CAD',
             sparkline: [
                 { price: 138.0 }, { price: 139.5 }, { price: 141.2 }, { price: 142.8 }, { price: 144.1 }
@@ -332,16 +575,16 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             accountId: 'demo-acc-2',
             ticker: 'MSFT',
             name: 'Microsoft Corporation',
-            quantity: 12,
-            averageCost: 405.00,
+            quantity: 17,
+            averageCost: 408.82,
             currentPrice: 432.50,
-            totalCost: 4860.00,
-            marketValue: 5190.00,
-            cadMarketValue: 5190.00 * exchangeRate,
-            profit: 330.00,
-            profitPercent: 6.79,
+            totalCost: 6950.00,
+            marketValue: 7352.50,
+            cadMarketValue: 7352.50 * exchangeRate,
+            profit: 402.50,
+            profitPercent: 5.79,
             todayChangePercent: -0.35,
-            todayChangeDollar: -18.15,
+            todayChangeDollar: -25.70,
             currency: 'USD',
             sparkline: [
                 { price: 420.0 }, { price: 425.0 }, { price: 435.0 }, { price: 430.0 }, { price: 432.5 }
@@ -392,16 +635,16 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             accountId: 'demo-acc-3',
             ticker: 'VDY.TO',
             name: 'Vanguard Canadian High Dividend Yield ETF',
-            quantity: 80,
-            averageCost: 44.50,
+            quantity: 130,
+            averageCost: 44.95,
             currentPrice: 49.20,
-            totalCost: 3560.00,
-            marketValue: 3936.00,
-            cadMarketValue: 3936.00,
-            profit: 376.00,
-            profitPercent: 10.56,
+            totalCost: 5844.00,
+            marketValue: 6396.00,
+            cadMarketValue: 6396.00,
+            profit: 552.00,
+            profitPercent: 9.45,
             todayChangePercent: 0.30,
-            todayChangeDollar: 11.75,
+            todayChangeDollar: 19.10,
             currency: 'CAD',
             sparkline: [
                 { price: 47.0 }, { price: 47.8 }, { price: 48.4 }, { price: 48.9 }, { price: 49.2 }
@@ -412,16 +655,16 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             accountId: 'demo-acc-3',
             ticker: 'GOOGL',
             name: 'Alphabet Inc. Class A',
-            quantity: 15,
-            averageCost: 168.00,
+            quantity: 20,
+            averageCost: 169.50,
             currentPrice: 183.40,
-            totalCost: 2520.00,
-            marketValue: 2751.00,
-            cadMarketValue: 2751.00 * exchangeRate,
-            profit: 231.00,
-            profitPercent: 9.17,
+            totalCost: 3390.00,
+            marketValue: 3668.00,
+            cadMarketValue: 3668.00 * exchangeRate,
+            profit: 278.00,
+            profitPercent: 8.20,
             todayChangePercent: -0.62,
-            todayChangeDollar: -17.15,
+            todayChangeDollar: -22.80,
             currency: 'USD',
             sparkline: [
                 { price: 175.0 }, { price: 178.0 }, { price: 181.0 }, { price: 184.0 }, { price: 183.4 }
@@ -432,16 +675,16 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             accountId: 'demo-acc-4',
             ticker: 'TD.TO',
             name: 'Toronto-Dominion Bank',
-            quantity: 60,
-            averageCost: 81.50,
+            quantity: 75,
+            averageCost: 81.24,
             currentPrice: 79.80,
-            totalCost: 4890.00,
-            marketValue: 4788.00,
-            cadMarketValue: 4788.00,
-            profit: -102.00,
-            profitPercent: -2.09,
+            totalCost: 6093.00,
+            marketValue: 5985.00,
+            cadMarketValue: 5985.00,
+            profit: -108.00,
+            profitPercent: -1.77,
             todayChangePercent: -0.25,
-            todayChangeDollar: -12.00,
+            todayChangeDollar: -15.00,
             currency: 'CAD',
             sparkline: [
                 { price: 82.0 }, { price: 81.2 }, { price: 80.5 }, { price: 79.5 }, { price: 79.8 }
@@ -541,7 +784,7 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
         {
             id: 'liab-2',
             memberId: 'demo-member-1',
-            name: 'Electric Vehicle Financing',
+            name: 'Vehicle Financing',
             balance: 8500.00
         }
     ];
@@ -579,11 +822,11 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
 
     const netWorthHistory: NetWorthSnapshot[] = [
         { date: '2024-06-01', value: -198000 },
-        { date: '2024-07-01', value: -192500 },
-        { date: '2024-08-01', value: -187000 },
-        { date: '2024-09-01', value: -181200 },
-        { date: '2024-10-01', value: -174500 },
-        { date: '2024-11-01', value: -168000 }
+        { date: '2024-12-01', value: -188000 },
+        { date: '2025-06-01', value: -176000 },
+        { date: '2025-12-01', value: -162000 },
+        { date: '2026-06-01', value: -148000 },
+        { date: '2026-11-01', value: -135000 }
     ];
 
     const acbAccounts: AcbAccount[] = [
@@ -615,6 +858,26 @@ export function getDemoData(exchangeRate: number = 1.38): DemoDataSet {
             pricePerShare: 3650.00,
             commission: 9.99,
             memo: 'Tech blue chip addition'
+        },
+        {
+            id: 'acb-tx-3',
+            acbAccountId: 'acb-acc-1',
+            ticker: 'TD.TO',
+            date: '2025-07-15',
+            type: 'Return of Capital',
+            amount: 45.00,
+            memo: 'Annual tax adjustment'
+        },
+        {
+            id: 'acb-tx-4',
+            acbAccountId: 'acb-acc-1',
+            ticker: 'TD.TO',
+            date: '2026-06-20',
+            type: 'Buy',
+            shares: 15,
+            pricePerShare: 80.20,
+            commission: 9.99,
+            memo: 'Dip purchase'
         }
     ];
 
