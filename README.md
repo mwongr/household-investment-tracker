@@ -98,3 +98,13 @@ Access the application at `http://localhost:5847`.
 ## 🔒 Security Note
 This application runs locally. Your financial data is stored in `server/database.json` and is **not** uploaded to any cloud service by the application itself. Ensure you include `server/database.json` in your `.gitignore` if you fork this repository (already configured by default).
 
+## 📄 License
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
+
+### In Plain English:
+* **Allowed**: You are free to view, download, run, share, and adapt the code for personal, educational, and non-commercial purposes, provided appropriate attribution is given to the author.
+* **Prohibited**: **Commercial use is strictly forbidden.** Anyone is explicitly blocked from making money off this code, selling or reselling it, offering it as a paid or subscription-based service (SaaS), bundling it into commercial products, or monetizing it in any manner without prior express written consent.
+
+For complete legal terms, see the [LICENSE](file:///d:/Apps/Household%20Investment%20Tracker/LICENSE) file or visit [Creative Commons](https://creativecommons.org/licenses/by-nc/4.0/).
+

@@ -2,6 +2,8 @@
   "name": "investment-tracker",
   "private": true,
   "version": "0.0.0",
+  "license": "CC-BY-NC-4.0",
+  "author": "Mike Wong",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"vite\"",
