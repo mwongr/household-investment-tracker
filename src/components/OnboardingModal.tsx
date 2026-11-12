@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
     Sparkles,
     Users,
-    Building2,
-    Wallet,
     ArrowRight,
     ArrowLeft,
     CheckCircle2,

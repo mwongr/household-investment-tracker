@@ -52,7 +52,7 @@ export type Asset = {
   previousTicker?: string;
 };
 
-export type TransactionType = 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal' | 'Dividend' | 'Dividend Income' | 'DRIP' | 'Dividend Reinvested' | 'Stock Split';
+export type TransactionType = 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal' | 'Dividend' | 'Dividend Income' | 'DRIP' | 'Dividend Reinvested' | 'Interest' | 'Fee' | 'Stock Split';
 
 export type Transaction = {
   id: string;

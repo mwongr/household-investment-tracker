@@ -133,6 +133,32 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         }
     }, [parseResult, mode]);
 
+    // Auto-populate new account details if broker preset detected
+    useEffect(() => {
+        if (!parseResult) return;
+        if (targetType === 'new') {
+            if (parseResult.detectedInstitution) {
+                const matchInst = institutions.find(i =>
+                    i.name.toLowerCase().includes(parseResult.detectedInstitution!.toLowerCase())
+                );
+                if (matchInst) {
+                    setNewInstitutionId(matchInst.id);
+                }
+            }
+            if (parseResult.detectedAccountType) {
+                const matchType = accountTypes.find(t =>
+                    t.toLowerCase() === parseResult.detectedAccountType!.toLowerCase()
+                );
+                if (matchType) {
+                    setNewAccType(matchType);
+                }
+            }
+            if (!newAccountName && parseResult.detectedInstitution) {
+                setNewAccountName(`${parseResult.detectedInstitution} ${parseResult.detectedAccountType || 'Account'}`);
+            }
+        }
+    }, [parseResult, targetType, institutions, accountTypes, newAccountName]);
+
     if (!isOpen) return null;
 
     const handleFileDrop = (e: React.DragEvent) => {
@@ -280,9 +306,21 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                         <div>
                             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                 Import Investments
-                                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                    CSV
-                                </span>
+                                {parseResult?.brokerPreset === 'wealthsimple' && (
+                                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                        ✓ Wealthsimple Detected
+                                    </span>
+                                )}
+                                {parseResult?.brokerPreset === 'questrade' && (
+                                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-green-500/20 text-green-300 border border-green-500/30">
+                                        ✓ Questrade Detected
+                                    </span>
+                                )}
+                                {(!parseResult || parseResult.brokerPreset === 'generic') && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                        CSV
+                                    </span>
+                                )}
                             </h2>
                             <p className="text-xs text-slate-400 mt-0.5">
                                 Import current portfolio holdings or historical transactions into an account
@@ -571,7 +609,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                         <div className="space-y-4 pt-2">
                             {/* Mode Toggle Bar */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-800/90 border border-slate-700/80 rounded-xl">
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2.5">
                                     <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                                         Import As:
                                     </span>
@@ -599,6 +637,16 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                             Transaction History
                                         </button>
                                     </div>
+                                    {parseResult.brokerPreset === 'wealthsimple' && (
+                                        <span className="text-[11px] px-2.5 py-1 rounded-lg font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                            Wealthsimple Native Parser Active
+                                        </span>
+                                    )}
+                                    {parseResult.brokerPreset === 'questrade' && (
+                                        <span className="text-[11px] px-2.5 py-1 rounded-lg font-bold bg-green-500/15 text-green-300 border border-green-500/30">
+                                            Questrade Native Parser Active
+                                        </span>
+                                    )}
                                 </div>
 
                                 <button
@@ -614,12 +662,16 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                             {/* Column Mapping Selectors */}
                             {showMappingConfig && (
                                 <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 animate-in fade-in space-y-3">
-                                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-slate-800">
                                         <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                                             Column Header Mapping ({parseResult.headers.length} headers detected)
                                         </span>
                                         <span className="text-[11px] text-slate-400">
-                                            Auto-detected from CSV headers
+                                            {parseResult.brokerPreset === 'wealthsimple'
+                                                ? '✨ Auto-mapped via Wealthsimple native engine'
+                                                : parseResult.brokerPreset === 'questrade'
+                                                ? '✨ Auto-mapped via Questrade native engine'
+                                                : 'Auto-detected from CSV headers'}
                                         </span>
                                     </div>
 

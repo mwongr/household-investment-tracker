@@ -293,6 +293,8 @@ const Reports = () => {
                                 <option value="Withdrawal">Withdrawal</option>
                                 <option value="Dividend Income">Dividend Income</option>
                                 <option value="Dividend Reinvested">Dividend Reinvested</option>
+                                <option value="Interest">Interest</option>
+                                <option value="Fee">Fee</option>
                                 <option value="Stock Split">Stock Split</option>
                             </select>
 
@@ -477,9 +479,11 @@ const Reports = () => {
                                         else if (tx.type === 'Sell') acc.sells += tx.amount;
                                         else if (tx.type.includes('Dividend') || tx.type === 'DRIP')
                                             acc.dividends += tx.amount;
+                                        else if (tx.type === 'Interest') acc.interest += tx.amount;
+                                        else if (tx.type === 'Fee') acc.fees += tx.amount;
                                         return acc;
                                     },
-                                    { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0 }
+                                    { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, fees: 0 }
                                 );
 
                                 return (
@@ -524,6 +528,26 @@ const Reports = () => {
                                                 ${fmt2(totals.dividends)}
                                             </span>
                                         </div>
+                                        {totals.interest > 0 && (
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
+                                                    Total Interest
+                                                </span>
+                                                <span className="text-emerald-400 font-mono tabular-nums font-bold text-lg">
+                                                    ${fmt2(totals.interest)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {totals.fees > 0 && (
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
+                                                    Total Fees
+                                                </span>
+                                                <span className="text-amber-400 font-mono tabular-nums font-bold text-lg">
+                                                    ${fmt2(totals.fees)}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })()}

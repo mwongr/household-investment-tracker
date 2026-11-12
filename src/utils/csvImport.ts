@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import type { Transaction, TransactionType } from '../types';
 
 export type ImportMode = 'holdings' | 'transactions';
+export type BrokerPreset = 'wealthsimple' | 'questrade' | 'generic';
 
 export interface ColumnMapping {
     ticker?: string;
@@ -42,6 +43,9 @@ export interface CsvParseResult {
     headers: string[];
     rawRows: Record<string, string>[];
     detectedMode: ImportMode;
+    brokerPreset: BrokerPreset;
+    detectedAccountType?: string;
+    detectedInstitution?: string;
     mapping: ColumnMapping;
     validatedRows: ValidatedRow[];
     stats: {
@@ -116,8 +120,11 @@ export const parseCleanNumber = (val: any): number => {
  */
 export const parseDateToIso = (val: string): string | null => {
     if (!val || typeof val !== 'string') return null;
-    const trimmed = val.trim();
+    let trimmed = val.trim();
     if (!trimmed) return null;
+
+    // Strip trailing timestamps like " 12:00:00 AM" or " 13:45:00"
+    trimmed = trimmed.replace(/\s+\d{1,2}:\d{2}(:\d{2})?(\s*[a-zA-Z]{2})?$/, '');
 
     // Direct YYYY-MM-DD or YYYY/MM/DD
     const isoMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -131,8 +138,8 @@ export const parseDateToIso = (val: string): string | null => {
     // MM/DD/YYYY or DD/MM/YYYY
     const slashMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
     if (slashMatch) {
-        let first = parseInt(slashMatch[1], 10);
-        let second = parseInt(slashMatch[2], 10);
+        const first = parseInt(slashMatch[1], 10);
+        const second = parseInt(slashMatch[2], 10);
         const y = slashMatch[3];
 
         let m = first;
@@ -155,16 +162,43 @@ export const parseDateToIso = (val: string): string | null => {
 };
 
 /**
+ * Detect if CSV headers match a known Canadian/US brokerage export
+ */
+export const detectBrokerPreset = (headers: string[]): BrokerPreset => {
+    const lower = headers.map(h => h.toLowerCase().trim().replace(/[_\s]+/g, ' '));
+
+    // Wealthsimple signature: has "activity type", "activity sub type" or "net cash amount" with "account id"
+    const hasWsActivity = lower.some(h => h.includes('activity type') || h.includes('activity subtype') || h.includes('activity sub type'));
+    const hasWsCash = lower.some(h => h.includes('net cash amount'));
+    const hasWsAccount = lower.some(h => h.includes('account id') || h.includes('account type'));
+    if ((hasWsActivity && hasWsCash) || (hasWsCash && hasWsAccount)) {
+        return 'wealthsimple';
+    }
+
+    // Questrade signature: has "transaction date", "settlement date", "account #" or "gross amount"
+    const hasQtDate = lower.some(h => h.includes('transaction date'));
+    const hasQtAccount = lower.some(h => h.includes('account #') || h.includes('account number'));
+    const hasQtGross = lower.some(h => h.includes('gross amount') || h.includes('net amount'));
+    if (hasQtDate && (hasQtAccount || hasQtGross)) {
+        return 'questrade';
+    }
+
+    return 'generic';
+};
+
+/**
  * Map free-form text or brokerage actions to supported TransactionType
  */
 export const mapTransactionType = (val: string): TransactionType | null => {
     if (!val) return 'Buy';
     const s = val.trim().toLowerCase();
 
-    if (/drip|reinvest/i.test(s)) return 'DRIP';
-    if (/div|distribution/i.test(s)) return 'Dividend';
+    if (/drip|reinvest/i.test(s)) return 'Dividend Reinvested';
+    if (/div|distribution/i.test(s)) return 'Dividend Income';
     if (/split/i.test(s)) return 'Stock Split';
     if (/sell|sold/i.test(s)) return 'Sell';
+    if (/interest|lending int/i.test(s)) return 'Interest';
+    if (/fee|charge/i.test(s)) return 'Fee';
     if (/deposit|dep|contrib|contribution|eft/i.test(s)) return 'Deposit';
     if (/withdraw|w\/d|disbursement/i.test(s)) return 'Withdrawal';
     if (/buy|bot|purchase/i.test(s)) return 'Buy';
@@ -215,6 +249,453 @@ export const detectImportMode = (mapping: ColumnMapping): ImportMode => {
         return 'holdings';
     }
     return 'transactions';
+};
+
+/**
+ * Helper to ensure Canadian stocks listed on TSX carry the .TO suffix
+ */
+const normalizeTickerSymbol = (symbol: string, currency: 'CAD' | 'USD'): string => {
+    let t = symbol.trim().toUpperCase();
+    if (!t) return '';
+    // If it already has an exchange suffix like .TO, .CN, .NE, .V, .VN
+    if (/\.(TO|CN|NE|V|VN)$/.test(t)) {
+        return t;
+    }
+    // Append .TO if currency is CAD and no suffix
+    if (currency === 'CAD') {
+        return `${t}.TO`;
+    }
+    return t;
+};
+
+/**
+ * Native parser for Wealthsimple Activity exports
+ */
+export const parseWealthsimpleRow = (
+    raw: Record<string, string>,
+    rowNum: number,
+    accountId: string,
+    todayDateIso: string
+): ValidatedRow | null => {
+    const activityType = (raw.activity_type || raw['Activity Type'] || '').trim();
+    const activitySubType = (raw.activity_sub_type || raw['Activity Sub Type'] || raw.activity_subtype || '').trim().toUpperCase();
+    const rawDate = raw.effective_date || raw['Effective Date'] || raw.settlement_date || raw['Settlement Date'] || '';
+    const date = parseDateToIso(rawDate) || todayDateIso;
+    const rawSymbol = (raw.symbol || raw.Symbol || '').trim();
+    const currency: 'CAD' | 'USD' = (raw.currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
+    const quantity = Math.abs(parseCleanNumber(raw.quantity));
+    const unitPrice = Math.abs(parseCleanNumber(raw.unit_price));
+    const commission = Math.abs(parseCleanNumber(raw.commission));
+    const netCash = parseCleanNumber(raw.net_cash_amount);
+    const absCash = Math.abs(netCash);
+
+    const cleanTicker = normalizeTickerSymbol(rawSymbol, currency);
+    const lowerAct = activityType.toLowerCase();
+
+    // 1. Trades (Buy / Sell)
+    if (lowerAct === 'trade') {
+        const isBuy = activitySubType === 'BUY' || netCash < 0;
+        const type: TransactionType = isBuy ? 'Buy' : 'Sell';
+        const amount = absCash > 0 ? absCash : quantity * unitPrice;
+
+        if (!cleanTicker) return { rowNumber: rowNum, raw, isValid: false, errors: ['Missing symbol for trade'] };
+        if (quantity <= 0) return { rowNumber: rowNum, raw, isValid: false, errors: ['Quantity must be greater than 0'] };
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type,
+                shares: quantity,
+                pricePerShare: unitPrice,
+                commission,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 2. Money Movement (Deposit / Withdrawal)
+    if (lowerAct === 'moneymovement' || lowerAct === 'money movement') {
+        const isDeposit = netCash >= 0;
+        const type: TransactionType = isDeposit ? 'Deposit' : 'Withdrawal';
+        const amount = absCash;
+
+        if (amount <= 0) return null;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: '',
+                date,
+                type,
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 3. Dividend
+    if (lowerAct === 'dividend') {
+        const amount = absCash > 0 ? absCash : (unitPrice > 0 ? unitPrice : quantity);
+        if (!cleanTicker) return { rowNumber: rowNum, raw, isValid: false, errors: ['Missing symbol for dividend'] };
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Dividend Income',
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 4. Interest (Stock lending or cash interest)
+    if (lowerAct === 'interest') {
+        const amount = absCash;
+        if (amount <= 0) return null;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker || '',
+                date,
+                type: 'Interest',
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 5. Corporate Actions (Split, etc.)
+    if (lowerAct === 'corporateaction' || lowerAct === 'corporate action') {
+        const desc = (raw.description || '').toUpperCase();
+        if (desc.includes('SPLIT')) {
+            return {
+                rowNumber: rowNum,
+                raw,
+                isValid: true,
+                errors: [],
+                transaction: {
+                    accountId,
+                    ticker: cleanTicker,
+                    date,
+                    type: 'Stock Split',
+                    shares: quantity,
+                    pricePerShare: 0,
+                    commission: 0,
+                    amount: 0,
+                    currency,
+                    ignoreCashImpact: false,
+                },
+            };
+        }
+        return null; // Skip informational reorganizations
+    }
+
+    return null;
+};
+
+/**
+ * Native parser for Questrade Activity exports
+ */
+export const parseQuestradeRow = (
+    raw: Record<string, string>,
+    rowNum: number,
+    accountId: string,
+    todayDateIso: string
+): ValidatedRow | null => {
+    const rawAction = (raw.Action || raw.action || '').trim();
+    const activityType = (raw['Activity Type'] || raw.activity_type || '').trim();
+    const rawDate = raw['Transaction Date'] || raw['Settlement Date'] || raw.date || '';
+    const date = parseDateToIso(rawDate) || todayDateIso;
+    const rawSymbol = (raw.Symbol || raw.symbol || '').trim();
+    const description = (raw.Description || raw.description || '').trim();
+    const currency: 'CAD' | 'USD' = (raw.Currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
+    const rawQuantity = parseCleanNumber(raw.Quantity);
+    const quantity = Math.abs(rawQuantity);
+    const unitPrice = Math.abs(parseCleanNumber(raw.Price));
+    const commission = Math.abs(parseCleanNumber(raw.Commission));
+    const netAmount = parseCleanNumber(raw['Net Amount']);
+    const absNet = Math.abs(netAmount);
+
+    let cleanTicker = rawSymbol.toUpperCase();
+    if (!cleanTicker && description) {
+        const symMatch = description.match(/Symbol[:\s-]+([A-Za-z0-9.]+)/i);
+        if (symMatch) cleanTicker = symMatch[1].toUpperCase();
+    }
+    cleanTicker = normalizeTickerSymbol(cleanTicker, currency);
+
+    const actionUpper = rawAction.toUpperCase();
+    const actLower = activityType.toLowerCase();
+    const descLower = description.toLowerCase();
+
+    // 1. Dividends
+    if (actLower === 'dividends' || descLower.includes('dist on') || descLower.includes('cash dividend') || actionUpper === 'DIV') {
+        const amount = absNet > 0 ? absNet : (unitPrice > 0 ? unitPrice : quantity);
+        if (!cleanTicker) return { rowNumber: rowNum, raw, isValid: false, errors: ['Missing symbol for dividend'] };
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Dividend Income',
+                shares: 0,
+                pricePerShare: unitPrice,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 2. Dividend Reinvestment (REI / DRIP)
+    if (actionUpper === 'REI' || actLower === 'dividend reinvestment' || descLower.includes('reinv@')) {
+        let shares = quantity;
+        let price = unitPrice;
+        if (price === 0 && descLower.includes('reinv@c$')) {
+            const m = description.match(/REINV@C?\$([0-9.]+)/i);
+            if (m) price = parseFloat(m[1]);
+        }
+        const amount = absNet > 0 ? absNet : shares * price;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Dividend Reinvested',
+                shares,
+                pricePerShare: price || (shares > 0 ? amount / shares : 0),
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 3. Deposits / Contributions (CON)
+    if (actionUpper === 'CON' || actLower === 'deposits' || descLower.includes('cont ') || descLower.includes('deposit')) {
+        const amount = absNet;
+        if (amount <= 0) return null;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: '',
+                date,
+                type: 'Deposit',
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 4. Withdrawals
+    if (actionUpper === 'W/D' || actLower === 'withdrawals' || descLower.includes('withdrawal')) {
+        const amount = absNet;
+        if (amount <= 0) return null;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: '',
+                date,
+                type: 'Withdrawal',
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 5. Interest & Securities Lending (LFJ / Fees and rebates)
+    if (actionUpper === 'LFJ' || descLower.includes('securities lending') || actLower === 'fees and rebates' || actLower === 'interest') {
+        const amount = absNet;
+        if (amount <= 0) return null;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker || '',
+                date,
+                type: 'Interest',
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 6. Buy Trade
+    if (actionUpper === 'BUY' || (actLower === 'trades' && (rawQuantity > 0 || netAmount < 0))) {
+        const shares = quantity;
+        const price = unitPrice;
+        const amount = absNet > 0 ? absNet : shares * price + commission;
+
+        if (!cleanTicker) return { rowNumber: rowNum, raw, isValid: false, errors: ['Missing symbol for Buy'] };
+        if (shares <= 0) return { rowNumber: rowNum, raw, isValid: false, errors: ['Shares must be greater than 0'] };
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Buy',
+                shares,
+                pricePerShare: price,
+                commission,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 7. Sell Trade
+    if (actionUpper === 'SELL' || (actLower === 'trades' && (rawQuantity < 0 || netAmount > 0))) {
+        const shares = quantity;
+        const price = unitPrice;
+        const amount = absNet > 0 ? absNet : Math.max(0, shares * price - commission);
+
+        if (!cleanTicker) return { rowNumber: rowNum, raw, isValid: false, errors: ['Missing symbol for Sell'] };
+        if (shares <= 0) return { rowNumber: rowNum, raw, isValid: false, errors: ['Shares must be greater than 0'] };
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Sell',
+                shares,
+                pricePerShare: price,
+                commission,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 8. Stock Splits (REV)
+    if (actionUpper === 'REV' || descLower.includes('reverse split') || descLower.includes('split')) {
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Stock Split',
+                shares: quantity,
+                pricePerShare: 0,
+                commission: 0,
+                amount: 0,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 9. Cash In Lieu (CIL)
+    if (actionUpper === 'CIL') {
+        const amount = absNet;
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Dividend Income',
+                shares: 0,
+                pricePerShare: 0,
+                commission: 0,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    return null;
 };
 
 /**
@@ -285,7 +766,7 @@ export const validateAndTransformRows = (
                 commission: 0,
                 amount: totalCost,
                 currency,
-                ignoreCashImpact: true, // Default to not altering cash for initial holdings import
+                ignoreCashImpact: true,
             };
 
             return {
@@ -320,7 +801,7 @@ export const validateAndTransformRows = (
             if (rawDate.trim()) {
                 errors.push(`Invalid date format: "${rawDate}"`);
             } else {
-                dateIso = todayDateIso; // fallback
+                dateIso = todayDateIso;
             }
         }
 
@@ -330,7 +811,6 @@ export const validateAndTransformRows = (
         let amount = Math.abs(parseCleanNumber(rawAmount));
 
         if (isCashOnly) {
-            // Deposit / Withdrawal: dollar amount can be in Amount or Price column
             if (amount <= 0 && price > 0) {
                 amount = price;
             }
@@ -338,7 +818,6 @@ export const validateAndTransformRows = (
                 errors.push(`Please enter the ${txType.toLowerCase()} dollar amount in the Amount column`);
             }
         } else if (isDividend) {
-            // Cash Dividend: payout amount can be in Amount column, or calculated from shares * price, or in Price
             if (amount <= 0 && price > 0) {
                 if (shares > 0) {
                     amount = shares * price;
@@ -350,7 +829,6 @@ export const validateAndTransformRows = (
                 errors.push('Please enter the dividend payout amount in the Amount column');
             }
         } else if (isDrip) {
-            // DRIP: Reinvested dividend buys new shares
             if (shares <= 0) {
                 errors.push('DRIP requires the number of reinvested shares in the Shares column');
             }
@@ -363,7 +841,6 @@ export const validateAndTransformRows = (
         } else if (isStockSplit) {
             // Stock Split
         } else {
-            // Buy or Sell
             if (shares <= 0) {
                 errors.push('Shares must be greater than 0');
             }
@@ -425,11 +902,44 @@ export const parseCsvContent = (
     const headers = parsed.meta.fields || [];
     const rawRows = parsed.data.filter(row => Object.values(row).some(v => v !== null && String(v).trim() !== ''));
 
+    const brokerPreset = detectBrokerPreset(headers);
+    let detectedAccountType: string | undefined;
+    let detectedInstitution: string | undefined;
+
+    // Detect Account Type & Institution
+    if (brokerPreset === 'wealthsimple') {
+        detectedInstitution = 'Wealthsimple';
+        const rawType = rawRows[0]?.account_type || rawRows[0]?.['Account Type'] || '';
+        if (/tfsa/i.test(rawType)) detectedAccountType = 'TFSA';
+        else if (/rrsp/i.test(rawType)) detectedAccountType = 'RRSP';
+        else if (/non[- ]?registered|personal/i.test(rawType)) detectedAccountType = 'Margin';
+    } else if (brokerPreset === 'questrade') {
+        detectedInstitution = 'Questrade';
+        const rawType = rawRows[0]?.['Account Type'] || rawRows[0]?.account_type || '';
+        if (/tfsa/i.test(rawType)) detectedAccountType = 'TFSA';
+        else if (/rrsp/i.test(rawType)) detectedAccountType = 'RRSP';
+        else if (/margin/i.test(rawType)) detectedAccountType = 'Margin';
+    }
+
     const autoMapping = detectColumnMapping(headers);
     const mapping: ColumnMapping = { ...autoMapping, ...customMapping };
-    const detectedMode = forcedMode || detectImportMode(mapping);
+    const detectedMode = forcedMode || (brokerPreset !== 'generic' ? 'transactions' : detectImportMode(mapping));
 
-    const validatedRows = validateAndTransformRows(rawRows, detectedMode, mapping, accountId, defaultCurrency);
+    let validatedRows: ValidatedRow[] = [];
+    const todayDateIso = new Date().toISOString().split('T')[0];
+
+    // If native broker preset detected and no custom forced mode or mapping override
+    if (brokerPreset === 'wealthsimple' && !forcedMode && Object.keys(customMapping || {}).length === 0) {
+        validatedRows = rawRows
+            .map((r, i) => parseWealthsimpleRow(r, i + 2, accountId, todayDateIso))
+            .filter((r): r is ValidatedRow => r !== null);
+    } else if (brokerPreset === 'questrade' && !forcedMode && Object.keys(customMapping || {}).length === 0) {
+        validatedRows = rawRows
+            .map((r, i) => parseQuestradeRow(r, i + 2, accountId, todayDateIso))
+            .filter((r): r is ValidatedRow => r !== null);
+    } else {
+        validatedRows = validateAndTransformRows(rawRows, detectedMode, mapping, accountId, defaultCurrency, todayDateIso);
+    }
 
     const validRows = validatedRows.filter(r => r.isValid);
     const uniqueTickers = new Set(
@@ -448,6 +958,9 @@ export const parseCsvContent = (
         headers,
         rawRows,
         detectedMode,
+        brokerPreset,
+        detectedAccountType,
+        detectedInstitution,
         mapping,
         validatedRows,
         stats: {

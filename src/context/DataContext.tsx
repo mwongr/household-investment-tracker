@@ -495,6 +495,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             case 'Withdrawal': return -amount;
             case 'Dividend':
             case 'Dividend Income': return amount;
+            case 'Interest': return amount;
+            case 'Fee': return -amount;
             case 'DRIP':
             case 'Dividend Reinvested': return 0; // Cash in (Div) immediately out (Buy Shares)
             case 'Stock Split': return 0;

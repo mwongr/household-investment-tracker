@@ -176,7 +176,7 @@ const AccountDetails = () => {
     const handleTransaction = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const isCashTx = type === 'Deposit' || type === 'Withdrawal';
+        const isCashTx = type === 'Deposit' || type === 'Withdrawal' || type === 'Interest' || type === 'Fee';
         const isDividendCash = type === 'Dividend' || type === 'Dividend Income';
         const isStockSplit = type === 'Stock Split';
 
@@ -244,7 +244,7 @@ const AccountDetails = () => {
         setType(tx.type);
         setShares(tx.shares?.toString() || '');
 
-        if (tx.type === 'Deposit' || tx.type === 'Withdrawal' || tx.type === 'Dividend' || tx.type === 'Dividend Income') {
+        if (tx.type === 'Deposit' || tx.type === 'Withdrawal' || tx.type === 'Dividend' || tx.type === 'Dividend Income' || tx.type === 'Interest' || tx.type === 'Fee') {
             setPrice(tx.amount.toString());
         } else if (tx.type === 'Stock Split') {
             setPrice('0');
@@ -608,7 +608,7 @@ const AccountDetails = () => {
                                     onChange={e => {
                                         const newType = e.target.value as TransactionType;
                                         setType(newType);
-                                        if (newType === 'Deposit' || newType === 'Withdrawal') {
+                                        if (newType === 'Deposit' || newType === 'Withdrawal' || newType === 'Interest' || newType === 'Fee') {
                                             setTicker('');
                                             setShares('');
                                             setPrice('');
@@ -622,6 +622,8 @@ const AccountDetails = () => {
                                     <option value="Withdrawal">Withdrawal</option>
                                     <option value="Dividend Income">Dividend Income</option>
                                     <option value="Dividend Reinvested">Dividend Reinvested</option>
+                                    <option value="Interest">Interest</option>
+                                    <option value="Fee">Fee</option>
                                     <option value="Stock Split">Stock Split</option>
                                     {type === 'Dividend' && <option value="Dividend">Dividend (Legacy)</option>}
                                     {type === 'DRIP' && <option value="DRIP">DRIP (Legacy)</option>}
@@ -1504,6 +1506,10 @@ const AccountDetails = () => {
                                                             ? 'bg-green-500/15 border-green-500/35 text-green-400'
                                                             : tx.type === 'Sell'
                                                             ? 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            : tx.type === 'Interest'
+                                                            ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                                                            : tx.type === 'Fee'
+                                                            ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
                                                             : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
                                                     }`}
                                                 >
