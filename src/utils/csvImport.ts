@@ -72,7 +72,18 @@ const SYNONYMS: Record<keyof ColumnMapping, string[]> = {
     ],
     type: ['type', 'action', 'transaction type', 'activity type', 'trans type', 'description', 'activity', 'trans'],
     date: ['date', 'trade date', 'settlement date', 'activity date', 'trans date', 'transaction date', 'time', 'effective date'],
-    amount: ['amount', 'net amount', 'gross amount', 'total', 'value', 'total amount', 'book value', 'net'],
+    amount: [
+        'amount',
+        'net amount',
+        'gross amount',
+        'total',
+        'value',
+        'total amount',
+        'book value',
+        'net',
+        'cash amount',
+        'transaction amount',
+    ],
     commission: ['commission', 'comm', 'fee', 'fees', 'brokerage fee', 'charge'],
     currency: ['currency', 'curr', 'curr.', 'fx', 'cash currency', 'market currency'],
     notes: ['notes', 'memo', 'comment', 'remarks'],
@@ -296,10 +307,12 @@ export const validateAndTransformRows = (
         // Transactions Mode
         const txType = mapTransactionType(rawType) || (cleanTicker ? 'Buy' : 'Deposit');
         const isCashOnly = txType === 'Deposit' || txType === 'Withdrawal';
+        const isDividend = txType === 'Dividend' || txType === 'Dividend Income';
+        const isDrip = txType === 'DRIP' || txType === 'Dividend Reinvested';
         const isStockSplit = txType === 'Stock Split';
 
         if (!isCashOnly && !cleanTicker) {
-            errors.push('Missing Ticker for non-cash transaction');
+            errors.push(`Missing Ticker for ${txType} transaction`);
         }
 
         let dateIso = parseDateToIso(rawDate);
@@ -314,21 +327,51 @@ export const validateAndTransformRows = (
         const shares = parseCleanNumber(rawShares);
         const price = parseCleanNumber(rawPrice);
         const commission = parseCleanNumber(rawCommission);
-        let amount = parseCleanNumber(rawAmount);
+        let amount = Math.abs(parseCleanNumber(rawAmount));
 
-        if (!isCashOnly && !isStockSplit) {
-            if (shares <= 0 && (txType === 'Buy' || txType === 'Sell' || txType === 'DRIP')) {
-                errors.push('Shares must be greater than 0');
-            }
-            if (amount === 0 && shares > 0 && price > 0) {
-                amount = shares * price + commission;
-            }
-        } else if (isCashOnly) {
+        if (isCashOnly) {
+            // Deposit / Withdrawal: dollar amount can be in Amount or Price column
             if (amount <= 0 && price > 0) {
-                amount = price; // often entered in price column
+                amount = price;
             }
             if (amount <= 0) {
-                errors.push('Cash amount must be greater than 0');
+                errors.push(`Please enter the ${txType.toLowerCase()} dollar amount in the Amount column`);
+            }
+        } else if (isDividend) {
+            // Cash Dividend: payout amount can be in Amount column, or calculated from shares * price, or in Price
+            if (amount <= 0 && price > 0) {
+                if (shares > 0) {
+                    amount = shares * price;
+                } else {
+                    amount = price;
+                }
+            }
+            if (amount <= 0) {
+                errors.push('Please enter the dividend payout amount in the Amount column');
+            }
+        } else if (isDrip) {
+            // DRIP: Reinvested dividend buys new shares
+            if (shares <= 0) {
+                errors.push('DRIP requires the number of reinvested shares in the Shares column');
+            }
+            if (amount <= 0 && price > 0 && shares > 0) {
+                amount = shares * price;
+            }
+            if (amount <= 0 && price <= 0) {
+                errors.push('DRIP requires reinvestment price or total amount');
+            }
+        } else if (isStockSplit) {
+            // Stock Split
+        } else {
+            // Buy or Sell
+            if (shares <= 0) {
+                errors.push('Shares must be greater than 0');
+            }
+            if (amount <= 0 && price > 0 && shares > 0) {
+                amount = txType === 'Sell' ? Math.max(0, shares * price - commission) : (shares * price + commission);
+            }
+            if (amount <= 0 && price <= 0) {
+                errors.push('Please provide price per share or total amount');
             }
         }
 
@@ -346,10 +389,10 @@ export const validateAndTransformRows = (
             ticker: isCashOnly ? '' : cleanTicker,
             date: dateIso || todayDateIso,
             type: txType,
-            shares: isCashOnly ? 0 : shares,
-            pricePerShare: isCashOnly ? 0 : price,
+            shares: isCashOnly || isDividend ? 0 : shares,
+            pricePerShare: isCashOnly ? 0 : isDividend ? (price > 0 ? price : (shares > 0 ? amount / shares : amount)) : price,
             commission,
-            amount: amount || (shares * price + commission),
+            amount,
             currency,
             ignoreCashImpact: false,
         };
@@ -426,13 +469,16 @@ VFV.TO,50,118.25,CAD
 AAPL,25,185.00,USD
 MSFT,15,420.50,USD`;
 
-export const SAMPLE_TRANSACTIONS_CSV = `Date,Type,Ticker,Shares,Price,Commission,Currency,Notes
-2024-01-15,Buy,XEQT.TO,100,28.50,0.00,CAD,Initial investment
-2024-02-01,Buy,VFV.TO,50,118.25,0.00,CAD,S&P 500 index ETF
-2024-03-10,Buy,AAPL,25,185.00,4.95,USD,Tech holding
-2024-04-15,Dividend,XEQT.TO,,,0.00,CAD,Quarterly distribution
-2024-05-01,Deposit,,,,,CAD,Monthly cash contribution
-2024-06-20,Sell,VFV.TO,10,125.00,0.00,CAD,Rebalancing profit take`;
+export const SAMPLE_TRANSACTIONS_CSV = `Date,Type,Ticker,Shares,Price,Commission,Amount,Currency,Notes
+2024-01-15,Deposit,,,,0.00,5000.00,CAD,Initial bank transfer into account
+2024-01-16,Buy,XEQT.TO,100,28.50,0.00,2850.00,CAD,Buy 100 shares of XEQT
+2024-02-01,Buy,VFV.TO,50,118.25,0.00,5912.50,CAD,Buy 50 shares of VFV
+2024-03-10,Buy,AAPL,25,185.00,4.95,4629.95,USD,Tech stock purchase
+2024-03-31,Dividend,XEQT.TO,,,0.00,45.50,CAD,Quarterly cash dividend payout
+2024-04-15,DRIP,XEQT.TO,2,28.60,0.00,57.20,CAD,Dividend reinvested for 2 new shares
+2024-05-01,Deposit,,,,0.00,1000.00,CAD,Monthly recurring deposit
+2024-06-20,Sell,VFV.TO,10,125.00,0.00,1250.00,CAD,Partial profit take
+2024-07-01,Withdrawal,,,,0.00,500.00,CAD,Cash withdrawal to bank chequing`;
 
 /**
  * Triggers a browser download of a sample CSV file

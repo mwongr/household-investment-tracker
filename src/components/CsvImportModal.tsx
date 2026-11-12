@@ -661,7 +661,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                         {/* Price / Avg Cost */}
                                         <div>
                                             <label className="block text-slate-400 mb-1 font-semibold">
-                                                {mode === 'holdings' ? 'Avg Cost / Book Cost' : 'Price per Share'} <span className="text-red-400">*</span>
+                                                {mode === 'holdings' ? 'Avg Cost / Book Cost' : 'Price per Share'} {mode === 'holdings' && <span className="text-red-400">*</span>}
                                             </label>
                                             <select
                                                 value={parseResult.mapping.price || '__NONE__'}
@@ -674,6 +674,25 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                                 ))}
                                             </select>
                                         </div>
+
+                                        {/* Amount / Total ($) (for transactions) */}
+                                        {mode === 'transactions' && (
+                                            <div>
+                                                <label className="block text-slate-400 mb-1 font-semibold">
+                                                    Amount / Total ($)
+                                                </label>
+                                                <select
+                                                    value={parseResult.mapping.amount || '__NONE__'}
+                                                    onChange={e => handleMappingChange('amount', e.target.value)}
+                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-blue-500"
+                                                >
+                                                    <option value="__NONE__">-- Auto (Shares × Price) --</option>
+                                                    {parseResult.headers.map(h => (
+                                                        <option key={h} value={h}>{h}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
 
                                         {/* Type (if transactions) */}
                                         {mode === 'transactions' && (
@@ -793,6 +812,33 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                     </span>
                                 </div>
                             </div>
+
+                            {/* Format Guide for Transactions */}
+                            {mode === 'transactions' && (
+                                <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-3 text-xs space-y-1.5">
+                                    <span className="font-bold text-slate-200 text-[11px] uppercase tracking-wider block">
+                                        How to format transaction types in CSV:
+                                    </span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-[11px] text-slate-400">
+                                        <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-750">
+                                            <span className="font-bold text-white block mb-0.5">Deposit / Withdrawal</span>
+                                            Cash amount goes in <span className="text-blue-300 font-mono">Amount</span>. Ticker & Shares stay empty.
+                                        </div>
+                                        <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-750">
+                                            <span className="font-bold text-white block mb-0.5">Dividend Payout</span>
+                                            Stock in <span className="text-blue-300 font-mono">Ticker</span>, cash received in <span className="text-blue-300 font-mono">Amount</span>.
+                                        </div>
+                                        <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-750">
+                                            <span className="font-bold text-white block mb-0.5">Buy / Sell Order</span>
+                                            Stock in <span className="text-blue-300 font-mono">Ticker</span>, <span className="text-blue-300 font-mono">Shares</span>, and <span className="text-blue-300 font-mono">Price</span>.
+                                        </div>
+                                        <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-750">
+                                            <span className="font-bold text-white block mb-0.5">DRIP (Reinvested)</span>
+                                            Stock in <span className="text-blue-300 font-mono">Ticker</span>, new shares in <span className="text-blue-300 font-mono">Shares</span>, price in <span className="text-blue-300 font-mono">Price</span>.
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Preview Table */}
                             <div className="bg-slate-900 border border-slate-700/80 rounded-xl overflow-hidden">
