@@ -5,12 +5,23 @@ A comprehensive personal finance and investment analysis application designed to
 ## 🚀 Features
 
 ### 📊 Portfolio Dashboard & Management
-*   **Household Overview**: Real-time tracking of net worth, daily performance, and asset allocation.
-*   **Multi-Member Support**: Track investments for multiple family members separately or aggregately. Member and institution management is integrated into the settings panel.
-*   **Asset Management**: Detailed tracking for Stocks, ETFs, Mutual Funds, and Cash with support for custom book costs.
+*   **Household Overview**: Real-time tracking of net worth, daily performance, and asset allocation across the entire household.
+*   **Multi-Member & Institution Support**: Track investments for multiple family members separately or aggregately across institutions.
+*   **Multi-Currency (CAD & USD)**: Live exchange rate integration, multi-currency account support, and seamless currency conversion across views.
+*   **Asset Management**: Detailed tracking for Stocks, ETFs, Mutual Funds, and Cash with custom book cost overrides.
 *   **Live Market Data**: Yahoo Finance integration for real-time price quotes, daily changes, and sparkline charts.
 *   **Watchlist**: Keep tabs on key securities with detailed metrics (volume, average volume, 52-week high/low) and technical indicators.
+*   **Interactive Onboarding & Demo Mode**: Step-by-step onboarding wizard for new users and a one-click Demo Mode with sample portfolios to explore features safely.
 *   **Theme Toggle**: Sleek, harmonious dark and light modes accessible from the navigation bar.
+
+### 📥 CSV Import (Wealthsimple, Questrade & Custom)
+*   **Native Brokerage Parsers**: Seamlessly import activity and transaction history exports directly from **Wealthsimple** and **Questrade** without manual reformatting.
+*   **Custom CSV Mapping**: Flexible mapper for holdings and transactions from any brokerage, featuring downloadable sample templates, interactive column mapping, and duplicate detection.
+*   **Import Preview & Validation**: Review, validate, and preview rows before committing them to your accounts.
+
+### ⚖️ Account Balancer & Average Down Calculator
+*   **Portfolio Balancer**: Set desired target allocation percentages per holding, visualize allocation drift, and generate an instant rebalancing action plan.
+*   **Average Down Calculator**: Model prospective purchases on existing holdings to determine your new average cost, required capital, and break-even recovery targets.
 
 ### 🛡️ Tax Bracket Optimizer
 *   **Bracket Drop Optimization**: Custom tax engine that models combined Federal & Provincial/State brackets, with support for customizable tax rates and regional abatements.
@@ -61,11 +72,15 @@ A comprehensive personal finance and investment analysis application designed to
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/mwongr/investment-tracker.git
-    cd investment-tracker
+    git clone https://github.com/mwongr/household-investment-tracker.git
     ```
 
-2.  **Install dependencies**:
+2.  **Navigate into the project directory**:
+    ```bash
+    cd household-investment-tracker
+    ```
+
+3.  **Install dependencies**:
     ```bash
     npm install
     ```
