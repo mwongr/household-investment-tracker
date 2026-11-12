@@ -5,6 +5,7 @@ import type {
     AcbAccount, AcbTransaction,
     BankAccount, Liability, MonthlyExpense, UserPreferences
 } from '../types';
+import { getDemoData } from '../data/demoData';
 
 interface DataContextType {
     members: Member[];
@@ -15,6 +16,11 @@ interface DataContextType {
     netWorthHistory: NetWorthSnapshot[];
     lastUpdated: Date | null;
     backupPath: string;
+
+    isDemoData: boolean;
+    loadDemoData: () => void;
+    clearAllData: () => void;
+    setupHousehold: (memberName: string, institutionName: string, initialAccount: { name: string; type: string; cashBalance: number }) => void;
 
     addMember: (name: string) => void;
     updateMember: (id: string, name: string) => void;
@@ -85,36 +91,19 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Initial Mock Data
-const INITIAL_MEMBERS: Member[] = [
-    { id: '1', name: 'John Doe' },
-    { id: '2', name: 'Jane Doe' }
-];
-
-const INITIAL_INSTITUTIONS: Institution[] = [
-    { id: '1', name: 'Questrade' },
-    { id: '2', name: 'Wealthsimple' },
-    { id: '3', name: 'RBC' }
-];
-
-const INITIAL_ACCOUNTS: Account[] = [
-    { id: '1', memberId: '1', institutionId: '1', type: 'TFSA', name: 'John TFSA', cashBalance: 5000 },
-    { id: '2', memberId: '2', institutionId: '2', type: 'RRSP', name: 'Jane RRSP', cashBalance: 10000 }
-];
-
-const INITIAL_ACCOUNT_TYPES: string[] = ['TFSA', 'RRSP', 'Margin', 'Cash', 'Crypto', 'Other'];
+const INITIAL_ACCOUNT_TYPES: string[] = ['TFSA', 'RRSP', 'FHSA', 'Margin', 'Cash', 'Crypto', 'Other'];
 
 const STORAGE_KEY = 'wealth-tracker-storage';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // Initialize State from LocalStorage or Mock Data
+    // Initialize State from LocalStorage (defaults to blank clean slate)
     const [members, setMembers] = useState<Member[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved).members : INITIAL_MEMBERS;
+        return saved && JSON.parse(saved).members ? JSON.parse(saved).members : [];
     });
     const [institutions, setInstitutions] = useState<Institution[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved).institutions : INITIAL_INSTITUTIONS;
+        return saved && JSON.parse(saved).institutions ? JSON.parse(saved).institutions : [];
     });
     const [accountTypes, setAccountTypes] = useState<string[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -142,7 +131,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }));
             }
         }
-        return INITIAL_ACCOUNTS;
+        return [];
+    });
+    const [isDemoData, setIsDemoData] = useState<boolean>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? Boolean(JSON.parse(saved).isDemoData) : false;
     });
     const [transactions, setTransactions] = useState<Transaction[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -241,7 +234,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             liabilities,
             monthlyExpenses,
             preferences,
-            exchangeRate
+            exchangeRate,
+            isDemoData
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -254,7 +248,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }).catch(e => console.warn('Sync failed (server might be down):', e));
         }, 2000); // 2 second debounce
         return () => clearTimeout(timer);
-    }, [members, institutions, accountTypes, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences, exchangeRate]);
+    }, [members, institutions, accountTypes, accounts, transactions, assets, lastUpdated, backupPath, watchlist, watchlistLastUpdated, acbAccounts, acbTransactions, bankAccounts, liabilities, monthlyExpenses, preferences, exchangeRate, isDemoData]);
 
     // Real Market Data Refresh - defined early so it can be used in useEffect
     const refreshPrices = useCallback(async (range: string = '1mo') => {
@@ -975,6 +969,101 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updateMonthlyExpense = (id: string, expense: Omit<MonthlyExpense, 'id'>) => setMonthlyExpenses(prev => prev.map(e => e.id === id ? { ...expense, id } : e));
     const deleteMonthlyExpense = (id: string) => setMonthlyExpenses(prev => prev.filter(e => e.id !== id));
 
+    // Demo Data & Reset Actions
+    const loadDemoData = useCallback(() => {
+        const demo = getDemoData(exchangeRate);
+        setMembers(demo.members);
+        setInstitutions(demo.institutions);
+        setAccounts(demo.accounts);
+        setAssets(demo.assets);
+        setTransactions(demo.transactions);
+        setNetWorthHistory(demo.netWorthHistory);
+        setWatchlist(demo.watchlist);
+        setBankAccounts(demo.bankAccounts);
+        setLiabilities(demo.liabilities);
+        setMonthlyExpenses(demo.monthlyExpenses);
+        setAcbAccounts(demo.acbAccounts);
+        setAcbTransactions(demo.acbTransactions);
+        setIsDemoData(true);
+        setLastUpdated(new Date());
+    }, [exchangeRate]);
+
+    const clearAllData = useCallback(() => {
+        setMembers([]);
+        setInstitutions([]);
+        setAccounts([]);
+        setAssets([]);
+        setTransactions([]);
+        setNetWorthHistory([]);
+        setWatchlist([]);
+        setBankAccounts([]);
+        setLiabilities([]);
+        setMonthlyExpenses([]);
+        setAcbAccounts([]);
+        setAcbTransactions([]);
+        setIsDemoData(false);
+        setLastUpdated(null);
+
+        const emptyState = {
+            members: [],
+            institutions: [],
+            accountTypes: INITIAL_ACCOUNT_TYPES,
+            accounts: [],
+            transactions: [],
+            assets: [],
+            netWorthHistory: [],
+            lastUpdated: null,
+            backupPath,
+            watchlist: [],
+            watchlistLastUpdated: null,
+            acbAccounts: [],
+            acbTransactions: [],
+            bankAccounts: [],
+            liabilities: [],
+            monthlyExpenses: [],
+            preferences,
+            exchangeRate,
+            isDemoData: false
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyState));
+
+        // Sync empty state to server
+        fetch('http://localhost:3001/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emptyState)
+        }).catch(e => console.warn('Sync failed on clearAllData:', e));
+    }, [backupPath, preferences, exchangeRate]);
+
+    const setupHousehold = useCallback((
+        memberName: string,
+        institutionName: string,
+        initialAccount: { name: string; type: string; cashBalance: number }
+    ) => {
+        const memberId = uuidv4();
+        const instId = uuidv4();
+        const accId = uuidv4();
+
+        const newMember: Member = { id: memberId, name: memberName };
+        const newInst: Institution = { id: instId, name: institutionName };
+        const newAcc: Account = {
+            id: accId,
+            memberId,
+            institutionId: instId,
+            name: initialAccount.name,
+            type: initialAccount.type,
+            cashBalance: initialAccount.cashBalance || 0
+        };
+
+        setMembers([newMember]);
+        setInstitutions([newInst]);
+        setAccounts([newAcc]);
+        setAssets([]);
+        setTransactions([]);
+        setIsDemoData(false);
+    }, []);
+
     return (
         <DataContext.Provider value={{
             members,
@@ -983,6 +1072,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             assets,
             transactions,
             netWorthHistory,
+            isDemoData,
+            loadDemoData,
+            clearAllData,
+            setupHousehold,
             addMember,
             updateMember,
             deleteMember,

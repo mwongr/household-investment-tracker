@@ -34,6 +34,7 @@ import {
     ArrowRightLeft,
     LayoutDashboard,
     Building2,
+    Sparkles,
 } from 'lucide-react';
 import EventsTable from '../components/EventsTable';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
@@ -309,7 +310,18 @@ const AllocationDonutCard: React.FC<AllocationDonutCardProps> = ({
 );
 
 const Dashboard = () => {
-    const { assets, accounts, members, institutions, refreshPrices, netWorthHistory, lastUpdated, transactions } = useData();
+    const {
+        assets,
+        accounts,
+        members,
+        institutions,
+        refreshPrices,
+        netWorthHistory,
+        lastUpdated,
+        transactions,
+        isDemoData,
+        loadDemoData
+    } = useData();
     const { theme } = useTheme();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
@@ -799,6 +811,39 @@ const Dashboard = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Empty State / Welcome Hero Card */}
+            {members.length === 0 && accounts.length === 0 && !isDemoData && (
+                <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-600/20 via-indigo-600/15 to-purple-600/15 border border-blue-500/30 shadow-2xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="space-y-1.5 max-w-2xl">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/35 text-blue-300 text-xs font-bold uppercase tracking-wider">
+                                <Sparkles size={13} /> Clean Slate Ready
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                                Start Your Household Portfolio or Try Demo Mode
+                            </h2>
+                            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                                Welcome! Your tracker is currently blank. You can set up your first member and accounts in Settings, import statement CSVs, or test-drive all charts and calculators with sample demo data.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <button
+                                onClick={loadDemoData}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md transition-all"
+                            >
+                                <Sparkles size={15} /> Try Demo Data
+                            </button>
+                            <Link
+                                to="/settings"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all"
+                            >
+                                <Users size={15} /> Configure in Settings
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Global Overview Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

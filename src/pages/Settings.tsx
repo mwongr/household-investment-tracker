@@ -23,6 +23,7 @@ import {
     ShieldAlert,
     Database,
     Tag,
+    Sparkles,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
@@ -473,6 +474,9 @@ const Settings = () => {
         deleteAccountType,
         backupPath,
         setBackupPath,
+        isDemoData,
+        loadDemoData,
+        clearAllData,
     } = useData();
     const { theme } = useTheme();
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -528,11 +532,10 @@ const Settings = () => {
     };
 
     const handleReset = () => {
-        if (window.confirm('DANGER: Delete ALL data permanently? This cannot be undone.')) {
-            if (window.confirm('Are you REALLY sure?')) {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.clear();
-                window.location.reload();
+        if (window.confirm('DANGER: Delete ALL data permanently? This will reset the app to a clean, blank slate.')) {
+            if (window.confirm('Are you REALLY sure? This cannot be undone.')) {
+                clearAllData();
+                setImportStatus({ type: 'success', message: 'All data deleted. App reset to clean slate.' });
             }
         }
     };
@@ -664,7 +667,7 @@ const Settings = () => {
                     </div>
 
                     <div className="p-5 space-y-5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="bg-slate-900/65 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between gap-4">
                                 <div>
                                     <h3 className="font-bold text-sm text-white">Backup Data</h3>
@@ -702,6 +705,47 @@ const Settings = () => {
                                 >
                                     <Upload size={15} /> Import Backup (.json)
                                 </button>
+                            </div>
+
+                            <div className={`bg-slate-900/65 border rounded-xl p-4 flex flex-col justify-between gap-4 ${isDemoData ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-700/80'}`}>
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <Sparkles size={16} className={isDemoData ? 'text-amber-400' : 'text-blue-400'} />
+                                        <h3 className="font-bold text-sm text-white">
+                                            {isDemoData ? 'Demo Mode Active' : 'Sample / Demo Data'}
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-slate-300 mt-1">
+                                        {isDemoData
+                                            ? 'Currently viewing sample household data. Clear it when ready for your real data.'
+                                            : 'Explore with a pre-populated sample household portfolio (stocks, ETFs, dividends).'}
+                                    </p>
+                                </div>
+                                {isDemoData ? (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm('Clear sample demo data? Your app will be reset to a clean blank slate.')) {
+                                                clearAllData();
+                                                setImportStatus({ type: 'success', message: 'Demo data cleared. Clean slate restored.' });
+                                            }
+                                        }}
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 rounded-xl text-xs font-bold transition-colors"
+                                    >
+                                        <Trash2 size={15} /> Clear Demo Data
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm('Load sample demo data? This will load a complete sample household portfolio.')) {
+                                                loadDemoData();
+                                                setImportStatus({ type: 'success', message: 'Demo portfolio loaded!' });
+                                            }
+                                        }}
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold transition-colors"
+                                    >
+                                        <Sparkles size={15} /> Load Demo Data
+                                    </button>
+                                )}
                             </div>
                         </div>
 
