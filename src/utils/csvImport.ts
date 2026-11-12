@@ -400,7 +400,12 @@ export const parseWealthsimpleRow = (
     }
 
     // 5. Corporate Actions (Split, etc.)
-    if (lowerAct === 'corporateaction' || lowerAct === 'corporate action') {
+    if (
+        lowerAct.includes('corporateaction') ||
+        lowerAct.includes('corporate action') ||
+        lowerAct.includes('legacycorporateaction') ||
+        lowerAct.includes('legacy corporate action')
+    ) {
         const desc = (raw.description || '').toUpperCase();
         if (desc.includes('SPLIT')) {
             return {
@@ -422,7 +427,32 @@ export const parseWealthsimpleRow = (
                 },
             };
         }
-        return null; // Skip informational reorganizations
+        return null; // Skip non-dilutive reorganizations, spin-offs, name changes, listing changes
+    }
+
+    // 6. Fees / Charges
+    if (lowerAct === 'fee' || lowerAct === 'charge' || lowerAct === 'commission') {
+        const amount = absCash;
+        if (amount <= 0) return null;
+
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker || '',
+                date,
+                type: 'Fee',
+                shares: 0,
+                pricePerShare: 0,
+                commission: amount,
+                amount,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
     }
 
     return null;
@@ -786,8 +816,41 @@ export const validateAndTransformRows = (
         }
 
         // Transactions Mode
-        const txType = mapTransactionType(rawType) || (cleanTicker ? 'Buy' : 'Deposit');
-        const isCashOnly = txType === 'Deposit' || txType === 'Withdrawal';
+        const rawSharesNum = parseCleanNumber(rawShares);
+        const shares = Math.abs(rawSharesNum);
+        const price = Math.abs(parseCleanNumber(rawPrice));
+        const commission = Math.abs(parseCleanNumber(rawCommission));
+        let amount = Math.abs(parseCleanNumber(rawAmount));
+
+        let txType = mapTransactionType(rawType);
+        if (!txType) {
+            const rawLower = String(rawType || '').toLowerCase();
+            const descLower = String(raw.description || raw.Description || '').toLowerCase();
+            if (rawSharesNum < 0 || rawLower.includes('sell') || descLower.includes('sold')) {
+                txType = 'Sell';
+            } else if (rawSharesNum > 0 || rawLower.includes('buy') || descLower.includes('bought')) {
+                txType = 'Buy';
+            } else if (cleanTicker) {
+                txType = 'Buy';
+            } else {
+                txType = 'Deposit';
+            }
+        }
+
+        // Non-dilutive administrative corporate actions (e.g. spinoff, name change, code change)
+        const isCorpAction = /corporate|reorgan|spin|change|listing/i.test(rawType || '') ||
+                             /corporate|reorgan|spin|change|listing/i.test(raw.description || '');
+        if (isCorpAction && !txType.includes('Split') && amount <= 0 && price <= 0) {
+            // Administrative row, skip safely
+            return {
+                rowNumber: rowNum,
+                raw,
+                isValid: true,
+                errors: [],
+            };
+        }
+
+        const isCashOnly = txType === 'Deposit' || txType === 'Withdrawal' || txType === 'Interest' || txType === 'Fee';
         const isDividend = txType === 'Dividend' || txType === 'Dividend Income';
         const isDrip = txType === 'DRIP' || txType === 'Dividend Reinvested';
         const isStockSplit = txType === 'Stock Split';
@@ -804,11 +867,6 @@ export const validateAndTransformRows = (
                 dateIso = todayDateIso;
             }
         }
-
-        const shares = parseCleanNumber(rawShares);
-        const price = parseCleanNumber(rawPrice);
-        const commission = parseCleanNumber(rawCommission);
-        let amount = Math.abs(parseCleanNumber(rawAmount));
 
         if (isCashOnly) {
             if (amount <= 0 && price > 0) {
@@ -928,12 +986,14 @@ export const parseCsvContent = (
     let validatedRows: ValidatedRow[] = [];
     const todayDateIso = new Date().toISOString().split('T')[0];
 
-    // If native broker preset detected and no custom forced mode or mapping override
-    if (brokerPreset === 'wealthsimple' && !forcedMode && Object.keys(customMapping || {}).length === 0) {
+    const isManualMapping = Object.keys(customMapping || {}).length > 0;
+
+    // If native broker preset detected and not forced into holdings mode
+    if (brokerPreset === 'wealthsimple' && forcedMode !== 'holdings' && !isManualMapping) {
         validatedRows = rawRows
             .map((r, i) => parseWealthsimpleRow(r, i + 2, accountId, todayDateIso))
             .filter((r): r is ValidatedRow => r !== null);
-    } else if (brokerPreset === 'questrade' && !forcedMode && Object.keys(customMapping || {}).length === 0) {
+    } else if (brokerPreset === 'questrade' && forcedMode !== 'holdings' && !isManualMapping) {
         validatedRows = rawRows
             .map((r, i) => parseQuestradeRow(r, i + 2, accountId, todayDateIso))
             .filter((r): r is ValidatedRow => r !== null);
