@@ -1,0 +1,7 @@
+Date,Type,Ticker,Shares,Price,Commission,Currency,Notes
+2024-01-15,Buy,XEQT.TO,100,28.50,0.00,CAD,Initial investment
+2024-02-01,Buy,VFV.TO,50,118.25,0.00,CAD,S&P 500 index ETF
+2024-03-10,Buy,AAPL,25,185.00,4.95,USD,Tech holding
+2024-04-15,Dividend,XEQT.TO,,,0.00,CAD,Quarterly distribution
+2024-05-01,Deposit,,,,,CAD,Monthly cash contribution
+2024-06-20,Sell,VFV.TO,10,125.00,0.00,CAD,Rebalancing profit take

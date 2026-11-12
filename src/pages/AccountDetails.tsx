@@ -12,6 +12,7 @@ import {
     Calculator,
     Wallet,
     ArrowRightLeft,
+    Upload,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
@@ -23,6 +24,7 @@ import PortfolioBalancer from '../components/PortfolioBalancer';
 import AverageDownCalc from '../components/AverageDownCalc';
 import StockDetails, { type StockData } from '../components/StockDetails';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
+import CsvImportModal from '../components/CsvImportModal';
 
 const fmt2 = (n: number) =>
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -113,6 +115,7 @@ const AccountDetails = () => {
     const assets = getAssetsByAccount(id || '');
 
     const [isAdding, setIsAdding] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'assets' | 'transactions'>('assets');
@@ -555,13 +558,22 @@ const AccountDetails = () => {
                     </button>
                 </div>
 
-                <button
-                    style={{ color: '#ffffff' }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
-                    onClick={() => setIsAdding(true)}
-                >
-                    <Plus size={18} /> Add Transaction
-                </button>
+                <div className="flex items-center gap-2.5">
+                    <button
+                        type="button"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                        onClick={() => setIsImportModalOpen(true)}
+                    >
+                        <Upload size={18} className="text-blue-400" /> Import CSV
+                    </button>
+                    <button
+                        style={{ color: '#ffffff' }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                        onClick={() => setIsAdding(true)}
+                    >
+                        <Plus size={18} /> Add Transaction
+                    </button>
+                </div>
             </div>
 
             {/* Add Transaction Modal */}
@@ -1425,15 +1437,26 @@ const AccountDetails = () => {
                     })}
 
                     {assets.length === 0 && (
-                        <div className="text-center py-16 bg-slate-800/95 rounded-2xl border border-dashed border-slate-700">
-                            <Plus size={40} className="text-slate-400 mx-auto mb-3" />
-                            <p className="text-slate-200 font-medium">No assets in this account yet.</p>
-                            <button
-                                onClick={() => setIsAdding(true)}
-                                className="text-blue-400 hover:underline text-sm mt-2 font-bold"
-                            >
-                                Add your first transaction
-                            </button>
+                        <div className="text-center py-16 bg-slate-800/95 rounded-2xl border border-dashed border-slate-700 space-y-3">
+                            <Plus size={40} className="text-slate-400 mx-auto" />
+                            <div>
+                                <p className="text-slate-200 font-medium">No assets in this account yet.</p>
+                                <p className="text-slate-400 text-xs mt-1">Add transactions manually or import your portfolio via CSV.</p>
+                            </div>
+                            <div className="flex justify-center gap-3 pt-2">
+                                <button
+                                    onClick={() => setIsAdding(true)}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white transition-colors"
+                                >
+                                    <Plus size={15} /> Add Transaction
+                                </button>
+                                <button
+                                    onClick={() => setIsImportModalOpen(true)}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
+                                >
+                                    <Upload size={15} className="text-blue-400" /> Import CSV
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1526,7 +1549,22 @@ const AccountDetails = () => {
                                 {accountTxs.length === 0 && (
                                     <tr>
                                         <td colSpan={7} className="px-6 py-12 text-center text-slate-300 text-sm">
-                                            No transaction history found.
+                                            <p className="font-medium text-slate-200">No transaction history found.</p>
+                                            <p className="text-slate-400 text-xs mt-1">Import your past activity or add your first transaction manually.</p>
+                                            <div className="flex justify-center gap-3 pt-3">
+                                                <button
+                                                    onClick={() => setIsAdding(true)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold text-white transition-colors"
+                                                >
+                                                    <Plus size={14} /> Add Transaction
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsImportModalOpen(true)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                                                >
+                                                    <Upload size={14} className="text-blue-400" /> Import CSV
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
@@ -1560,6 +1598,13 @@ const AccountDetails = () => {
                 </div>
             )}
             {showMigrationModal && <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />}
+            
+            {/* CSV Import Modal */}
+            <CsvImportModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                defaultAccountId={account?.id}
+            />
         </div>
     );
 };

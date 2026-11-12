@@ -30,11 +30,12 @@ interface DataContextType {
     updateAccountType: (oldName: string, newName: string) => void;
     deleteAccountType: (name: string) => void;
 
-    addAccount: (account: Omit<Account, 'id'>) => void;
+    addAccount: (account: Omit<Account, 'id'>) => Account;
     updateAccount: (id: string, updates: Partial<Account>) => void;
     deleteAccount: (id: string) => void;
 
     addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+    addTransactions: (transactions: Omit<Transaction, 'id'>[], options?: { updateCashBalance?: boolean }) => void;
     updateTransaction: (id: string, transaction: Omit<Transaction, 'id'>) => void;
     deleteTransaction: (id: string) => void;
 
@@ -476,8 +477,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAccountTypes(prev => prev.filter(t => t !== name));
     };
 
-    const addAccount = (account: Omit<Account, 'id'>) => {
-        setAccounts([...accounts, { ...account, id: uuidv4() }]);
+    const addAccount = (account: Omit<Account, 'id'>): Account => {
+        const newAccount = { ...account, id: uuidv4() };
+        setAccounts(prev => [...prev, newAccount]);
+        return newAccount;
     };
 
     const updateAccount = (id: string, updates: Partial<Account>) => {
@@ -523,6 +526,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Flag for auto-refresh if this is a new asset
         if (isNewAsset && tx.ticker) {
+            pendingRefreshRef.current = true;
+        }
+    };
+
+    const addTransactions = (newTxs: Omit<Transaction, 'id'>[], options?: { updateCashBalance?: boolean }) => {
+        if (!newTxs || newTxs.length === 0) return;
+        const updateCash = options?.updateCashBalance ?? true;
+        const createdTxs: Transaction[] = newTxs.map(tx => ({ ...tx, id: uuidv4() }));
+
+        const existingAccountTickers = new Set(assets.map(a => `${a.accountId}-${a.ticker}`));
+        const hasNewAsset = createdTxs.some(tx => tx.ticker && !existingAccountTickers.has(`${tx.accountId}-${tx.ticker}`));
+
+        setTransactions(prev => {
+            const updated = [...prev, ...createdTxs];
+            const hasSplit = createdTxs.some(t => t.type === 'Stock Split');
+            recalculateAssets(updated, hasSplit);
+            return updated;
+        });
+
+        if (updateCash) {
+            const accountCashDeltas: Record<string, number> = {};
+            for (const tx of createdTxs) {
+                const impact = calculateCashImpact(tx);
+                if (impact !== 0) {
+                    accountCashDeltas[tx.accountId] = (accountCashDeltas[tx.accountId] || 0) + impact;
+                }
+            }
+
+            if (Object.keys(accountCashDeltas).length > 0) {
+                setAccounts(prev => prev.map(a => {
+                    const delta = accountCashDeltas[a.id];
+                    if (delta !== undefined && delta !== 0) {
+                        return { ...a, cashBalance: a.cashBalance + delta };
+                    }
+                    return a;
+                }));
+            }
+        }
+
+        if (hasNewAsset) {
             pendingRefreshRef.current = true;
         }
     };
@@ -954,6 +997,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateAccount,
             deleteAccount,
             addTransaction,
+            addTransactions,
             updateTransaction,
             deleteTransaction,
             updateAssetCustomBookCost,

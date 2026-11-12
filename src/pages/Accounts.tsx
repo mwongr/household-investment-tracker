@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2, X, Save, Wallet, Pencil, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, X, Save, Wallet, Pencil, TrendingUp, Upload } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import type { Account, AccountType } from '../types';
+import CsvImportModal from '../components/CsvImportModal';
 import '../styles/shared.css';
 
 const Accounts = () => {
     const { accounts, members, institutions, accountTypes, assets, addAccount, updateAccount, deleteAccount } = useData();
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importTargetAccountId, setImportTargetAccountId] = useState<string | undefined>(undefined);
 
     // Form State
     const [memberId, setMemberId] = useState('');
@@ -82,13 +85,25 @@ const Accounts = () => {
                     </div>
                 </div>
                 {!isEditing && (
-                    <button
-                        style={{ color: '#ffffff' }}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
-                        onClick={() => setIsEditing(true)}
-                    >
-                        <Plus size={18} /> Add Account
-                    </button>
+                    <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                        <button
+                            type="button"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                            onClick={() => {
+                                setImportTargetAccountId(undefined);
+                                setIsImportModalOpen(true);
+                            }}
+                        >
+                            <Upload size={18} className="text-blue-400" /> Import CSV
+                        </button>
+                        <button
+                            style={{ color: '#ffffff' }}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                            onClick={() => setIsEditing(true)}
+                        >
+                            <Plus size={18} /> Add Account
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -195,6 +210,30 @@ const Accounts = () => {
                                 required
                             />
                         </div>
+                        {!editingId && (
+                            <div className="md:col-span-2 p-3.5 bg-slate-900/60 border border-slate-700/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="p-2 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                                        <Upload size={16} />
+                                    </span>
+                                    <div>
+                                        <p className="text-xs font-bold text-white">Have a CSV of holdings or trade history?</p>
+                                        <p className="text-[11px] text-slate-400">Create this account directly via CSV import with holdings automatically populated.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        resetForm();
+                                        setImportTargetAccountId(undefined);
+                                        setIsImportModalOpen(true);
+                                    }}
+                                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30 transition-colors"
+                                >
+                                    Create via CSV Import
+                                </button>
+                            </div>
+                        )}
                         <div className="md:col-span-2 flex justify-end gap-3 mt-2 pt-4 border-t border-slate-700/70">
                             <button
                                 type="button"
@@ -217,9 +256,27 @@ const Accounts = () => {
 
             <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
                 {accounts.length === 0 ? (
-                    <div className="text-center py-14 px-6">
+                    <div className="text-center py-14 px-6 space-y-3">
                         <p className="text-slate-300 text-sm font-medium">No accounts found yet.</p>
-                        <p className="text-slate-400 text-xs mt-1">Click &ldquo;Add Account&rdquo; above to get started.</p>
+                        <p className="text-slate-400 text-xs">Create your first account manually or import holdings from a CSV.</p>
+                        <div className="flex justify-center gap-3 pt-2">
+                            <button
+                                style={{ color: '#ffffff' }}
+                                onClick={() => setIsEditing(true)}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold transition-colors"
+                            >
+                                <Plus size={15} /> Add Account
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setImportTargetAccountId(undefined);
+                                    setIsImportModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
+                            >
+                                <Upload size={15} className="text-blue-400" /> Import CSV
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -268,6 +325,18 @@ const Accounts = () => {
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setImportTargetAccountId(acc.id);
+                                                            setIsImportModalOpen(true);
+                                                        }}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+                                                        title="Import CSV into this account"
+                                                        aria-label={`Import CSV into ${acc.name}`}
+                                                    >
+                                                        <Upload size={13} className="text-blue-400" /> Import
+                                                    </button>
                                                     <Link
                                                         to={`/accounts/${acc.id}`}
                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/35 transition-colors"
@@ -301,6 +370,12 @@ const Accounts = () => {
                     </div>
                 )}
             </div>
+
+            <CsvImportModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                defaultAccountId={importTargetAccountId}
+            />
         </div>
     );
 };
