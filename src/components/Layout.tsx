@@ -46,7 +46,6 @@ const Layout = () => {
                             isOpen={true}
                             isInline={true}
                             onClose={() => setOnboardingDismissed(true)}
-                            onOpenCsvImport={handleOpenCsvImport}
                         />
                     ) : (
                         <Outlet />

@@ -13,6 +13,7 @@ import {
     Wallet,
     ArrowRightLeft,
     Upload,
+    Users,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
@@ -1505,6 +1506,13 @@ const AccountDetails = () => {
                                 >
                                     <Upload size={15} className="text-blue-400" /> Import CSV
                                 </button>
+                            </div>
+                            <div className="pt-3 border-t border-slate-700/60 max-w-sm mx-auto text-xs text-slate-400 flex items-center justify-center gap-1.5">
+                                <Users size={13} className="text-purple-400 shrink-0" />
+                                <span>Need to add users or other accounts?</span>
+                                <Link to="/settings" className="text-blue-400 hover:text-blue-300 font-semibold underline">
+                                    Visit Settings
+                                </Link>
                             </div>
                         </div>
                     )}
