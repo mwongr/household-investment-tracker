@@ -226,7 +226,6 @@ const Accounts = () => {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        resetForm();
                                         setImportTargetAccountId(undefined);
                                         setImportTargetType('new');
                                         setIsImportModalOpen(true);
@@ -380,6 +379,10 @@ const Accounts = () => {
                 onClose={() => setIsImportModalOpen(false)}
                 defaultAccountId={importTargetAccountId}
                 initialTargetType={importTargetType}
+                initialAccountName={name}
+                initialAccountType={type}
+                initialMemberId={memberId}
+                initialInstitutionId={institutionId}
                 onSuccess={() => {
                     resetForm();
                 }}

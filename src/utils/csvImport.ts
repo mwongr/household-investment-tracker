@@ -1012,18 +1012,31 @@ export const parseCsvContent = (
     let detectedInstitution: string | undefined;
 
     // Detect Account Type & Institution
+    const findRawAccountType = (): string => {
+        for (const row of rawRows) {
+            const val = row['Account Type'] || row['account_type'] || row['Account type'] || row['account type'] || '';
+            if (val && String(val).trim()) return String(val).trim();
+        }
+        return '';
+    };
+    const rawType = findRawAccountType();
+
     if (brokerPreset === 'wealthsimple') {
         detectedInstitution = 'Wealthsimple';
-        const rawType = rawRows[0]?.account_type || rawRows[0]?.['Account Type'] || '';
         if (/tfsa/i.test(rawType)) detectedAccountType = 'TFSA';
         else if (/rrsp/i.test(rawType)) detectedAccountType = 'RRSP';
-        else if (/non[- ]?registered|personal/i.test(rawType)) detectedAccountType = 'Margin';
+        else if (/fhsa/i.test(rawType)) detectedAccountType = 'FHSA';
+        else if (/resp/i.test(rawType)) detectedAccountType = 'RESP';
+        else if (/margin/i.test(rawType)) detectedAccountType = 'Margin';
+        else if (/non[- ]?registered|personal|cash/i.test(rawType)) detectedAccountType = 'Cash';
     } else if (brokerPreset === 'questrade') {
         detectedInstitution = 'Questrade';
-        const rawType = rawRows[0]?.['Account Type'] || rawRows[0]?.account_type || '';
         if (/tfsa/i.test(rawType)) detectedAccountType = 'TFSA';
         else if (/rrsp/i.test(rawType)) detectedAccountType = 'RRSP';
+        else if (/fhsa/i.test(rawType)) detectedAccountType = 'FHSA';
+        else if (/resp/i.test(rawType)) detectedAccountType = 'RESP';
         else if (/margin/i.test(rawType)) detectedAccountType = 'Margin';
+        else if (/cash/i.test(rawType)) detectedAccountType = 'Cash';
     }
 
     const autoMapping = detectColumnMapping(headers);

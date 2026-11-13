@@ -32,6 +32,10 @@ interface CsvImportModalProps {
     onClose: () => void;
     defaultAccountId?: string;
     initialTargetType?: 'existing' | 'new';
+    initialAccountName?: string;
+    initialAccountType?: AccountType;
+    initialMemberId?: string;
+    initialInstitutionId?: string;
     onSuccess?: (accountId: string) => void;
 }
 
@@ -40,6 +44,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     onClose,
     defaultAccountId,
     initialTargetType,
+    initialAccountName,
+    initialAccountType,
+    initialMemberId,
+    initialInstitutionId,
     onSuccess,
 }) => {
     const {
@@ -62,11 +70,15 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         defaultAccountId || (accounts[0] ? accounts[0].id : '')
     );
 
+    // Track whether user explicitly typed/selected name or type to prevent auto-overwrites
+    const userModifiedNameRef = useRef<boolean>(!!initialAccountName);
+    const userModifiedTypeRef = useRef<boolean>(!!initialAccountType);
+
     // New Account Form state
-    const [newAccountName, setNewAccountName] = useState('');
-    const [newMemberId, setNewMemberId] = useState(() => (members[0] ? members[0].id : ''));
-    const [newInstitutionId, setNewInstitutionId] = useState(() => (institutions[0] ? institutions[0].id : ''));
-    const [newAccType, setNewAccType] = useState<AccountType>(() => accountTypes[0] || 'TFSA');
+    const [newAccountName, setNewAccountName] = useState(initialAccountName || '');
+    const [newMemberId, setNewMemberId] = useState(() => initialMemberId || (members[0] ? members[0].id : ''));
+    const [newInstitutionId, setNewInstitutionId] = useState(() => initialInstitutionId || (institutions[0] ? institutions[0].id : ''));
+    const [newAccType, setNewAccType] = useState<AccountType>(() => initialAccountType || (accountTypes[0] as AccountType) || 'TFSA');
     const [newCashBalance, setNewCashBalance] = useState('0.00');
 
     // CSV Input State
@@ -119,7 +131,22 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         } else if (accounts.length > 0 && !selectedAccountId) {
             setSelectedAccountId(accounts[0].id);
         }
-    }, [isOpen, initialTargetType, defaultAccountId, accounts, selectedAccountId]);
+
+        if (initialAccountName) {
+            setNewAccountName(initialAccountName);
+            userModifiedNameRef.current = true;
+        }
+        if (initialAccountType) {
+            setNewAccType(initialAccountType);
+            userModifiedTypeRef.current = true;
+        }
+        if (initialMemberId) {
+            setNewMemberId(initialMemberId);
+        }
+        if (initialInstitutionId) {
+            setNewInstitutionId(initialInstitutionId);
+        }
+    }, [isOpen, initialTargetType, defaultAccountId, accounts, selectedAccountId, initialAccountName, initialAccountType, initialMemberId, initialInstitutionId]);
 
     // Read file text when file changes
     useEffect(() => {
@@ -165,10 +192,12 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         }
     }, [parseResult, mode]);
 
-    // Auto-populate new account details if broker preset detected
+    // Auto-populate new account details if broker preset detected AND user hasn't typed/chosen their own
     useEffect(() => {
         if (!parseResult) return;
-        if (parseResult.detectedInstitution) {
+
+        // Auto-select / auto-create institution if not manually chosen
+        if (parseResult.detectedInstitution && !initialInstitutionId) {
             const matchInst = institutions.find(i =>
                 i.name.toLowerCase().includes(parseResult.detectedInstitution!.toLowerCase())
             );
@@ -182,18 +211,22 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 setNewInstitutionId(created.id);
             }
         }
-        if (parseResult.detectedAccountType) {
+
+        // Auto-select account type ONLY IF the user hasn't explicitly chosen/typed one
+        if (parseResult.detectedAccountType && !userModifiedTypeRef.current) {
             const matchType = accountTypes.find(t =>
                 t.toLowerCase() === parseResult.detectedAccountType!.toLowerCase()
             );
             if (matchType) {
-                setNewAccType(matchType);
+                setNewAccType(matchType as AccountType);
             }
         }
-        if (!newAccountName && parseResult.detectedInstitution) {
+
+        // Auto-populate account name ONLY IF the user hasn't explicitly typed one
+        if (!userModifiedNameRef.current && parseResult.detectedInstitution) {
             setNewAccountName(`${parseResult.detectedInstitution} ${parseResult.detectedAccountType || 'Account'}`);
         }
-    }, [parseResult, institutions, accountTypes, newAccountName, newInstitutionId, addInstitution]);
+    }, [parseResult, institutions, accountTypes, initialInstitutionId, addInstitution]);
 
     if (!isOpen) return null;
 
@@ -561,7 +594,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                         type="text"
                                         placeholder="e.g. Questrade TFSA"
                                         value={newAccountName}
-                                        onChange={e => setNewAccountName(e.target.value)}
+                                        onChange={e => {
+                                            userModifiedNameRef.current = true;
+                                            setNewAccountName(e.target.value);
+                                        }}
                                         className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                                     />
                                 </div>
@@ -599,7 +635,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                     </label>
                                     <select
                                         value={newAccType}
-                                        onChange={e => setNewAccType(e.target.value as AccountType)}
+                                        onChange={e => {
+                                            userModifiedTypeRef.current = true;
+                                            setNewAccType(e.target.value as AccountType);
+                                        }}
                                         className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                                     >
                                         {accountTypes.map(t => (
