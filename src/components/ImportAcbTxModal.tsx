@@ -98,11 +98,17 @@ function buildAcbPayload(
         };
     }
 
-    // Split
+    // Split: preserve ratio if provided, otherwise preserve direct share adjustment from broker CSVs
+    if (tx.splitFrom && tx.splitTo) {
+        return {
+            ...base,
+            splitFrom: tx.splitFrom,
+            splitTo: tx.splitTo,
+        };
+    }
     return {
         ...base,
-        splitFrom: tx.splitFrom ?? 1,
-        splitTo: tx.splitTo ?? 1,
+        shares: tx.shares ?? 0,
     };
 }
 
@@ -538,7 +544,11 @@ export const ImportAcbTxModal: React.FC<ImportAcbTxModalProps> = ({
                                                 )}
                                                 {mappedType === 'Split' && (
                                                     <span>
-                                                        {tx.splitTo ?? 1}-for-{tx.splitFrom ?? 1}
+                                                        {tx.splitFrom && tx.splitTo
+                                                            ? `${tx.splitTo}-for-${tx.splitFrom} Split`
+                                                            : tx.shares
+                                                              ? `${tx.shares > 0 ? '+' : ''}${tx.shares} shs (Split)`
+                                                              : 'Split'}
                                                     </span>
                                                 )}
                                             </td>

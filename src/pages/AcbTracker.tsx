@@ -104,8 +104,27 @@ const getRowPriceAndAmount = (row: AcbHistoryRow) => {
     };
 };
 
+const getSameDayOrder = (type: AcbTransactionType) => {
+    switch (type) {
+        case 'Buy':
+        case 'Reinvested Dividend':
+        case 'Reinvested Capital Gains Distribution':
+            return 0;
+        case 'Sell':
+            return 1;
+        case 'Split':
+            return 2;
+        default:
+            return 3;
+    }
+};
+
 function computeAcbHistory(txs: AcbTransaction[]) {
-    const sorted = [...txs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sorted = [...txs].sort((a, b) => {
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return getSameDayOrder(a.type) - getSameDayOrder(b.type);
+    });
     const rows: AcbHistoryRow[] = [];
     let runningShares = 0;
     let runningAcb = 0;
@@ -149,10 +168,12 @@ function computeAcbHistory(txs: AcbTransaction[]) {
                 acbChange = tx.reinvestedAmount || 0;
                 break;
             case 'Split': {
-                const from = tx.splitFrom || 1;
-                const to = tx.splitTo || 1;
-                const newShares = (runningShares * to) / from;
-                sharesChange = newShares - runningShares;
+                if (tx.splitFrom && tx.splitTo) {
+                    const newShares = (runningShares * tx.splitTo) / tx.splitFrom;
+                    sharesChange = newShares - runningShares;
+                } else if (tx.shares) {
+                    sharesChange = tx.shares;
+                }
                 break;
             }
         }
@@ -739,7 +760,9 @@ const AcbTracker = () => {
                                                                                     : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
                                                                             }`}
                                                                         >
-                                                                            {row.tx.type}
+                                                                            {row.tx.type === 'Split' && row.tx.splitFrom && row.tx.splitTo
+                                                                                ? `Split (${row.tx.splitTo}-for-${row.tx.splitFrom})`
+                                                                                : row.tx.type}
                                                                         </span>
                                                                         {row.tx.memo && (
                                                                             <span className="text-xs text-slate-300">
@@ -1112,7 +1135,7 @@ const AcbTracker = () => {
                                             <input
                                                 type="number"
                                                 step="any"
-                                                min="1"
+                                                min="0.0001"
                                                 required
                                                 className={`${inputClass} input-no-spinner font-mono`}
                                                 value={txForm.splitFrom ?? ''}
@@ -1126,7 +1149,7 @@ const AcbTracker = () => {
                                             <input
                                                 type="number"
                                                 step="any"
-                                                min="1"
+                                                min="0.0001"
                                                 required
                                                 className={`${inputClass} input-no-spinner font-mono`}
                                                 value={txForm.splitTo ?? ''}
@@ -1134,7 +1157,7 @@ const AcbTracker = () => {
                                             />
                                         </div>
                                         <div className="col-span-2 text-xs text-slate-300 text-center">
-                                            Example: For a 2-for-1 split, Old Shares = 1, New Shares = 2
+                                            2-for-1 split: Old = 1, New = 2 • 1-for-3 reverse split: Old = 3, New = 1
                                         </div>
                                     </div>
                                 )}
