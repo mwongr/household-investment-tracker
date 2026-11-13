@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -9,16 +9,24 @@ import {
     Trash2,
     Save,
     RotateCcw,
-    Calculator,
     Wallet,
     ArrowRightLeft,
     Upload,
     Users,
+    LayoutGrid,
+    LayoutList,
+    Table,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    ChevronDown,
+    ChevronUp,
+    Wrench,
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
-import type { Transaction, TransactionType } from '../types';
+import type { Asset, Transaction, TransactionType } from '../types';
 
 import '../styles/shared.css';
 import PortfolioBalancer from '../components/PortfolioBalancer';
@@ -26,75 +34,14 @@ import AverageDownCalc from '../components/AverageDownCalc';
 import StockDetails, { type StockData } from '../components/StockDetails';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 import CsvImportModal from '../components/CsvImportModal';
+import AssetSimulators from '../components/AssetSimulators';
+
+type AssetViewMode = 'cards' | 'compact' | 'table';
+type AssetSortField = 'ticker' | 'profit' | 'profitPercent' | 'marketValue' | 'bookCost' | 'averageCost' | 'todayChange';
+type SortDirection = 'asc' | 'desc';
 
 const fmt2 = (n: number) =>
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-interface SimProjectedProps {
-    summaryLabel: string;
-    summaryValue: string;
-    tradeProfit?: number;
-    tradeProfitPct?: number;
-    newBookCost: number;
-    newMarketValue: number;
-    newProfit: number;
-    newProfitPercent: number;
-    newAvg: number;
-}
-
-const SimProjected: React.FC<SimProjectedProps> = ({
-    summaryLabel,
-    summaryValue,
-    tradeProfit,
-    tradeProfitPct,
-    newBookCost,
-    newMarketValue,
-    newProfit,
-    newProfitPercent,
-    newAvg,
-}) => (
-    <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-2.5 text-xs space-y-1.5">
-        <div className="flex justify-between items-center gap-2">
-            <span className="text-slate-300">
-                {summaryLabel}: <span className="text-white font-mono font-bold">{summaryValue}</span>
-            </span>
-            {tradeProfit !== undefined && tradeProfitPct !== undefined && (
-                <span
-                    className={`font-mono font-bold ${
-                        tradeProfit >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}
-                >
-                    {tradeProfit >= 0 ? '+' : '-'}${fmt2(Math.abs(tradeProfit))} ({tradeProfitPct >= 0 ? '+' : ''}
-                    {tradeProfitPct.toFixed(2)}%)
-                </span>
-            )}
-        </div>
-        <div className="border-t border-slate-700/70 pt-1.5 space-y-1">
-            <div className="flex justify-between">
-                <span className="text-slate-400">New Book</span>
-                <span className="text-white font-mono tabular-nums font-semibold">${fmt2(newBookCost)}</span>
-            </div>
-            <div className="flex justify-between">
-                <span className="text-slate-400">New MV</span>
-                <span className="text-white font-mono tabular-nums font-semibold">${fmt2(newMarketValue)}</span>
-            </div>
-            <div className="flex justify-between">
-                <span className="text-slate-400">New P/L</span>
-                <span
-                    className={`font-mono tabular-nums font-bold ${
-                        newProfit >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}
-                >
-                    {newProfit >= 0 ? '+' : '-'}${fmt2(Math.abs(newProfit))} ({newProfitPercent.toFixed(2)}%)
-                </span>
-            </div>
-            <div className="flex justify-between">
-                <span className="text-slate-400">New Avg</span>
-                <span className="text-blue-400 font-mono tabular-nums font-bold">${fmt2(newAvg)}</span>
-            </div>
-        </div>
-    </div>
-);
 
 const AccountDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -164,6 +111,56 @@ const AccountDetails = () => {
     // Book Cost Editing State
     const [editingBookCostId, setEditingBookCostId] = useState<string | null>(null);
     const [customBookCostInput, setCustomBookCostInput] = useState<Record<string, string>>({});
+
+    // Assets View, Sorting & Tools Dropdown State
+    const [assetView, setAssetView] = useState<AssetViewMode>(() => {
+        const saved = localStorage.getItem('accountDetails.assetView');
+        return saved === 'cards' || saved === 'compact' || saved === 'table' ? saved : 'cards';
+    });
+    const [sortField, setSortField] = useState<AssetSortField>(() => {
+        const saved = localStorage.getItem('accountDetails.sortField');
+        return saved === 'ticker' ||
+            saved === 'profit' ||
+            saved === 'profitPercent' ||
+            saved === 'marketValue' ||
+            saved === 'bookCost' ||
+            saved === 'averageCost' ||
+            saved === 'todayChange'
+            ? saved
+            : 'ticker';
+    });
+    const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+        const saved = localStorage.getItem('accountDetails.sortDirection');
+        return saved === 'asc' || saved === 'desc' ? saved : 'asc';
+    });
+    const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        localStorage.setItem('accountDetails.assetView', assetView);
+    }, [assetView]);
+
+    useEffect(() => {
+        localStorage.setItem('accountDetails.sortField', sortField);
+        localStorage.setItem('accountDetails.sortDirection', sortDirection);
+    }, [sortField, sortDirection]);
+
+    const toggleAssetTools = (assetId: string) => {
+        setExpandedTools(prev => ({ ...prev, [assetId]: !prev[assetId] }));
+    };
+
+    const handleSortFieldSelect = (field: AssetSortField) => {
+        setSortField(field);
+        setSortDirection(field === 'ticker' ? 'asc' : 'desc');
+    };
+
+    const handleColumnSort = (field: AssetSortField) => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortDirection(field === 'ticker' ? 'asc' : 'desc');
+        }
+    };
 
     // Inline Research State
     const [researchData, setResearchData] = useState<StockData | null>(null);
@@ -374,6 +371,319 @@ const AccountDetails = () => {
         fontFamily: 'monospace',
     };
 
+    const getEffectiveBookCost = (asset: Asset) =>
+        asset.customBookCost !== undefined && asset.customBookCost !== null ? asset.customBookCost : asset.totalCost;
+
+    const getImpliedAvgCost = (asset: Asset) => {
+        const effectiveBookCost = getEffectiveBookCost(asset);
+        return asset.quantity > 0 ? effectiveBookCost / asset.quantity : asset.averageCost;
+    };
+
+    const sortedAssets = [...assets].sort((a, b) => {
+        const dir = sortDirection === 'asc' ? 1 : -1;
+        switch (sortField) {
+            case 'ticker':
+                return a.ticker.localeCompare(b.ticker) * dir;
+            case 'profit':
+                return (a.profit - b.profit) * dir;
+            case 'profitPercent':
+                return (a.profitPercent - b.profitPercent) * dir;
+            case 'marketValue':
+                return (a.marketValue - b.marketValue) * dir;
+            case 'bookCost':
+                return (getEffectiveBookCost(a) - getEffectiveBookCost(b)) * dir;
+            case 'averageCost':
+                return (getImpliedAvgCost(a) - getImpliedAvgCost(b)) * dir;
+            case 'todayChange':
+                return ((a.todayChangePercent || 0) - (b.todayChangePercent || 0)) * dir;
+            default:
+                return 0;
+        }
+    });
+
+    const renderSortIcon = (field: AssetSortField) => {
+        if (sortField !== field) return <ArrowUpDown size={12} className="opacity-40" />;
+        return sortDirection === 'asc' ? (
+            <ArrowUp size={12} className="text-blue-400" />
+        ) : (
+            <ArrowDown size={12} className="text-blue-400" />
+        );
+    };
+
+    const renderSignalBadge = (asset: Asset) => {
+        if (asset.goldenCross) {
+            return (
+                <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 uppercase border border-blue-500/35 whitespace-nowrap">
+                    Golden Cross
+                </span>
+            );
+        }
+        if (asset.signal === 'buy' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30)) {
+            return (
+                <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/15 text-green-400 uppercase border border-green-500/35 whitespace-nowrap">
+                    Buy Signal
+                </span>
+            );
+        }
+        if (asset.signal === 'sell' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70)) {
+            return (
+                <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-500/15 text-red-400 uppercase border border-red-500/35 whitespace-nowrap">
+                    Sell Signal
+                </span>
+            );
+        }
+        if (typeof asset.signal === 'string') {
+            return (
+                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-300 uppercase border border-slate-700 whitespace-nowrap">
+                    Neutral
+                </span>
+            );
+        }
+        return null;
+    };
+
+    const renderBookCost = (asset: Asset, size: 'lg' | 'sm' = 'lg', align: 'center' | 'right' | 'left' = 'center') => {
+        const effectiveBookCost = getEffectiveBookCost(asset);
+        const justifyClass =
+            align === 'right' ? 'justify-end' : align === 'center' ? 'md:justify-center' : 'justify-start';
+        const textSizeClass = size === 'lg' ? 'text-xl sm:text-2xl' : 'text-sm';
+
+        if (editingBookCostId === asset.id) {
+            return (
+                <div className={`flex flex-col ${align === 'right' ? 'items-end' : align === 'center' ? 'items-center' : 'items-start'}`}>
+                    <div className={`flex items-center ${justifyClass} gap-1.5`}>
+                        <input
+                            type="number"
+                            step="any"
+                            className="w-28 bg-slate-900 border border-blue-500 rounded-lg px-2 py-1 text-sm text-white font-mono focus:outline-none input-no-spinner"
+                            value={customBookCostInput[asset.id] || ''}
+                            onChange={e =>
+                                setCustomBookCostInput({
+                                    ...customBookCostInput,
+                                    [asset.id]: e.target.value,
+                                })
+                            }
+                            autoFocus
+                        />
+                        <button
+                            onClick={() => {
+                                const rawInput = customBookCostInput[asset.id];
+                                const cleaned = rawInput ? rawInput.toString().replace(/[,$]/g, '') : '';
+                                const value = parseFloat(cleaned);
+
+                                if (!isNaN(value) && value >= 0) {
+                                    updateAssetCustomBookCost(asset.id, value);
+                                } else {
+                                    alert('Please enter a valid number (e.g. 18240.08)');
+                                }
+                                setEditingBookCostId(null);
+                            }}
+                            className="p-1.5 bg-green-500/15 hover:bg-green-500/25 rounded-lg text-green-400 transition-colors"
+                            title="Save custom book cost"
+                        >
+                            <Save size={15} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                setEditingBookCostId(null);
+                                setCustomBookCostInput({
+                                    ...customBookCostInput,
+                                    [asset.id]: '',
+                                });
+                            }}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors"
+                            title="Cancel"
+                        >
+                            <X size={15} />
+                        </button>
+                        {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                            <button
+                                onClick={() => {
+                                    updateAssetCustomBookCost(asset.id, null);
+                                    setEditingBookCostId(null);
+                                    setCustomBookCostInput({
+                                        ...customBookCostInput,
+                                        [asset.id]: '',
+                                    });
+                                }}
+                                className="p-1.5 bg-red-500/15 hover:bg-red-500/25 rounded-lg text-red-400 transition-colors"
+                                title="Reset to calculated"
+                            >
+                                <RotateCcw size={15} />
+                            </button>
+                        )}
+                    </div>
+                    {(() => {
+                        const rawVal = parseFloat((customBookCostInput[asset.id] || '').replace(/[,$]/g, ''));
+                        if (!isNaN(rawVal) && rawVal > 0 && asset.quantity > 0) {
+                            return (
+                                <p className="text-[11px] text-blue-400 font-mono mt-1">
+                                    ≈ ${fmt2(rawVal / asset.quantity)} / share
+                                </p>
+                            );
+                        }
+                        return null;
+                    })()}
+                </div>
+            );
+        }
+
+        return (
+            <div className={`flex items-center ${justifyClass} gap-1.5`}>
+                <p className={`${textSizeClass} font-mono tabular-nums font-bold text-slate-200`}>
+                    ${fmt2(effectiveBookCost)}
+                </p>
+                <button
+                    onClick={() => {
+                        setEditingBookCostId(asset.id);
+                        setCustomBookCostInput({
+                            ...customBookCostInput,
+                            [asset.id]: effectiveBookCost.toString(),
+                        });
+                    }}
+                    className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                    title="Edit book cost"
+                >
+                    <Pencil size={13} />
+                </button>
+            </div>
+        );
+    };
+
+    const render52WStats = (asset: Asset) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-900/60 border border-slate-700/70 p-3.5 rounded-xl">
+            <div>
+                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">52W High</p>
+                <p className="font-mono tabular-nums text-white text-base font-bold">
+                    {asset.high52Week ? `$${asset.high52Week.toFixed(2)}` : '—'}
+                </p>
+            </div>
+            <div>
+                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">52W Low</p>
+                <p className="font-mono tabular-nums text-white text-base font-bold">
+                    {asset.low52Week ? `$${asset.low52Week.toFixed(2)}` : '—'}
+                </p>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">% to 52W High</p>
+                <div className="flex items-center gap-2.5">
+                    <div className="flex-1 h-2 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{
+                                width: `${Math.max(
+                                    0,
+                                    Math.min(100, (asset.currentPrice / (asset.high52Week || 1)) * 100)
+                                )}%`,
+                            }}
+                        />
+                    </div>
+                    <span className="text-xs text-white font-mono tabular-nums font-bold">
+                        {asset.high52Week ? `${(100 - (asset.currentPrice / asset.high52Week) * 100).toFixed(1)}%` : '—'}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderSparkline = (asset: Asset, heightClass = 'h-24') => (
+        <div className="bg-slate-900/65 rounded-xl p-3.5 border border-slate-700/80 flex flex-col justify-between">
+            <div className="flex justify-between items-center mb-2">
+                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                    {asset.chartRange || '1MO'} Trend
+                </p>
+                <div className="flex gap-1">
+                    {['1mo', '3mo', '1y', '5y'].map(range => {
+                        const isActiveRange = asset.chartRange === range || (!asset.chartRange && range === '1mo');
+                        return (
+                            <button
+                                key={range}
+                                onClick={e => {
+                                    e.preventDefault();
+                                    refreshAsset(asset.id, range);
+                                }}
+                                style={isActiveRange ? { color: '#ffffff' } : undefined}
+                                className={`text-[11px] px-1.5 py-0.5 rounded-md uppercase font-bold transition-colors ${
+                                    isActiveRange
+                                        ? 'bg-blue-600'
+                                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                }`}
+                            >
+                                {range}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+            <div
+                className={`w-full ${heightClass} cursor-pointer hover:opacity-85 transition-opacity`}
+                onClick={() => handleResearchClick(asset.ticker)}
+                title="Click to view detailed chart and research"
+            >
+                {asset.sparkline && asset.sparkline.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={asset.sparkline} style={{ cursor: 'pointer' }}>
+                            <defs>
+                                <linearGradient id={`grad-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop
+                                        offset="5%"
+                                        stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
+                                        stopOpacity={0.35}
+                                    />
+                                    <stop
+                                        offset="95%"
+                                        stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
+                                        stopOpacity={0}
+                                    />
+                                </linearGradient>
+                            </defs>
+                            <Tooltip
+                                cursor={{ stroke: isDark ? '#64748b' : '#94a3b8', strokeWidth: 1 }}
+                                contentStyle={tooltipContentStyle}
+                                itemStyle={tooltipItemStyle}
+                                formatter={value => [`$${fmt2(Number(value))}`, 'Price']}
+                                labelStyle={{ display: 'none' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="price"
+                                stroke={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
+                                strokeWidth={2}
+                                fillOpacity={1}
+                                fill={`url(#grad-${asset.id})`}
+                                isAnimationActive={false}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-300 text-xs text-center gap-1">
+                        <RotateCcw size={16} className="text-slate-400" />
+                        <span>Click &ldquo;Refresh Prices&rdquo; to load chart</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderSimulators = (asset: Asset, stacked = false) => (
+        <AssetSimulators
+            asset={asset}
+            effectiveBookCost={getEffectiveBookCost(asset)}
+            impliedAvgCost={getImpliedAvgCost(asset)}
+            simTargetPrice={simTargetPrice[asset.id] || ''}
+            onSimTargetPriceChange={val => setSimTargetPrice(prev => ({ ...prev, [asset.id]: val }))}
+            simSellPrice={simSellPrice[asset.id] || ''}
+            onSimSellPriceChange={val => setSimSellPrice(prev => ({ ...prev, [asset.id]: val }))}
+            simSellShares={simSellShares[asset.id] || ''}
+            onSimSellSharesChange={val => setSimSellShares(prev => ({ ...prev, [asset.id]: val }))}
+            simBuyAmount={simBuyAmount[asset.id] || ''}
+            onSimBuyAmountChange={val => setSimBuyAmount(prev => ({ ...prev, [asset.id]: val }))}
+            simBuyShares={simBuyShares[asset.id] || ''}
+            onSimBuySharesChange={val => setSimBuyShares(prev => ({ ...prev, [asset.id]: val }))}
+            stacked={stacked}
+        />
+    );
+
     return (
         <div className="space-y-6">
             {/* Page Header */}
@@ -554,33 +864,134 @@ const AccountDetails = () => {
             </div>
 
             {/* Actions Bar & Navigation */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex bg-slate-900 border border-slate-700/90 p-1 rounded-xl">
-                    <button
-                        style={activeTab === 'assets' ? { color: '#ffffff' } : undefined}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${
-                            activeTab === 'assets'
-                                ? 'bg-blue-600 shadow-sm'
-                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                        }`}
-                        onClick={() => setActiveTab('assets')}
-                    >
-                        Assets ({assets.length})
-                    </button>
-                    <button
-                        style={activeTab === 'transactions' ? { color: '#ffffff' } : undefined}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${
-                            activeTab === 'transactions'
-                                ? 'bg-blue-600 shadow-sm'
-                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                        }`}
-                        onClick={() => setActiveTab('transactions')}
-                    >
-                        Transactions ({accountTxs.length})
-                    </button>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex bg-slate-900 border border-slate-700/90 p-1 rounded-xl">
+                        <button
+                            style={activeTab === 'assets' ? { color: '#ffffff' } : undefined}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${
+                                activeTab === 'assets'
+                                    ? 'bg-blue-600 shadow-sm'
+                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
+                            onClick={() => setActiveTab('assets')}
+                        >
+                            Assets ({assets.length})
+                        </button>
+                        <button
+                            style={activeTab === 'transactions' ? { color: '#ffffff' } : undefined}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${
+                                activeTab === 'transactions'
+                                    ? 'bg-blue-600 shadow-sm'
+                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
+                            onClick={() => setActiveTab('transactions')}
+                        >
+                            Transactions ({accountTxs.length})
+                        </button>
+                    </div>
+
+                    {activeTab === 'assets' && (
+                        <>
+                            {/* View Switcher */}
+                            <div
+                                className="flex bg-slate-900 border border-slate-700/90 p-1 rounded-xl"
+                                role="group"
+                                aria-label="Asset view mode"
+                            >
+                                <button
+                                    type="button"
+                                    style={assetView === 'cards' ? { color: '#ffffff' } : undefined}
+                                    onClick={() => setAssetView('cards')}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                        assetView === 'cards'
+                                            ? 'bg-blue-600 shadow-sm'
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                    title="Full Card View"
+                                >
+                                    <LayoutGrid size={14} />
+                                    <span>Cards</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    style={assetView === 'compact' ? { color: '#ffffff' } : undefined}
+                                    onClick={() => setAssetView('compact')}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                        assetView === 'compact'
+                                            ? 'bg-blue-600 shadow-sm'
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                    title="Compact Card View"
+                                >
+                                    <LayoutList size={14} />
+                                    <span>Compact</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    style={assetView === 'table' ? { color: '#ffffff' } : undefined}
+                                    onClick={() => setAssetView('table')}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                        assetView === 'table'
+                                            ? 'bg-blue-600 shadow-sm'
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                    title="Table View"
+                                >
+                                    <Table size={14} />
+                                    <span>Table</span>
+                                </button>
+                            </div>
+
+                            {/* Sort Controls */}
+                            <div className="flex items-center bg-slate-900 border border-slate-700/90 rounded-xl p-1 gap-1">
+                                <span className="pl-2 text-slate-400" title="Sort assets">
+                                    <ArrowUpDown size={14} />
+                                </span>
+                                <select
+                                    aria-label="Sort assets by"
+                                    value={sortField}
+                                    onChange={e => handleSortFieldSelect(e.target.value as AssetSortField)}
+                                    className="bg-transparent text-slate-200 text-xs font-bold py-1.5 pr-2 focus:outline-none cursor-pointer"
+                                >
+                                    <option value="ticker" className="bg-slate-900 text-white">
+                                        Alphabetical
+                                    </option>
+                                    <option value="profit" className="bg-slate-900 text-white">
+                                        Profit / Loss ($)
+                                    </option>
+                                    <option value="profitPercent" className="bg-slate-900 text-white">
+                                        Return (%)
+                                    </option>
+                                    <option value="marketValue" className="bg-slate-900 text-white">
+                                        Market Value
+                                    </option>
+                                    <option value="bookCost" className="bg-slate-900 text-white">
+                                        Book Cost
+                                    </option>
+                                    <option value="averageCost" className="bg-slate-900 text-white">
+                                        Avg. Cost
+                                    </option>
+                                    <option value="todayChange" className="bg-slate-900 text-white">
+                                        Today&apos;s Change (%)
+                                    </option>
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-colors"
+                                    title={sortDirection === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
+                                    aria-label="Toggle sort direction"
+                                >
+                                    {sortDirection === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />}
+                                    <span>{sortDirection === 'asc' ? 'Asc' : 'Desc'}</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 self-end lg:self-auto">
                     <button
                         type="button"
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors"
@@ -848,96 +1259,204 @@ const AccountDetails = () => {
                 </div>
             )}
 
-            {/* Assets List Grid */}
+            {/* Assets List */}
             {activeTab === 'assets' && (
                 <div className="flex flex-col gap-6">
-                    {assets.map(asset => {
-                        const sPrice = simSellPrice[asset.id] || '';
-                        const bAmount = simBuyAmount[asset.id] || '';
-                        const effectiveBookCost =
-                            asset.customBookCost !== undefined && asset.customBookCost !== null
-                                ? asset.customBookCost
-                                : asset.totalCost;
-                        const impliedAvgCost = asset.quantity > 0 ? effectiveBookCost / asset.quantity : asset.averageCost;
+                    {assets.length > 0 && assetView === 'cards' && (
+                        <div className="flex flex-col gap-6">
+                            {sortedAssets.map(asset => {
+                                const effectiveBookCost = getEffectiveBookCost(asset);
+                                const impliedAvgCost = getImpliedAvgCost(asset);
 
-                        return (
-                            <div
-                                key={asset.id}
-                                className="bg-slate-800/95 border border-slate-700/90 rounded-2xl overflow-hidden shadow-xl"
-                            >
-                                {/* Header Row - All Key Metrics */}
-                                <div className="p-5 bg-slate-900/65 border-b border-slate-700/80">
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-5 items-center">
-                                        {/* 1. Stock Symbol/Shares */}
-                                        <div>
-                                            <h3 className="text-xl sm:text-2xl font-bold font-mono text-white leading-none flex items-center gap-2">
-                                                <span>{asset.ticker}</span>
-                                                {asset.currency === 'USD' && (
-                                                    <span className="text-[11px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/35 text-blue-400">
-                                                        USD
-                                                    </span>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
-                                                    className="p-1 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors"
-                                                    title={`Rename or Merge ${asset.ticker} (e.g. after uplisting or symbol change)`}
-                                                >
-                                                    <Pencil size={13} />
-                                                </button>
-                                            </h3>
-                                            <p className="text-xs text-slate-300 font-mono font-semibold mt-1.5">
-                                                {asset.quantity.toLocaleString()} shares
-                                            </p>
-                                            <div className="mt-2 flex items-center gap-1 flex-wrap">
-                                                {asset.goldenCross ? (
-                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 uppercase border border-blue-500/35 whitespace-nowrap">
-                                                        Golden Cross
-                                                    </span>
-                                                ) : asset.signal === 'buy' ||
-                                                  (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30) ? (
-                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/15 text-green-400 uppercase border border-green-500/35 whitespace-nowrap">
-                                                        Buy Signal
-                                                    </span>
-                                                ) : asset.signal === 'sell' ||
-                                                  (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70) ? (
-                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-500/15 text-red-400 uppercase border border-red-500/35 whitespace-nowrap">
-                                                        Sell Signal
-                                                    </span>
-                                                ) : typeof asset.signal === 'string' ? (
-                                                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-300 uppercase border border-slate-700 whitespace-nowrap">
-                                                        Neutral
-                                                    </span>
-                                                ) : null}
+                                return (
+                                    <div
+                                        key={asset.id}
+                                        className="bg-slate-800/95 border border-slate-700/90 rounded-2xl overflow-hidden shadow-xl"
+                                    >
+                                        {/* Header Row - All Key Metrics */}
+                                        <div className="p-5 bg-slate-900/65 border-b border-slate-700/80">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-5 items-center">
+                                                {/* 1. Stock Symbol/Shares */}
+                                                <div>
+                                                    <h3 className="text-xl sm:text-2xl font-bold font-mono text-white leading-none flex items-center gap-2">
+                                                        <span>{asset.ticker}</span>
+                                                        {asset.currency === 'USD' && (
+                                                            <span className="text-[11px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/35 text-blue-400">
+                                                                USD
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
+                                                            className="p-1 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                                            title={`Rename or Merge ${asset.ticker} (e.g. after uplisting or symbol change)`}
+                                                        >
+                                                            <Pencil size={13} />
+                                                        </button>
+                                                    </h3>
+                                                    <p className="text-xs text-slate-300 font-mono font-semibold mt-1.5">
+                                                        {asset.quantity.toLocaleString()} shares
+                                                    </p>
+                                                    <div className="mt-2 flex items-center gap-1 flex-wrap">
+                                                        {renderSignalBadge(asset)}
+                                                    </div>
+                                                </div>
+
+                                                {/* 2. Avg. Cost */}
+                                                <div className="md:text-center">
+                                                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1 flex items-center md:justify-center gap-1">
+                                                        <span>Avg. Cost</span>
+                                                        {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                                                            <span className="text-[10px] text-blue-400 font-normal">(custom)</span>
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-slate-200">
+                                                        ${fmt2(impliedAvgCost)}
+                                                    </p>
+                                                </div>
+
+                                                {/* 3. Current Price */}
+                                                <div className="md:text-center">
+                                                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                        Current Price
+                                                    </p>
+                                                    <div className="flex flex-wrap items-center md:justify-center gap-1.5">
+                                                        <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-white">
+                                                            ${asset.currentPrice.toFixed(2)}
+                                                        </span>
+                                                        <span
+                                                            className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                                                asset.todayChangePercent >= 0
+                                                                    ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                                    : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            }`}
+                                                        >
+                                                            {asset.todayChangePercent > 0 ? '+' : ''}
+                                                            {asset.todayChangePercent?.toFixed(2)}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 4. Book Cost */}
+                                                <div className="md:text-center">
+                                                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1 flex items-center md:justify-center gap-1.5">
+                                                        <span>Book Cost</span>
+                                                        {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                                                            <span className="text-[11px] bg-blue-500/15 border border-blue-500/35 text-blue-400 px-1.5 py-0.5 rounded">
+                                                                Custom
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                    {renderBookCost(asset, 'lg', 'center')}
+                                                </div>
+
+                                                {/* 5. Market Value */}
+                                                <div className="md:text-center">
+                                                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                        Market Value
+                                                    </p>
+                                                    <p
+                                                        className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
+                                                            asset.marketValue >= effectiveBookCost ? 'text-green-400' : 'text-red-400'
+                                                        }`}
+                                                    >
+                                                        ${fmt2(asset.marketValue)}
+                                                    </p>
+                                                </div>
+
+                                                {/* 6. P/L ($) */}
+                                                <div className="md:text-center">
+                                                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                        P/L ($)
+                                                    </p>
+                                                    <p
+                                                        className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
+                                                            asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                                        }`}
+                                                    >
+                                                        {asset.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(asset.profit))}
+                                                    </p>
+                                                </div>
+
+                                                {/* 7. P/L (%) */}
+                                                <div className="md:text-center">
+                                                    <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
+                                                        P/L (%)
+                                                    </p>
+                                                    <p
+                                                        className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
+                                                            asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                                        }`}
+                                                    >
+                                                        {asset.profitPercent >= 0 ? '+' : ''}
+                                                        {asset.profitPercent.toFixed(2)}%
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* 2. Avg. Cost */}
-                                        <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1 flex items-center md:justify-center gap-1">
-                                                <span>Avg. Cost</span>
-                                                {asset.customBookCost !== undefined && asset.customBookCost !== null && (
-                                                    <span className="text-[10px] text-blue-400 font-normal">
-                                                        (custom)
-                                                    </span>
-                                                )}
-                                            </p>
-                                            <p className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-slate-200">
-                                                ${fmt2(impliedAvgCost)}
-                                            </p>
+                                        {/* Content Grid */}
+                                        <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-6">
+                                            <div className="space-y-5">
+                                                {render52WStats(asset)}
+                                                {renderSimulators(asset)}
+                                            </div>
+                                            {renderSparkline(asset)}
                                         </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                                        {/* 3. Current Price */}
-                                        <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                Current Price
-                                            </p>
-                                            <div className="flex flex-wrap items-center md:justify-center gap-1.5">
-                                                <span className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-white">
+                    {/* Compact Card View */}
+                    {assets.length > 0 && assetView === 'compact' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {sortedAssets.map(asset => {
+                                const effectiveBookCost = getEffectiveBookCost(asset);
+                                const impliedAvgCost = getImpliedAvgCost(asset);
+                                const isToolsOpen = !!expandedTools[asset.id];
+
+                                return (
+                                    <div
+                                        key={asset.id}
+                                        className="bg-slate-800/95 border border-slate-700/90 rounded-2xl overflow-hidden shadow-lg flex flex-col"
+                                    >
+                                        {/* Compact Header */}
+                                        <div className="p-4 bg-slate-900/65 border-b border-slate-700/80 flex items-start justify-between gap-3">
+                                            <div>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <h3 className="text-lg font-bold font-mono text-white leading-none">
+                                                        {asset.ticker}
+                                                    </h3>
+                                                    {asset.currency === 'USD' && (
+                                                        <span className="text-[10px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/35 text-blue-400">
+                                                            USD
+                                                        </span>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
+                                                        className="p-1 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                                        title={`Rename or Merge ${asset.ticker}`}
+                                                    >
+                                                        <Pencil size={12} />
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                    <span className="text-xs text-slate-300 font-mono font-semibold">
+                                                        {asset.quantity.toLocaleString()} sh
+                                                    </span>
+                                                    {renderSignalBadge(asset)}
+                                                </div>
+                                            </div>
+
+                                            <div className="text-right shrink-0">
+                                                <p className="text-lg font-mono tabular-nums font-bold text-white leading-none">
                                                     ${asset.currentPrice.toFixed(2)}
-                                                </span>
+                                                </p>
                                                 <span
-                                                    className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                                    className={`inline-block mt-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md border ${
                                                         asset.todayChangePercent >= 0
                                                             ? 'bg-green-500/15 border-green-500/35 text-green-400'
                                                             : 'bg-red-500/15 border-red-500/35 text-red-400'
@@ -949,542 +1468,293 @@ const AccountDetails = () => {
                                             </div>
                                         </div>
 
-                                        {/* 4. Book Cost */}
-                                        <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1 flex items-center md:justify-center gap-1.5">
-                                                <span>Book Cost</span>
-                                                {asset.customBookCost !== undefined && asset.customBookCost !== null && (
-                                                    <span className="text-[11px] bg-blue-500/15 border border-blue-500/35 text-blue-400 px-1.5 py-0.5 rounded">
-                                                        Custom
-                                                    </span>
-                                                )}
-                                            </p>
-                                            {editingBookCostId === asset.id ? (
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center md:justify-center gap-1.5">
-                                                        <input
-                                                            type="number"
-                                                            step="any"
-                                                            className="w-28 bg-slate-900 border border-blue-500 rounded-lg px-2 py-1 text-sm text-white font-mono focus:outline-none input-no-spinner"
-                                                            value={customBookCostInput[asset.id] || ''}
-                                                            onChange={e =>
-                                                                setCustomBookCostInput({
-                                                                    ...customBookCostInput,
-                                                                    [asset.id]: e.target.value,
-                                                                })
-                                                            }
-                                                            autoFocus
-                                                        />
-                                                        <button
-                                                            onClick={() => {
-                                                                const rawInput = customBookCostInput[asset.id];
-                                                                const cleaned = rawInput
-                                                                    ? rawInput.toString().replace(/[,$]/g, '')
-                                                                    : '';
-                                                                const value = parseFloat(cleaned);
-
-                                                                if (!isNaN(value) && value >= 0) {
-                                                                    updateAssetCustomBookCost(asset.id, value);
-                                                                } else {
-                                                                    alert('Please enter a valid number (e.g. 18240.08)');
-                                                                }
-                                                                setEditingBookCostId(null);
-                                                            }}
-                                                            className="p-1.5 bg-green-500/15 hover:bg-green-500/25 rounded-lg text-green-400 transition-colors"
-                                                            title="Save custom book cost"
-                                                        >
-                                                            <Save size={15} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingBookCostId(null);
-                                                                setCustomBookCostInput({
-                                                                    ...customBookCostInput,
-                                                                    [asset.id]: '',
-                                                                });
-                                                            }}
-                                                            className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors"
-                                                            title="Cancel"
-                                                        >
-                                                            <X size={15} />
-                                                        </button>
-                                                        {asset.customBookCost !== undefined && asset.customBookCost !== null && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    updateAssetCustomBookCost(asset.id, null);
-                                                                    setEditingBookCostId(null);
-                                                                    setCustomBookCostInput({
-                                                                        ...customBookCostInput,
-                                                                        [asset.id]: '',
-                                                                    });
-                                                                }}
-                                                                className="p-1.5 bg-red-500/15 hover:bg-red-500/25 rounded-lg text-red-400 transition-colors"
-                                                                title="Reset to calculated"
-                                                            >
-                                                                <RotateCcw size={15} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {(() => {
-                                                        const rawVal = parseFloat((customBookCostInput[asset.id] || '').replace(/[,$]/g, ''));
-                                                        if (!isNaN(rawVal) && rawVal > 0 && asset.quantity > 0) {
-                                                             return (
-                                                                 <p className="text-[11px] text-blue-400 font-mono mt-1">
-                                                                     ≈ ${fmt2(rawVal / asset.quantity)} / share
-                                                                 </p>
-                                                             );
-                                                         }
-                                                         return null;
-                                                     })()}
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center md:justify-center gap-1.5">
-                                                    <p className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-slate-200">
-                                                        ${fmt2(effectiveBookCost)}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingBookCostId(asset.id);
-                                                            setCustomBookCostInput({
-                                                                ...customBookCostInput,
-                                                                [asset.id]: effectiveBookCost.toString(),
-                                                            });
-                                                        }}
-                                                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors"
-                                                        title="Edit book cost"
-                                                    >
-                                                        <Pencil size={14} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* 5. Market Value */}
-                                        <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                Market Value
-                                            </p>
-                                            <p
-                                                className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
-                                                    asset.marketValue >= effectiveBookCost ? 'text-green-400' : 'text-red-400'
-                                                }`}
-                                            >
-                                                ${fmt2(asset.marketValue)}
-                                            </p>
-                                        </div>
-
-                                        {/* 6. P/L ($) */}
-                                        <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                P/L ($)
-                                            </p>
-                                            <p
-                                                className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
-                                                    asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
-                                                }`}
-                                            >
-                                                {asset.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(asset.profit))}
-                                            </p>
-                                        </div>
-
-                                        {/* 7. P/L (%) */}
-                                        <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                P/L (%)
-                                            </p>
-                                            <p
-                                                className={`text-xl sm:text-2xl font-mono tabular-nums font-bold ${
-                                                    asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
-                                                }`}
-                                            >
-                                                {asset.profitPercent >= 0 ? '+' : ''}
-                                                {asset.profitPercent.toFixed(2)}%
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Content Grid */}
-                                <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-6">
-                                    {/* Left Content Area */}
-                                    <div className="space-y-5">
-                                        {/* 52W Stats */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-900/60 border border-slate-700/70 p-3.5 rounded-xl">
+                                        {/* Compact Metrics */}
+                                        <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                                             <div>
-                                                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                    52W High
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                                    Market Value
                                                 </p>
-                                                <p className="font-mono tabular-nums text-white text-base font-bold">
-                                                    {asset.high52Week ? `$${asset.high52Week.toFixed(2)}` : '—'}
+                                                <p
+                                                    className={`font-mono tabular-nums font-bold text-base ${
+                                                        asset.marketValue >= effectiveBookCost ? 'text-green-400' : 'text-red-400'
+                                                    }`}
+                                                >
+                                                    ${fmt2(asset.marketValue)}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                                    P/L
+                                                </p>
+                                                <p
+                                                    className={`font-mono tabular-nums font-bold text-base ${
+                                                        asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                                    }`}
+                                                >
+                                                    {asset.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(asset.profit))}{' '}
+                                                    <span className="text-xs">
+                                                        ({asset.profitPercent >= 0 ? '+' : ''}
+                                                        {asset.profitPercent.toFixed(2)}%)
+                                                    </span>
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                    52W Low
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                                    Avg. Cost
                                                 </p>
-                                                <p className="font-mono tabular-nums text-white text-base font-bold">
-                                                    {asset.low52Week ? `$${asset.low52Week.toFixed(2)}` : '—'}
+                                                <p className="font-mono tabular-nums font-semibold text-slate-200">
+                                                    ${fmt2(impliedAvgCost)}
                                                 </p>
                                             </div>
-                                            <div className="col-span-2 sm:col-span-1">
-                                                <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1.5">
-                                                    % to 52W High
+                                            <div className="text-right">
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                                    Book Cost
                                                 </p>
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="flex-1 h-2 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-blue-500 rounded-full"
-                                                            style={{
-                                                                width: `${Math.max(
-                                                                    0,
-                                                                    Math.min(100, (asset.currentPrice / (asset.high52Week || 1)) * 100)
-                                                                )}%`,
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs text-white font-mono tabular-nums font-bold">
-                                                        {asset.high52Week
-                                                            ? `${(100 - (asset.currentPrice / asset.high52Week) * 100).toFixed(1)}%`
-                                                            : '—'}
-                                                    </span>
-                                                </div>
+                                                {renderBookCost(asset, 'sm', 'right')}
                                             </div>
                                         </div>
 
-                                        {/* Simulators */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            {/* Sell Simulator */}
-                                            <div className="space-y-2.5">
-                                                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                                                    <Calculator size={13} className="text-blue-400" />
-                                                    <span>Sell Simulator</span>
-                                                </h4>
-
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-2 text-slate-300 text-xs font-semibold">
-                                                        $
-                                                    </span>
-                                                    <input
-                                                        type="number"
-                                                        className="bg-slate-900 border border-slate-700 rounded-xl pl-6 pr-3 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                        placeholder={`Target Price (Cur: $${asset.currentPrice.toFixed(2)})`}
-                                                        value={simTargetPrice[asset.id] || ''}
-                                                        onChange={e =>
-                                                            setSimTargetPrice({ ...simTargetPrice, [asset.id]: e.target.value })
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-2">
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-2 text-slate-300 text-xs font-semibold">
-                                                                $
-                                                            </span>
-                                                            <input
-                                                                type="number"
-                                                                className="bg-slate-900 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                                placeholder="Sell Amount"
-                                                                value={sPrice}
-                                                                onChange={e =>
-                                                                    setSimSellPrice({ ...simSellPrice, [asset.id]: e.target.value })
-                                                                }
-                                                            />
-                                                        </div>
-                                                        {sPrice &&
-                                                            (() => {
-                                                                const amountVal = parseFloat(sPrice);
-                                                                if (isNaN(amountVal) || amountVal <= 0) return null;
-                                                                const targetPriceVal = simTargetPrice[asset.id]
-                                                                    ? parseFloat(simTargetPrice[asset.id])
-                                                                    : NaN;
-                                                                const sellPriceUsed =
-                                                                    !isNaN(targetPriceVal) && targetPriceVal > 0
-                                                                        ? targetPriceVal
-                                                                        : asset.currentPrice || 1;
-                                                                const sharesNum = amountVal / sellPriceUsed;
-                                                                const profit = (sellPriceUsed - impliedAvgCost) * sharesNum;
-                                                                const profitPercent =
-                                                                    impliedAvgCost > 0
-                                                                        ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100
-                                                                        : 0;
-
-                                                                const newQuantity = asset.quantity - sharesNum;
-                                                                const newBookCost = effectiveBookCost - sharesNum * impliedAvgCost;
-                                                                const newMarketValue = newQuantity * asset.currentPrice;
-                                                                const newAvg =
-                                                                    newQuantity > 0 ? newBookCost / newQuantity : impliedAvgCost;
-                                                                const newProfit = newMarketValue - newBookCost;
-                                                                const newProfitPercent =
-                                                                    Math.abs(newBookCost) > 0.01
-                                                                        ? (newProfit / newBookCost) * 100
-                                                                        : 0;
-
-                                                                return (
-                                                                    <SimProjected
-                                                                        summaryLabel="Sells"
-                                                                        summaryValue={`${sharesNum.toFixed(2)} sh`}
-                                                                        tradeProfit={profit}
-                                                                        tradeProfitPct={profitPercent}
-                                                                        newBookCost={newBookCost}
-                                                                        newMarketValue={newMarketValue}
-                                                                        newProfit={newProfit}
-                                                                        newProfitPercent={newProfitPercent}
-                                                                        newAvg={newAvg}
-                                                                    />
-                                                                );
-                                                            })()}
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <div className="relative">
-                                                            <input
-                                                                type="number"
-                                                                className="bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-10 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                                placeholder="Shares"
-                                                                value={simSellShares[asset.id] || ''}
-                                                                onChange={e =>
-                                                                    setSimSellShares({ ...simSellShares, [asset.id]: e.target.value })
-                                                                }
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                className="absolute right-1.5 top-1 text-[11px] font-bold bg-slate-800 border border-slate-700 text-slate-200 hover:text-white px-2 py-0.5 rounded-lg transition-colors"
-                                                                onClick={() =>
-                                                                    setSimSellShares({
-                                                                        ...simSellShares,
-                                                                        [asset.id]: asset.quantity.toString(),
-                                                                    })
-                                                                }
-                                                            >
-                                                                All
-                                                            </button>
-                                                        </div>
-                                                        {simSellShares[asset.id] &&
-                                                            (() => {
-                                                                const sharesVal = parseFloat(simSellShares[asset.id]);
-                                                                if (isNaN(sharesVal) || sharesVal <= 0) return null;
-                                                                const targetPriceVal = simTargetPrice[asset.id]
-                                                                    ? parseFloat(simTargetPrice[asset.id])
-                                                                    : NaN;
-                                                                const sellPriceUsed =
-                                                                    !isNaN(targetPriceVal) && targetPriceVal > 0
-                                                                        ? targetPriceVal
-                                                                        : asset.currentPrice || 1;
-                                                                const proceeds = sharesVal * sellPriceUsed;
-                                                                const profit = (sellPriceUsed - impliedAvgCost) * sharesVal;
-                                                                const profitPercent =
-                                                                    impliedAvgCost > 0
-                                                                        ? ((sellPriceUsed - impliedAvgCost) / impliedAvgCost) * 100
-                                                                        : 0;
-
-                                                                const newQuantity = asset.quantity - sharesVal;
-                                                                const newBookCost = effectiveBookCost - sharesVal * impliedAvgCost;
-                                                                const newMarketValue = newQuantity * asset.currentPrice;
-                                                                const newAvg =
-                                                                    newQuantity > 0 ? newBookCost / newQuantity : impliedAvgCost;
-                                                                const newProfit = newMarketValue - newBookCost;
-                                                                const newProfitPercent =
-                                                                    Math.abs(newBookCost) > 0.01
-                                                                        ? (newProfit / newBookCost) * 100
-                                                                        : 0;
-
-                                                                return (
-                                                                    <SimProjected
-                                                                        summaryLabel="Proc"
-                                                                        summaryValue={`$${fmt2(proceeds)}`}
-                                                                        tradeProfit={profit}
-                                                                        tradeProfitPct={profitPercent}
-                                                                        newBookCost={newBookCost}
-                                                                        newMarketValue={newMarketValue}
-                                                                        newProfit={newProfit}
-                                                                        newProfitPercent={newProfitPercent}
-                                                                        newAvg={newAvg}
-                                                                    />
-                                                                );
-                                                            })()}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Buy Simulator */}
-                                            <div className="space-y-2.5">
-                                                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                                                    <RefreshCw size={13} className="text-green-400" />
-                                                    <span>Buy Simulator</span>
-                                                </h4>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-2">
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-2 text-slate-300 text-xs font-semibold">
-                                                                $
-                                                            </span>
-                                                            <input
-                                                                type="number"
-                                                                className="bg-slate-900 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                                placeholder="Invest Amount"
-                                                                value={bAmount}
-                                                                onChange={e =>
-                                                                    setSimBuyAmount({ ...simBuyAmount, [asset.id]: e.target.value })
-                                                                }
-                                                            />
-                                                        </div>
-                                                        {bAmount &&
-                                                            (() => {
-                                                                const investVal = parseFloat(bAmount);
-                                                                if (isNaN(investVal) || investVal <= 0) return null;
-                                                                const sharesNum = investVal / (asset.currentPrice || 1);
-                                                                const newAvg =
-                                                                    (effectiveBookCost + investVal) / (asset.quantity + sharesNum);
-                                                                const newQuantity = asset.quantity + sharesNum;
-                                                                const newBookCost = effectiveBookCost + investVal;
-                                                                const newMarketValue = newQuantity * asset.currentPrice;
-                                                                const newProfit = newMarketValue - newBookCost;
-                                                                const newProfitPercent =
-                                                                    Math.abs(newBookCost) > 0.01
-                                                                        ? (newProfit / newBookCost) * 100
-                                                                        : 0;
-
-                                                                return (
-                                                                    <SimProjected
-                                                                        summaryLabel="Buys"
-                                                                        summaryValue={`${sharesNum.toFixed(2)} sh`}
-                                                                        newBookCost={newBookCost}
-                                                                        newMarketValue={newMarketValue}
-                                                                        newProfit={newProfit}
-                                                                        newProfitPercent={newProfitPercent}
-                                                                        newAvg={newAvg}
-                                                                    />
-                                                                );
-                                                            })()}
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <input
-                                                            type="number"
-                                                            className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-400 w-full font-mono focus:outline-none focus:border-blue-500 input-no-spinner"
-                                                            placeholder="Shares"
-                                                            value={simBuyShares[asset.id] || ''}
-                                                            onChange={e =>
-                                                                setSimBuyShares({ ...simBuyShares, [asset.id]: e.target.value })
-                                                            }
-                                                        />
-                                                        {simBuyShares[asset.id] &&
-                                                            (() => {
-                                                                const sharesVal = parseFloat(simBuyShares[asset.id]);
-                                                                if (isNaN(sharesVal) || sharesVal <= 0) return null;
-                                                                const costVal = sharesVal * asset.currentPrice;
-                                                                const newAvg =
-                                                                    (effectiveBookCost + costVal) / (asset.quantity + sharesVal);
-                                                                const newQuantity = asset.quantity + sharesVal;
-                                                                const newBookCost = effectiveBookCost + costVal;
-                                                                const newMarketValue = newQuantity * asset.currentPrice;
-                                                                const newProfit = newMarketValue - newBookCost;
-                                                                const newProfitPercent =
-                                                                    Math.abs(newBookCost) > 0.01
-                                                                        ? (newProfit / newBookCost) * 100
-                                                                        : 0;
-
-                                                                return (
-                                                                    <SimProjected
-                                                                        summaryLabel="Cost"
-                                                                        summaryValue={`$${fmt2(costVal)}`}
-                                                                        newBookCost={newBookCost}
-                                                                        newMarketValue={newMarketValue}
-                                                                        newProfit={newProfit}
-                                                                        newProfitPercent={newProfitPercent}
-                                                                        newAvg={newAvg}
-                                                                    />
-                                                                );
-                                                            })()}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        {/* Compact Footer with Tools Dropdown */}
+                                        <div className="px-4 py-2.5 bg-slate-900/45 border-t border-slate-700/70 flex items-center justify-between gap-2 mt-auto">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleResearchClick(asset.ticker)}
+                                                className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                                            >
+                                                52W &amp; Research
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleAssetTools(asset.id)}
+                                                aria-expanded={isToolsOpen}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                                                    isToolsOpen
+                                                        ? 'bg-blue-600/20 border-blue-500/40 text-blue-300'
+                                                        : 'bg-slate-900 border-slate-700 text-slate-200 hover:text-white hover:border-slate-500'
+                                                }`}
+                                            >
+                                                <Wrench size={13} className="text-blue-400" />
+                                                <span>Tools</span>
+                                                {isToolsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                            </button>
                                         </div>
+
+                                        {/* Expanded Tools Drawer */}
+                                        {isToolsOpen && (
+                                            <div className="p-4 border-t border-slate-700/80 bg-slate-900/40 space-y-4">
+                                                {renderSimulators(asset, true)}
+                                                {render52WStats(asset)}
+                                                {renderSparkline(asset, 'h-20')}
+                                            </div>
+                                        )}
                                     </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                                    {/* Right Content Area: Sparkline */}
-                                    <div className="bg-slate-900/65 rounded-xl p-3.5 border border-slate-700/80 flex flex-col justify-between">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider">
-                                                {asset.chartRange || '1MO'} Trend
-                                            </p>
-                                            <div className="flex gap-1">
-                                                {['1mo', '3mo', '1y', '5y'].map(range => {
-                                                    const isActiveRange =
-                                                        asset.chartRange === range || (!asset.chartRange && range === '1mo');
-                                                    return (
-                                                        <button
-                                                            key={range}
-                                                            onClick={e => {
-                                                                e.preventDefault();
-                                                                refreshAsset(asset.id, range);
-                                                            }}
-                                                            style={isActiveRange ? { color: '#ffffff' } : undefined}
-                                                            className={`text-[11px] px-1.5 py-0.5 rounded-md uppercase font-bold transition-colors ${
-                                                                isActiveRange
-                                                                    ? 'bg-blue-600'
-                                                                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    {/* Table View */}
+                    {assets.length > 0 && assetView === 'table' && (
+                        <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-900/90 text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700/80">
+                                        <tr>
+                                            <th className="px-5 py-3.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('ticker')}
+                                                    className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+                                                >
+                                                    <span>Asset</span>
+                                                    {renderSortIcon('ticker')}
+                                                </button>
+                                            </th>
+                                            <th className="px-4 py-3.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('averageCost')}
+                                                    className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto"
+                                                >
+                                                    <span>Avg. Cost</span>
+                                                    {renderSortIcon('averageCost')}
+                                                </button>
+                                            </th>
+                                            <th className="px-4 py-3.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('todayChange')}
+                                                    className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto"
+                                                >
+                                                    <span>Price</span>
+                                                    {renderSortIcon('todayChange')}
+                                                </button>
+                                            </th>
+                                            <th className="px-4 py-3.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('bookCost')}
+                                                    className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto"
+                                                >
+                                                    <span>Book Cost</span>
+                                                    {renderSortIcon('bookCost')}
+                                                </button>
+                                            </th>
+                                            <th className="px-4 py-3.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('marketValue')}
+                                                    className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto"
+                                                >
+                                                    <span>Market Value</span>
+                                                    {renderSortIcon('marketValue')}
+                                                </button>
+                                            </th>
+                                            <th className="px-4 py-3.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('profit')}
+                                                    className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto"
+                                                >
+                                                    <span>P/L ($)</span>
+                                                    {renderSortIcon('profit')}
+                                                </button>
+                                            </th>
+                                            <th className="px-4 py-3.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleColumnSort('profitPercent')}
+                                                    className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto"
+                                                >
+                                                    <span>P/L (%)</span>
+                                                    {renderSortIcon('profitPercent')}
+                                                </button>
+                                            </th>
+                                            <th className="px-5 py-3.5 text-right">Tools</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-700/60 text-sm">
+                                        {sortedAssets.map(asset => {
+                                            const effectiveBookCost = getEffectiveBookCost(asset);
+                                            const impliedAvgCost = getImpliedAvgCost(asset);
+                                            const isToolsOpen = !!expandedTools[asset.id];
+
+                                            return (
+                                                <React.Fragment key={asset.id}>
+                                                    <tr className="hover:bg-slate-750/60 transition-colors">
+                                                        <td className="px-5 py-3.5">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleResearchClick(asset.ticker)}
+                                                                    className="font-bold font-mono text-white hover:text-blue-400 transition-colors text-base"
+                                                                    title="View detailed research"
+                                                                >
+                                                                    {asset.ticker}
+                                                                </button>
+                                                                {asset.currency === 'USD' && (
+                                                                    <span className="text-[10px] font-sans font-bold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/35 text-blue-400">
+                                                                        USD
+                                                                    </span>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
+                                                                    className="p-1 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                                                    title={`Rename or Merge ${asset.ticker}`}
+                                                                >
+                                                                    <Pencil size={12} />
+                                                                </button>
+                                                                {renderSignalBadge(asset)}
+                                                            </div>
+                                                            <p className="text-xs text-slate-400 font-mono mt-0.5">
+                                                                {asset.quantity.toLocaleString()} shares
+                                                            </p>
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-right font-mono tabular-nums font-semibold text-slate-200">
+                                                            ${fmt2(impliedAvgCost)}
+                                                            {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                                                                <span className="block text-[10px] text-blue-400 font-sans font-normal">
+                                                                    custom
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-right">
+                                                            <span className="font-mono tabular-nums font-bold text-white">
+                                                                ${asset.currentPrice.toFixed(2)}
+                                                            </span>
+                                                            <span
+                                                                className={`block text-[11px] font-mono font-bold mt-0.5 ${
+                                                                    asset.todayChangePercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                                                }`}
+                                                            >
+                                                                {asset.todayChangePercent > 0 ? '+' : ''}
+                                                                {asset.todayChangePercent?.toFixed(2)}%
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-right">
+                                                            {renderBookCost(asset, 'sm', 'right')}
+                                                        </td>
+                                                        <td
+                                                            className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                                                asset.marketValue >= effectiveBookCost ? 'text-green-400' : 'text-red-400'
                                                             }`}
                                                         >
-                                                            {range}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                        <div
-                                            className="w-full h-24 cursor-pointer hover:opacity-85 transition-opacity"
-                                            onClick={() => handleResearchClick(asset.ticker)}
-                                            title="Click to view detailed chart and research"
-                                        >
-                                            {asset.sparkline && asset.sparkline.length > 0 ? (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart data={asset.sparkline} style={{ cursor: 'pointer' }}>
-                                                        <defs>
-                                                            <linearGradient id={`grad-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                                <stop
-                                                                    offset="5%"
-                                                                    stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
-                                                                    stopOpacity={0.35}
-                                                                />
-                                                                <stop
-                                                                    offset="95%"
-                                                                    stopColor={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
-                                                                    stopOpacity={0}
-                                                                />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <Tooltip
-                                                            cursor={{ stroke: isDark ? '#64748b' : '#94a3b8', strokeWidth: 1 }}
-                                                            contentStyle={tooltipContentStyle}
-                                                            itemStyle={tooltipItemStyle}
-                                                            formatter={value => [`$${fmt2(Number(value))}`, 'Price']}
-                                                            labelStyle={{ display: 'none' }}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="price"
-                                                            stroke={asset.todayChangePercent >= 0 ? '#10b981' : '#ef4444'}
-                                                            strokeWidth={2}
-                                                            fillOpacity={1}
-                                                            fill={`url(#grad-${asset.id})`}
-                                                            isAnimationActive={false}
-                                                        />
-                                                    </AreaChart>
-                                                </ResponsiveContainer>
-                                            ) : (
-                                                <div className="h-full flex flex-col items-center justify-center text-slate-300 text-xs text-center gap-1">
-                                                    <RotateCcw size={16} className="text-slate-400" />
-                                                    <span>Click &ldquo;Refresh Prices&rdquo; to load chart</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                                                            ${fmt2(asset.marketValue)}
+                                                        </td>
+                                                        <td
+                                                            className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                                                asset.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                                                            }`}
+                                                        >
+                                                            {asset.profit >= 0 ? '+' : '-'}${fmt2(Math.abs(asset.profit))}
+                                                        </td>
+                                                        <td
+                                                            className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold ${
+                                                                asset.profitPercent >= 0 ? 'text-green-400' : 'text-red-400'
+                                                            }`}
+                                                        >
+                                                            {asset.profitPercent >= 0 ? '+' : ''}
+                                                            {asset.profitPercent.toFixed(2)}%
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-right">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleAssetTools(asset.id)}
+                                                                aria-expanded={isToolsOpen}
+                                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                                                                    isToolsOpen
+                                                                        ? 'bg-blue-600/20 border-blue-500/40 text-blue-300'
+                                                                        : 'bg-slate-900 border-slate-700 text-slate-200 hover:text-white hover:border-slate-500'
+                                                                }`}
+                                                            >
+                                                                <Wrench size={13} className="text-blue-400" />
+                                                                <span>Tools</span>
+                                                                {isToolsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {isToolsOpen && (
+                                                        <tr className="bg-slate-900/45">
+                                                            <td colSpan={8} className="p-5">
+                                                                <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px] gap-6">
+                                                                    <div className="space-y-4">
+                                                                        {render52WStats(asset)}
+                                                                        {renderSimulators(asset)}
+                                                                    </div>
+                                                                    {renderSparkline(asset)}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
-                        );
-                    })}
+                        </div>
+                    )}
 
                     {assets.length === 0 && (
                         <div className="text-center py-16 bg-slate-800/95 rounded-2xl border border-dashed border-slate-700 space-y-3">

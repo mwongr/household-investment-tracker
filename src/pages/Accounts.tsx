@@ -327,6 +327,14 @@ const Accounts = () => {
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end items-center gap-2">
+                                                    <Link
+                                                        to={`/accounts/${acc.id}`}
+                                                        style={{ color: '#ffffff' }}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 shadow-sm transition-colors"
+                                                        title="Manage Assets"
+                                                    >
+                                                        <TrendingUp size={14} /> Assets
+                                                    </Link>
                                                     <button
                                                         type="button"
                                                         onClick={() => {
@@ -340,13 +348,6 @@ const Accounts = () => {
                                                     >
                                                         <Upload size={13} className="text-blue-400" /> Import
                                                     </button>
-                                                    <Link
-                                                        to={`/accounts/${acc.id}`}
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/35 transition-colors"
-                                                        title="Manage Assets"
-                                                    >
-                                                        <TrendingUp size={14} /> Assets
-                                                    </Link>
                                                     <button
                                                         className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
                                                         onClick={() => startEdit(acc)}
