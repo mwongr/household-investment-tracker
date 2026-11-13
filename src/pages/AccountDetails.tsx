@@ -913,11 +913,16 @@ const AccountDetails = () => {
 
                                         {/* 2. Avg. Cost */}
                                         <div className="md:text-center">
-                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                                                Avg. Cost
+                                            <p className="text-xs text-slate-300 font-bold uppercase tracking-wider mb-1 flex items-center md:justify-center gap-1">
+                                                <span>Avg. Cost</span>
+                                                {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                                                    <span className="text-[10px] text-blue-400 font-normal">
+                                                        (custom)
+                                                    </span>
+                                                )}
                                             </p>
                                             <p className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-slate-200">
-                                                ${fmt2(asset.averageCost)}
+                                                ${fmt2(impliedAvgCost)}
                                             </p>
                                         </div>
 
@@ -954,69 +959,82 @@ const AccountDetails = () => {
                                                 )}
                                             </p>
                                             {editingBookCostId === asset.id ? (
-                                                <div className="flex items-center md:justify-center gap-1.5">
-                                                    <input
-                                                        type="number"
-                                                        step="any"
-                                                        className="w-28 bg-slate-900 border border-blue-500 rounded-lg px-2 py-1 text-sm text-white font-mono focus:outline-none input-no-spinner"
-                                                        value={customBookCostInput[asset.id] || ''}
-                                                        onChange={e =>
-                                                            setCustomBookCostInput({
-                                                                ...customBookCostInput,
-                                                                [asset.id]: e.target.value,
-                                                            })
-                                                        }
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        onClick={() => {
-                                                            const rawInput = customBookCostInput[asset.id];
-                                                            const cleaned = rawInput
-                                                                ? rawInput.toString().replace(/[,$]/g, '')
-                                                                : '';
-                                                            const value = parseFloat(cleaned);
-
-                                                            if (!isNaN(value) && value >= 0) {
-                                                                updateAssetCustomBookCost(asset.id, value);
-                                                            } else {
-                                                                alert('Please enter a valid number (e.g. 18240.08)');
+                                                <div className="flex flex-col items-center">
+                                                    <div className="flex items-center md:justify-center gap-1.5">
+                                                        <input
+                                                            type="number"
+                                                            step="any"
+                                                            className="w-28 bg-slate-900 border border-blue-500 rounded-lg px-2 py-1 text-sm text-white font-mono focus:outline-none input-no-spinner"
+                                                            value={customBookCostInput[asset.id] || ''}
+                                                            onChange={e =>
+                                                                setCustomBookCostInput({
+                                                                    ...customBookCostInput,
+                                                                    [asset.id]: e.target.value,
+                                                                })
                                                             }
-                                                            setEditingBookCostId(null);
-                                                        }}
-                                                        className="p-1.5 bg-green-500/15 hover:bg-green-500/25 rounded-lg text-green-400 transition-colors"
-                                                        title="Save custom book cost"
-                                                    >
-                                                        <Save size={15} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingBookCostId(null);
-                                                            setCustomBookCostInput({
-                                                                ...customBookCostInput,
-                                                                [asset.id]: '',
-                                                            });
-                                                        }}
-                                                        className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors"
-                                                        title="Cancel"
-                                                    >
-                                                        <X size={15} />
-                                                    </button>
-                                                    {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                                                            autoFocus
+                                                        />
                                                         <button
                                                             onClick={() => {
-                                                                updateAssetCustomBookCost(asset.id, null);
+                                                                const rawInput = customBookCostInput[asset.id];
+                                                                const cleaned = rawInput
+                                                                    ? rawInput.toString().replace(/[,$]/g, '')
+                                                                    : '';
+                                                                const value = parseFloat(cleaned);
+
+                                                                if (!isNaN(value) && value >= 0) {
+                                                                    updateAssetCustomBookCost(asset.id, value);
+                                                                } else {
+                                                                    alert('Please enter a valid number (e.g. 18240.08)');
+                                                                }
+                                                                setEditingBookCostId(null);
+                                                            }}
+                                                            className="p-1.5 bg-green-500/15 hover:bg-green-500/25 rounded-lg text-green-400 transition-colors"
+                                                            title="Save custom book cost"
+                                                        >
+                                                            <Save size={15} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
                                                                 setEditingBookCostId(null);
                                                                 setCustomBookCostInput({
                                                                     ...customBookCostInput,
                                                                     [asset.id]: '',
                                                                 });
                                                             }}
-                                                            className="p-1.5 bg-red-500/15 hover:bg-red-500/25 rounded-lg text-red-400 transition-colors"
-                                                            title="Reset to calculated"
+                                                            className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors"
+                                                            title="Cancel"
                                                         >
-                                                            <RotateCcw size={15} />
+                                                            <X size={15} />
                                                         </button>
-                                                    )}
+                                                        {asset.customBookCost !== undefined && asset.customBookCost !== null && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    updateAssetCustomBookCost(asset.id, null);
+                                                                    setEditingBookCostId(null);
+                                                                    setCustomBookCostInput({
+                                                                        ...customBookCostInput,
+                                                                        [asset.id]: '',
+                                                                    });
+                                                                }}
+                                                                className="p-1.5 bg-red-500/15 hover:bg-red-500/25 rounded-lg text-red-400 transition-colors"
+                                                                title="Reset to calculated"
+                                                            >
+                                                                <RotateCcw size={15} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {(() => {
+                                                        const rawVal = parseFloat((customBookCostInput[asset.id] || '').replace(/[,$]/g, ''));
+                                                        if (!isNaN(rawVal) && rawVal > 0 && asset.quantity > 0) {
+                                                             return (
+                                                                 <p className="text-[11px] text-blue-400 font-mono mt-1">
+                                                                     ≈ ${fmt2(rawVal / asset.quantity)} / share
+                                                                 </p>
+                                                             );
+                                                         }
+                                                         return null;
+                                                     })()}
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center md:justify-center gap-1.5">

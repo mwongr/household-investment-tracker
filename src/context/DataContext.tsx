@@ -747,11 +747,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Only adjust if there was a pre-existing Custom Book Cost
             if (existingAsset?.customBookCost !== undefined && existingAsset.customBookCost !== null) {
                 if (ignoreCustomBookCostAdjustment) {
+                    const cadCost = asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost;
+                    const impliedAvg = asset.quantity > 0 ? existingAsset.customBookCost / asset.quantity : asset.averageCost;
                     return {
                         ...asset,
                         customBookCost: existingAsset.customBookCost,
-                        profit: asset.cadMarketValue - (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost),
-                        profitPercent: (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost) > 0 ? ((asset.cadMarketValue - (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost)) / (asset.currency === 'USD' ? existingAsset.customBookCost * exchangeRate : existingAsset.customBookCost)) * 100 : 0
+                        averageCost: impliedAvg,
+                        cadTotalCost: cadCost,
+                        profit: asset.cadMarketValue - cadCost,
+                        profitPercent: cadCost > 0 ? ((asset.cadMarketValue - cadCost) / cadCost) * 100 : 0
                     };
                 }
 
@@ -776,13 +780,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // If no meaningful change, keep existing value (already set in newCustomBookCost init)
 
-                // Update the asset with the calculate custom cost
+                // Update the asset with the calculated custom cost and implied average cost
                 const effectiveBookCost = newCustomBookCost;
                 const cadEffectiveBookCost = asset.currency === 'USD' ? effectiveBookCost * exchangeRate : effectiveBookCost;
+                const impliedAvg = asset.quantity > 0 ? effectiveBookCost / asset.quantity : asset.averageCost;
 
                 return {
                     ...asset,
                     customBookCost: newCustomBookCost,
+                    averageCost: impliedAvg,
                     cadTotalCost: cadEffectiveBookCost,
                     // Recalculate profit metadata based on new adjusted custom cost
                     profit: asset.cadMarketValue - cadEffectiveBookCost,
@@ -804,11 +810,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAssets(prev => prev.map(asset => {
             if (asset.id === assetId) {
                 const effectiveBookCost = customBookCost !== null && customBookCost !== undefined ? customBookCost : asset.totalCost;
+                const cadEffectiveBookCost = asset.currency === 'USD' ? effectiveBookCost * exchangeRate : effectiveBookCost;
+                const impliedAvgCost = asset.quantity > 0 ? effectiveBookCost / asset.quantity : 0;
                 return {
                     ...asset,
                     customBookCost: customBookCost !== null ? customBookCost : undefined,
-                    profit: asset.marketValue - effectiveBookCost,
-                    profitPercent: effectiveBookCost > 0 ? ((asset.marketValue - effectiveBookCost) / effectiveBookCost) * 100 : 0
+                    averageCost: impliedAvgCost,
+                    cadTotalCost: cadEffectiveBookCost,
+                    profit: asset.cadMarketValue - cadEffectiveBookCost,
+                    profitPercent: cadEffectiveBookCost > 0 ? ((asset.cadMarketValue - cadEffectiveBookCost) / cadEffectiveBookCost) * 100 : 0
                 };
             }
             return asset;
