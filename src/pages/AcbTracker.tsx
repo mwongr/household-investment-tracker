@@ -104,8 +104,8 @@ const getRowPriceAndAmount = (row: AcbHistoryRow) => {
     };
 };
 
-const getSameDayOrder = (type: AcbTransactionType) => {
-    switch (type) {
+const getSameDayOrder = (tx: AcbTransaction) => {
+    switch (tx.type) {
         case 'Buy':
         case 'Reinvested Dividend':
         case 'Reinvested Capital Gains Distribution':
@@ -113,9 +113,9 @@ const getSameDayOrder = (type: AcbTransactionType) => {
         case 'Sell':
             return 1;
         case 'Split':
-            return 2;
+            return (tx.shares || 0) < 0 ? 2 : 3;
         default:
-            return 3;
+            return 4;
     }
 };
 
@@ -123,7 +123,7 @@ function computeAcbHistory(txs: AcbTransaction[]) {
     const sorted = [...txs].sort((a, b) => {
         const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (dateDiff !== 0) return dateDiff;
-        return getSameDayOrder(a.type) - getSameDayOrder(b.type);
+        return getSameDayOrder(a) - getSameDayOrder(b);
     });
     const rows: AcbHistoryRow[] = [];
     let runningShares = 0;
