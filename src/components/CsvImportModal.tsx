@@ -416,7 +416,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 return {
                     ...tx,
                     accountId: finalAccountId,
-                    ignoreCashImpact: !updateCashBalance,
+                    ignoreCashImpact: Boolean(tx.ignoreCashImpact) || !updateCashBalance,
                 };
             });
 

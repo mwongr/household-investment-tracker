@@ -746,9 +746,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const newQty = asset.quantity + (tx.shares || 0);
                     asset.quantity = newQty <= 0.000001 ? 0 : newQty;
                 }
-                if (asset.quantity === 0) {
-                    asset.totalCost = 0;
-                }
                 asset.averageCost = asset.quantity > 0 ? asset.totalCost / asset.quantity : 0;
             }
 
