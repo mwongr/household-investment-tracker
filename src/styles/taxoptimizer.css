@@ -74,18 +74,6 @@
   pointer-events: none;
 }
 
-.tax-kpi-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--kpi-gradient, transparent);
-  opacity: 0.85;
-  pointer-events: none;
-}
-
 .tax-kpi-card:hover {
   transform: translateY(-2px);
   border-color: var(--color-border);
@@ -102,12 +90,6 @@
 .tax-kpi-card.tax-kpi-hero::before {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(99, 102, 241, 0.26));
   opacity: 0.45;
-}
-
-.tax-kpi-card.tax-kpi-hero::after {
-  height: 4px;
-  background: linear-gradient(90deg, #10b981, #6366f1, #a855f7);
-  opacity: 1;
 }
 
 .tax-kpi-card.tax-kpi-hero:hover {

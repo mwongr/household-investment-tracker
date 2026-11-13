@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Calculator, Plus, Trash2, ChevronRight, X, ChevronDown, Download, Pencil, ListPlus } from 'lucide-react';
+import { Calculator, Plus, Trash2, ChevronRight, X, ChevronDown, Download, Pencil, ListPlus, LayoutGrid, List, ArrowLeft } from 'lucide-react';
 import type { AcbTransactionType, AcbTransaction } from '../types';
 import { ImportAcbTxModal } from '../components/ImportAcbTxModal';
 import '../styles/shared.css';
@@ -218,6 +218,7 @@ const AcbTracker = () => {
     } = useData();
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
     const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+    const [holdingsView, setHoldingsView] = useState<'table' | 'cards'>('table');
 
     // Modals
     const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -300,6 +301,32 @@ const AcbTracker = () => {
             };
         });
     }, [tickersInAccount, acbTransactions, selectedAccountId]);
+
+    const allAccountOverviews = useMemo(() => {
+        return acbAccounts.map(account => {
+            const accTxs = acbTransactions.filter(t => t.acbAccountId === account.id);
+            const tickers = Array.from(new Set(accTxs.map(t => t.ticker))).sort();
+            let totalAcb = 0;
+            let totalCg = 0;
+            let activeCount = 0;
+
+            for (const ticker of tickers) {
+                const summary = computeAcbHistory(accTxs.filter(t => t.ticker === ticker));
+                totalAcb += summary.acb;
+                totalCg += summary.cg;
+                if (summary.shares > 0) activeCount++;
+            }
+
+            return {
+                account,
+                tickers,
+                activeCount,
+                txCount: accTxs.length,
+                totalAcb,
+                totalCg,
+            };
+        });
+    }, [acbAccounts, acbTransactions]);
 
     // Handlers
     const handleAddAccount = (e: React.FormEvent) => {
@@ -428,6 +455,13 @@ const AcbTracker = () => {
                         </p>
                     </div>
                 </div>
+                <button
+                    onClick={() => setIsAddAccountModalOpen(true)}
+                    style={{ color: '#ffffff' }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
+                >
+                    <Plus size={17} /> New ACB Account
+                </button>
             </div>
 
             <div className="flex flex-col lg:flex-row items-start gap-6">
@@ -519,22 +553,209 @@ const AcbTracker = () => {
                 {/* Main Content Area */}
                 <div className="flex-1 min-w-0 w-full flex flex-col gap-6">
                     {!selectedAccountId ? (
-                        <div className="flex flex-col items-center justify-center bg-slate-800/95 rounded-2xl border border-dashed border-slate-700 p-12 min-h-[320px] text-center shadow-xl">
-                            <div className="p-4 rounded-2xl bg-slate-900/75 border border-slate-700/80 text-blue-400 mb-4">
-                                <Calculator size={36} />
+                        allAccountOverviews.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center bg-slate-800/95 rounded-2xl border border-dashed border-slate-700 p-12 min-h-[320px] text-center shadow-xl">
+                                <div className="p-4 rounded-2xl bg-slate-900/75 border border-slate-700/80 text-blue-400 mb-4">
+                                    <Calculator size={36} />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">Adjusted Cost Base Tracker</h3>
+                                <p className="max-w-md text-sm text-slate-300 mb-5">
+                                    Create an ACB account to start tracking your adjusted cost base, stock splits, and capital gains for non-registered investments.
+                                </p>
+                                <button
+                                    onClick={() => setIsAddAccountModalOpen(true)}
+                                    style={{ color: '#ffffff' }}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                                >
+                                    <Plus size={17} /> Create First ACB Account
+                                </button>
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Adjusted Cost Base Tracker</h3>
-                            <p className="max-w-md text-sm text-slate-300">
-                                Select an account from the sidebar or create a new one to start tracking your adjusted cost base for non-registered investments.
-                            </p>
-                        </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {/* Household Overview Strip */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-4 shadow-lg">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                            ACB Accounts
+                                        </p>
+                                        <p className="text-2xl font-bold font-mono tabular-nums text-white">
+                                            {allAccountOverviews.length}
+                                        </p>
+                                    </div>
+                                    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-4 shadow-lg">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                            Combined Total ACB
+                                        </p>
+                                        <p className="text-2xl font-bold font-mono tabular-nums text-white">
+                                            $
+                                            {fmt2(
+                                                allAccountOverviews.reduce((sum, o) => sum + o.totalAcb, 0)
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-4 shadow-lg">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                            Combined Realized CG
+                                        </p>
+                                        {(() => {
+                                            const totalCg = allAccountOverviews.reduce(
+                                                (sum, o) => sum + o.totalCg,
+                                                0
+                                            );
+                                            return (
+                                                <p
+                                                    className={`text-2xl font-bold font-mono tabular-nums ${
+                                                        totalCg >= 0 ? 'text-green-400' : 'text-red-400'
+                                                    }`}
+                                                >
+                                                    {totalCg >= 0 ? '+' : '-'}${fmt2(Math.abs(totalCg))}
+                                                </p>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* Account Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {allAccountOverviews.map(
+                                        ({ account, tickers, activeCount, txCount, totalAcb, totalCg }) => (
+                                            <div
+                                                key={account.id}
+                                                onClick={() => {
+                                                    setSelectedAccountId(account.id);
+                                                    setSelectedTicker(null);
+                                                }}
+                                                className="p-5 bg-slate-800/95 border border-slate-700/90 hover:border-blue-500/70 rounded-2xl shadow-lg cursor-pointer transition-all group flex flex-col justify-between gap-4"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
+                                                            {account.name}
+                                                        </h3>
+                                                        <p className="text-xs text-slate-400 mt-0.5">
+                                                            {tickers.length} {tickers.length === 1 ? 'stock' : 'stocks'} ({activeCount} active) • {txCount} {txCount === 1 ? 'transaction' : 'transactions'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <button
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                if (
+                                                                    confirm(
+                                                                        `Delete account ${account.name} and all its transactions?`
+                                                                    )
+                                                                ) {
+                                                                    deleteAcbAccount(account.id);
+                                                                }
+                                                            }}
+                                                            className="p-1.5 hover:bg-red-500/15 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                                            title={`Delete ${account.name}`}
+                                                            aria-label={`Delete ${account.name}`}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                        <ChevronRight
+                                                            size={18}
+                                                            className="text-slate-400 group-hover:text-blue-400 transition-colors"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3 bg-slate-900/65 border border-slate-700/70 rounded-xl p-3.5">
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                                                            Total ACB
+                                                        </p>
+                                                        <p className="font-mono tabular-nums font-bold text-base text-white">
+                                                            ${fmt2(totalAcb)}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                                                            Realized CG
+                                                        </p>
+                                                        <p
+                                                            className={`font-mono tabular-nums font-bold text-base ${
+                                                                totalCg >= 0 ? 'text-green-400' : 'text-red-400'
+                                                            }`}
+                                                        >
+                                                            {totalCg >= 0 ? '+' : '-'}${fmt2(Math.abs(totalCg))}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {tickers.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {tickers.slice(0, 6).map(t => (
+                                                            <span
+                                                                key={t}
+                                                                className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-200"
+                                                            >
+                                                                {t}
+                                                            </span>
+                                                        ))}
+                                                        {tickers.length > 6 && (
+                                                            <span className="text-xs font-medium px-2 py-0.5 text-slate-400">
+                                                                +{tickers.length - 6} more
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        )
                     ) : (
                         <>
                             <div className="flex flex-wrap justify-between items-center gap-4">
-                                <h2 className="text-2xl font-bold text-white tracking-tight">
-                                    {selectedAccount?.name}
-                                </h2>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedAccountId(null);
+                                            setSelectedTicker(null);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white rounded-xl text-xs font-semibold transition-colors"
+                                        title="Back to all ACB accounts"
+                                    >
+                                        <ArrowLeft size={15} /> All Accounts
+                                    </button>
+                                    <h2 className="text-2xl font-bold text-white tracking-tight">
+                                        {selectedAccount?.name}
+                                    </h2>
+                                </div>
                                 <div className="flex flex-wrap items-center gap-2.5">
+                                    <div
+                                        className="inline-flex items-center bg-slate-900 border border-slate-700 rounded-xl p-1"
+                                        role="group"
+                                        aria-label="Holdings view mode"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => setHoldingsView('table')}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                holdingsView === 'table'
+                                                    ? 'bg-blue-600 text-white shadow-sm'
+                                                    : 'text-slate-300 hover:text-white'
+                                            }`}
+                                            title="Table View"
+                                        >
+                                            <List size={14} /> Table
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setHoldingsView('cards')}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                holdingsView === 'cards'
+                                                    ? 'bg-blue-600 text-white shadow-sm'
+                                                    : 'text-slate-300 hover:text-white'
+                                            }`}
+                                            title="Card View"
+                                        >
+                                            <LayoutGrid size={14} /> Cards
+                                        </button>
+                                    </div>
                                     <button
                                         onClick={() => setIsImportModalOpen(true)}
                                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-600 hover:border-slate-500 text-slate-100 rounded-xl text-sm font-semibold shadow-sm transition-colors"
@@ -560,14 +781,91 @@ const AcbTracker = () => {
                                 </div>
                             </div>
 
-                            {/* Security Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {accountSummaries.length === 0 ? (
-                                    <div className="col-span-full p-6 bg-slate-800/95 rounded-2xl border border-slate-700/90 text-slate-300 text-sm w-full">
-                                        No securities tracked in this account yet. Add a transaction to begin.
+                            {/* Securities Summary (Table or Card View) */}
+                            {accountSummaries.length === 0 ? (
+                                <div className="p-6 bg-slate-800/95 rounded-2xl border border-slate-700/90 text-slate-300 text-sm w-full">
+                                    No securities tracked in this account yet. Add a transaction or import from an account to begin.
+                                </div>
+                            ) : holdingsView === 'table' ? (
+                                <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead className="bg-slate-900/90 border-b border-slate-700/80">
+                                                <tr className="text-xs font-bold uppercase tracking-wider text-slate-300 whitespace-nowrap">
+                                                    <th className="px-5 py-3.5">Ticker</th>
+                                                    <th className="px-4 py-3.5 text-right">Shares</th>
+                                                    <th className="px-4 py-3.5 text-right">Total ACB</th>
+                                                    <th className="px-4 py-3.5 text-right text-blue-400">ACB / Share</th>
+                                                    <th className="px-4 py-3.5 text-right">Realized CG</th>
+                                                    <th className="px-4 py-3.5 text-right w-20">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-700/60 text-sm">
+                                                {accountSummaries.map(summary => {
+                                                    const isSelected = selectedTicker === summary.ticker;
+                                                    return (
+                                                        <tr
+                                                            key={summary.ticker}
+                                                            onClick={() => setSelectedTicker(summary.ticker)}
+                                                            className={`cursor-pointer transition-colors ${
+                                                                isSelected
+                                                                    ? 'bg-blue-500/15 hover:bg-blue-500/20'
+                                                                    : 'hover:bg-slate-750/60'
+                                                            }`}
+                                                        >
+                                                            <td className="px-5 py-3.5 font-mono font-bold text-white whitespace-nowrap">
+                                                                <span className={isSelected ? 'text-blue-400' : 'text-white'}>
+                                                                    {summary.ticker}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3.5 text-right font-mono tabular-nums text-slate-200 whitespace-nowrap">
+                                                                {formatShares(summary.shares)}
+                                                            </td>
+                                                            <td className="px-4 py-3.5 text-right font-mono tabular-nums font-semibold text-white whitespace-nowrap">
+                                                                ${fmt2(summary.acb)}
+                                                            </td>
+                                                            <td className="px-4 py-3.5 text-right font-mono tabular-nums font-bold text-blue-400 whitespace-nowrap">
+                                                                ${fmt4(summary.acbPerShare)}
+                                                            </td>
+                                                            <td
+                                                                className={`px-4 py-3.5 text-right font-mono tabular-nums font-bold whitespace-nowrap ${
+                                                                    summary.cg >= 0 ? 'text-green-400' : 'text-red-400'
+                                                                }`}
+                                                            >
+                                                                {summary.cg >= 0 ? '+' : '-'}${fmt2(Math.abs(summary.cg))}
+                                                            </td>
+                                                            <td className="px-4 py-3.5 text-right">
+                                                                <button
+                                                                    onClick={e => {
+                                                                        e.stopPropagation();
+                                                                        if (
+                                                                            confirm(
+                                                                                `Delete ${summary.ticker} and all its ACB transactions from ${selectedAccount?.name || 'this account'}?`
+                                                                            )
+                                                                        ) {
+                                                                            deleteAcbTicker(selectedAccountId, summary.ticker);
+                                                                            if (selectedTicker === summary.ticker) {
+                                                                                setSelectedTicker(null);
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    className="p-1.5 hover:bg-red-500/15 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                                                    title={`Delete ${summary.ticker}`}
+                                                                    aria-label={`Delete ${summary.ticker}`}
+                                                                >
+                                                                    <Trash2 size={15} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                ) : (
-                                    accountSummaries.map(summary => {
+                                </section>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {accountSummaries.map(summary => {
                                         const isSelected = selectedTicker === summary.ticker;
                                         return (
                                             <div
@@ -641,9 +939,9 @@ const AcbTracker = () => {
                                                 </div>
                                             </div>
                                         );
-                                    })
-                                )}
-                            </div>
+                                    })}
+                                </div>
+                            )}
 
                             {/* Transaction History Table */}
                             {selectedTicker && (
