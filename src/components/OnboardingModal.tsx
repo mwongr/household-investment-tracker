@@ -19,7 +19,7 @@ interface OnboardingModalProps {
     isInline?: boolean;
 }
 
-const COMMON_INSTITUTIONS = [
+export const COMMON_INSTITUTIONS = [
     'Wealthsimple',
     'Questrade',
     'TD Direct Investing',

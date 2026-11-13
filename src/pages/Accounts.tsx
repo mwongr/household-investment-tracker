@@ -4,10 +4,22 @@ import { Plus, Trash2, X, Save, Wallet, Pencil, TrendingUp, Upload } from 'lucid
 import { useData } from '../context/DataContext';
 import type { Account, AccountType } from '../types';
 import CsvImportModal from '../components/CsvImportModal';
+import { COMMON_INSTITUTIONS } from '../components/OnboardingModal';
 import '../styles/shared.css';
 
 const Accounts = () => {
-    const { accounts, members, institutions, accountTypes, assets, addAccount, updateAccount, deleteAccount } = useData();
+    const {
+        accounts,
+        members,
+        institutions,
+        accountTypes,
+        assets,
+        addAccount,
+        updateAccount,
+        deleteAccount,
+        addMember,
+        addInstitution,
+    } = useData();
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -20,6 +32,12 @@ const Accounts = () => {
     const [type, setType] = useState<AccountType>(() => accountTypes[0] || 'TFSA');
     const [name, setName] = useState('');
     const [initialCash, setInitialCash] = useState('');
+
+    // Inline Member & Institution Creation State
+    const [showAddMember, setShowAddMember] = useState(false);
+    const [newMemberName, setNewMemberName] = useState('');
+    const [showAddInstitution, setShowAddInstitution] = useState(false);
+    const [newInstitutionName, setNewInstitutionName] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,6 +81,38 @@ const Accounts = () => {
         setType(accountTypes[0] || 'TFSA');
         setName('');
         setInitialCash('');
+        setShowAddMember(false);
+        setNewMemberName('');
+        setShowAddInstitution(false);
+        setNewInstitutionName('');
+    };
+
+    const handleQuickAddMember = () => {
+        const trimmed = newMemberName.trim();
+        if (!trimmed) return;
+        const existing = members.find(m => m.name.toLowerCase() === trimmed.toLowerCase());
+        if (existing) {
+            setMemberId(existing.id);
+        } else {
+            const created = addMember(trimmed);
+            setMemberId(created.id);
+        }
+        setNewMemberName('');
+        setShowAddMember(false);
+    };
+
+    const handleQuickAddInstitution = (instName: string) => {
+        const trimmed = instName.trim();
+        if (!trimmed) return;
+        const existing = institutions.find(i => i.name.toLowerCase() === trimmed.toLowerCase());
+        if (existing) {
+            setInstitutionId(existing.id);
+        } else {
+            const created = addInstitution(trimmed);
+            setInstitutionId(created.id);
+        }
+        setNewInstitutionName('');
+        setShowAddInstitution(false);
     };
 
     const availableAccountTypes = type && !accountTypes.includes(type) ? [type, ...accountTypes] : accountTypes;
@@ -138,9 +188,24 @@ const Accounts = () => {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                                Select Member
-                            </label>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Select Member
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddMember(prev => !prev)}
+                                    className="text-xs font-semibold text-blue-400 hover:underline inline-flex items-center gap-1"
+                                >
+                                    {showAddMember ? (
+                                        <>Cancel</>
+                                    ) : (
+                                        <>
+                                            <Plus size={12} /> Add Member
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                             <select
                                 className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                                 value={memberId}
@@ -154,11 +219,53 @@ const Accounts = () => {
                                     </option>
                                 ))}
                             </select>
+                            {showAddMember && (
+                                <div className="mt-2 p-2.5 bg-slate-900/75 border border-slate-700/80 rounded-xl flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500"
+                                        placeholder="Enter member name..."
+                                        value={newMemberName}
+                                        onChange={e => setNewMemberName(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleQuickAddMember();
+                                            }
+                                        }}
+                                        autoFocus
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleQuickAddMember}
+                                        disabled={!newMemberName.trim()}
+                                        style={{ color: '#ffffff' }}
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-xs font-bold transition-colors"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                                Select Institution
-                            </label>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                                    Select Institution
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddInstitution(prev => !prev)}
+                                    className="text-xs font-semibold text-blue-400 hover:underline inline-flex items-center gap-1"
+                                >
+                                    {showAddInstitution ? (
+                                        <>Cancel</>
+                                    ) : (
+                                        <>
+                                            <Plus size={12} /> Add Institution
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                             <select
                                 className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                                 value={institutionId}
@@ -172,6 +279,51 @@ const Accounts = () => {
                                     </option>
                                 ))}
                             </select>
+                            {showAddInstitution && (
+                                <div className="mt-2 p-3 bg-slate-900/75 border border-slate-700/80 rounded-xl space-y-2.5">
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                            Quick Presets
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {COMMON_INSTITUTIONS.map(preset => (
+                                                <button
+                                                    key={preset}
+                                                    type="button"
+                                                    onClick={() => handleQuickAddInstitution(preset)}
+                                                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-blue-600/25 border border-slate-700 hover:border-blue-500/40 text-slate-200 hover:text-white transition-colors"
+                                                >
+                                                    {preset}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-1 border-t border-slate-700/70">
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-slate-900 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none focus:border-blue-500"
+                                            placeholder="Or enter custom institution..."
+                                            value={newInstitutionName}
+                                            onChange={e => setNewInstitutionName(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleQuickAddInstitution(newInstitutionName);
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleQuickAddInstitution(newInstitutionName)}
+                                            disabled={!newInstitutionName.trim()}
+                                            style={{ color: '#ffffff' }}
+                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-xs font-bold transition-colors"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
