@@ -112,6 +112,7 @@ export type AcbAccount = {
 export type AcbTransaction = {
   id: string;
   acbAccountId: string;
+  sourceTransactionId?: string;
   ticker: string;
   date: string;
   type: AcbTransactionType;

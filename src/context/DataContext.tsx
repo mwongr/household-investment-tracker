@@ -70,6 +70,7 @@ interface DataContextType {
     addAcbAccount: (name: string) => void;
     deleteAcbAccount: (id: string) => void;
     addAcbTransaction: (transaction: Omit<AcbTransaction, 'id'>) => void;
+    addAcbTransactions: (transactions: Omit<AcbTransaction, 'id'>[]) => void;
     updateAcbTransaction: (id: string, transaction: Omit<AcbTransaction, 'id'>) => void;
     deleteAcbTransaction: (id: string) => void;
 
@@ -1015,7 +1016,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const addAcbTransaction = (tx: Omit<AcbTransaction, 'id'>) => {
-        setAcbTransactions([...acbTransactions, { ...tx, id: uuidv4() }]);
+        setAcbTransactions(prev => [...prev, { ...tx, id: uuidv4() }]);
+    };
+
+    const addAcbTransactions = (txs: Omit<AcbTransaction, 'id'>[]) => {
+        const withIds = txs.map(tx => ({ ...tx, id: uuidv4() }));
+        setAcbTransactions(prev => [...prev, ...withIds]);
     };
 
     const updateAcbTransaction = (id: string, tx: Omit<AcbTransaction, 'id'>) => {
@@ -1184,6 +1190,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addAcbAccount,
             deleteAcbAccount,
             addAcbTransaction,
+            addAcbTransactions,
             updateAcbTransaction,
             deleteAcbTransaction,
             bankAccounts,

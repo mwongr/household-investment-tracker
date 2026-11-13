@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Calculator, Plus, Trash2, ChevronRight, X, ChevronDown, Download, Pencil } from 'lucide-react';
+import { Calculator, Plus, Trash2, ChevronRight, X, ChevronDown, Download, Pencil, ListPlus } from 'lucide-react';
 import type { AcbTransactionType, AcbTransaction } from '../types';
+import { ImportAcbTxModal } from '../components/ImportAcbTxModal';
 import '../styles/shared.css';
 
 interface AcbHistoryRow {
@@ -142,6 +143,7 @@ const AcbTracker = () => {
     const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
     const [newAccountName, setNewAccountName] = useState('');
     const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingTxId, setEditingTxId] = useState<string | null>(null);
 
     // Transaction Form State
@@ -447,22 +449,30 @@ const AcbTracker = () => {
                                 <h2 className="text-2xl font-bold text-white tracking-tight">
                                     {selectedAccount?.name}
                                 </h2>
-                                <button
-                                    onClick={() => {
-                                        setEditingTxId(null);
-                                        setTxForm({
-                                            type: 'Buy',
-                                            date: new Date().toISOString().split('T')[0],
-                                            memo: '',
-                                            ticker: selectedTicker || '',
-                                        });
-                                        setIsAddTxModalOpen(true);
-                                    }}
-                                    style={{ color: '#ffffff' }}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
-                                >
-                                    <Plus size={17} /> Add Transaction
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2.5">
+                                    <button
+                                        onClick={() => setIsImportModalOpen(true)}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-600 hover:border-slate-500 text-slate-100 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                                    >
+                                        <ListPlus size={17} className="text-blue-400" /> Import from Account
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setEditingTxId(null);
+                                            setTxForm({
+                                                type: 'Buy',
+                                                date: new Date().toISOString().split('T')[0],
+                                                memo: '',
+                                                ticker: selectedTicker || '',
+                                            });
+                                            setIsAddTxModalOpen(true);
+                                        }}
+                                        style={{ color: '#ffffff' }}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                                    >
+                                        <Plus size={17} /> Add Transaction
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Security Cards */}
@@ -1087,6 +1097,23 @@ const AcbTracker = () => {
                         </form>
                     </div>
                 </div>
+            )}
+            {/* Import Transactions from Portfolio Account Modal */}
+            {selectedAccount && (
+                <ImportAcbTxModal
+                    isOpen={isImportModalOpen}
+                    onClose={() => setIsImportModalOpen(false)}
+                    acbAccountId={selectedAccount.id}
+                    acbAccountName={selectedAccount.name}
+                    initialTicker={selectedTicker}
+                    onImported={importedTickers => {
+                        if (importedTickers.length === 1) {
+                            setSelectedTicker(importedTickers[0]);
+                        } else if (!selectedTicker && importedTickers.length > 0) {
+                            setSelectedTicker(importedTickers[0]);
+                        }
+                    }}
+                />
             )}
         </div>
     );
