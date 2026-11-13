@@ -644,8 +644,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const recalculateAssets = (currentTransactions: Transaction[], ignoreCustomBookCostAdjustment: boolean = false) => {
         const newAssetsMap = new Map<string, Asset>();
 
-        // Sort by date asc
-        const sorted = [...currentTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        // Sort by date asc; on the same date, process Buy/DRIP first, then Sell, then negative Stock Split, then positive Stock Split
+        const getSameDayOrder = (tx: Transaction): number => {
+            if (tx.type === 'Buy' || tx.type === 'DRIP' || tx.type === 'Dividend Reinvested') return 0;
+            if (tx.type === 'Sell') return 1;
+            if (tx.type === 'Stock Split') return (tx.shares || 0) < 0 ? 2 : 3;
+            return 4;
+        };
+        const sorted = [...currentTransactions].sort((a, b) => {
+            const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return getSameDayOrder(a) - getSameDayOrder(b);
+        });
 
         for (const tx of sorted) {
             const key = `${tx.accountId}-${tx.ticker}`;
@@ -705,21 +715,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Custom book cost logic removed to prevent double-counting on recalculation
 
             } else if (tx.type === 'Sell') {
-                const newQty = asset.quantity - (tx.shares || 0);
+                const newQty = Math.max(0, asset.quantity - (tx.shares || 0));
                 const costOfSharesSold = (tx.shares || 0) * asset.averageCost;
 
-                asset.quantity = newQty;
-                asset.totalCost -= costOfSharesSold;
+                asset.quantity = newQty <= 0.000001 ? 0 : newQty;
+                asset.totalCost = asset.quantity === 0 ? 0 : Math.max(0, asset.totalCost - costOfSharesSold);
 
                 // Custom book cost logic removed to prevent double-counting on recalculation
 
             } else if (tx.type === 'Stock Split') {
                 if (tx.splitFrom && tx.splitTo) {
                     const newQty = (asset.quantity * tx.splitTo) / tx.splitFrom;
-                    asset.quantity = newQty;
+                    asset.quantity = Math.max(0, newQty);
                 } else {
                     const newQty = asset.quantity + (tx.shares || 0);
-                    asset.quantity = newQty;
+                    asset.quantity = newQty <= 0.000001 ? 0 : newQty;
+                }
+                if (asset.quantity === 0) {
+                    asset.totalCost = 0;
                 }
                 asset.averageCost = asset.quantity > 0 ? asset.totalCost / asset.quantity : 0;
             }

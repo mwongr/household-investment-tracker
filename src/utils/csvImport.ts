@@ -322,7 +322,8 @@ export const parseWealthsimpleRow = (
     const date = parseDateToIso(rawDate) || todayDateIso;
     const rawSymbol = (raw.symbol || raw.Symbol || '').trim();
     const rowCurrency: 'CAD' | 'USD' = (raw.currency || 'CAD').toUpperCase().includes('USD') ? 'USD' : 'CAD';
-    const quantity = Math.abs(parseCleanNumber(raw.quantity));
+    const rawQuantity = parseCleanNumber(raw.quantity);
+    const quantity = Math.abs(rawQuantity);
     const unitPrice = Math.abs(parseCleanNumber(raw.unit_price));
     const commission = Math.abs(parseCleanNumber(raw.commission));
     const netCash = parseCleanNumber(raw.net_cash_amount);
@@ -439,35 +440,60 @@ export const parseWealthsimpleRow = (
         };
     }
 
-    // 5. Corporate Actions (Split, etc.)
+    // 5. Corporate Actions (Split, Consolidation, Name Change, Spin-off, etc.)
     if (
         lowerAct.includes('corporateaction') ||
         lowerAct.includes('corporate action') ||
         lowerAct.includes('legacycorporateaction') ||
         lowerAct.includes('legacy corporate action')
     ) {
-        const desc = (raw.description || '').toUpperCase();
-        if (desc.includes('SPLIT')) {
-            return {
-                rowNumber: rowNum,
-                raw,
-                isValid: true,
-                errors: [],
-                transaction: {
-                    accountId,
-                    ticker: cleanTicker,
-                    date,
-                    type: 'Stock Split',
-                    shares: quantity,
-                    pricePerShare: 0,
-                    commission: 0,
-                    amount: 0,
-                    currency,
-                    ignoreCashImpact: false,
-                },
-            };
+        if (!cleanTicker || rawQuantity === 0) {
+            return null;
         }
-        return null; // Skip non-dilutive reorganizations, spin-offs, name changes, listing changes
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: 'Stock Split',
+                shares: rawQuantity,
+                pricePerShare: 0,
+                commission: 0,
+                amount: 0,
+                currency,
+                ignoreCashImpact: false,
+            },
+        };
+    }
+
+    // 5b. Security Transfer (in-kind transfers between accounts/brokers)
+    if (lowerAct === 'securitytransfer' || lowerAct === 'security transfer') {
+        if (!cleanTicker || quantity <= 0) {
+            return null;
+        }
+        const txType = rawQuantity >= 0 ? 'Buy' : 'Sell';
+        return {
+            rowNumber: rowNum,
+            raw,
+            isValid: true,
+            errors: [],
+            transaction: {
+                accountId,
+                ticker: cleanTicker,
+                date,
+                type: txType,
+                shares: quantity,
+                pricePerShare: quantity > 0 && absCash > 0 ? absCash / quantity : 0,
+                commission: 0,
+                amount: absCash,
+                currency,
+                ignoreCashImpact: true,
+            },
+        };
     }
 
     // 6. Fees / Charges
