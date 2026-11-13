@@ -214,6 +214,7 @@ const AcbTracker = () => {
         addAcbTransaction,
         updateAcbTransaction,
         deleteAcbTransaction,
+        deleteAcbTicker,
     } = useData();
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
     const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
@@ -582,9 +583,31 @@ const AcbTracker = () => {
                                                     <h3 className="text-xl font-bold font-mono text-white">
                                                         {summary.ticker}
                                                     </h3>
-                                                    <span className="text-xs font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg text-slate-200">
-                                                        {formatShares(summary.shares)} shs
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-xs font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg text-slate-200">
+                                                            {formatShares(summary.shares)} shs
+                                                        </span>
+                                                        <button
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                if (
+                                                                    confirm(
+                                                                        `Delete ${summary.ticker} and all its ACB transactions from ${selectedAccount?.name || 'this account'}?`
+                                                                    )
+                                                                ) {
+                                                                    deleteAcbTicker(selectedAccountId, summary.ticker);
+                                                                    if (selectedTicker === summary.ticker) {
+                                                                        setSelectedTicker(null);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="p-1.5 hover:bg-red-500/15 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                                            title={`Delete ${summary.ticker}`}
+                                                            aria-label={`Delete ${summary.ticker}`}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3.5 bg-slate-900/65 border border-slate-700/70 rounded-xl p-3">
                                                     <div>

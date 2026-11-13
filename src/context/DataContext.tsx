@@ -73,6 +73,7 @@ interface DataContextType {
     addAcbTransactions: (transactions: Omit<AcbTransaction, 'id'>[]) => void;
     updateAcbTransaction: (id: string, transaction: Omit<AcbTransaction, 'id'>) => void;
     deleteAcbTransaction: (id: string) => void;
+    deleteAcbTicker: (acbAccountId: string, ticker: string) => void;
 
     // Net Worth Tracking
     bankAccounts: BankAccount[];
@@ -1029,7 +1030,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const deleteAcbTransaction = (id: string) => {
-        setAcbTransactions(acbTransactions.filter(t => t.id !== id));
+        setAcbTransactions(prev => prev.filter(t => t.id !== id));
+    };
+
+    const deleteAcbTicker = (acbAccountId: string, ticker: string) => {
+        setAcbTransactions(prev =>
+            prev.filter(t => !(t.acbAccountId === acbAccountId && t.ticker === ticker))
+        );
     };
 
     // Net Worth Tracking Methods
@@ -1193,6 +1200,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addAcbTransactions,
             updateAcbTransaction,
             deleteAcbTransaction,
+            deleteAcbTicker,
             bankAccounts,
             addBankAccount,
             updateBankAccount,
