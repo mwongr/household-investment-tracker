@@ -46,6 +46,64 @@ const formatShares = (value: number) => {
     return num.toLocaleString(undefined, { maximumFractionDigits: 4 });
 };
 
+const getRowPriceAndAmount = (row: AcbHistoryRow) => {
+    const tx = row.tx;
+    if (tx.type === 'Buy') {
+        const price =
+            tx.pricePerShare !== undefined
+                ? tx.pricePerShare
+                : tx.shares
+                  ? (row.acbChange - (tx.commission ?? 0)) / tx.shares
+                  : 0;
+        const amount = (tx.shares ?? 0) * (tx.pricePerShare ?? 0) + (tx.commission ?? 0);
+        return {
+            price: price ? `$${fmt4(price)}` : '—',
+            rawPrice: price,
+            amount: amount ? `$${fmt2(amount)}` : '—',
+            rawAmount: amount,
+            commission: tx.commission,
+        };
+    }
+    if (tx.type === 'Sell') {
+        const price = tx.pricePerShare ?? 0;
+        const amount = (tx.shares ?? 0) * (tx.pricePerShare ?? 0) - (tx.commission ?? 0);
+        return {
+            price: price ? `$${fmt4(price)}` : '—',
+            rawPrice: price,
+            amount: amount ? `$${fmt2(amount)}` : '—',
+            rawAmount: amount,
+            commission: tx.commission,
+        };
+    }
+    if (tx.type === 'Reinvested Dividend' || tx.type === 'Reinvested Capital Gains Distribution') {
+        const price =
+            tx.reinvestedShares && tx.reinvestedAmount
+                ? tx.reinvestedAmount / tx.reinvestedShares
+                : 0;
+        return {
+            price: price ? `$${fmt4(price)}` : '—',
+            rawPrice: price,
+            amount: tx.reinvestedAmount ? `$${fmt2(tx.reinvestedAmount)}` : '—',
+            rawAmount: tx.reinvestedAmount ?? 0,
+        };
+    }
+    if (tx.type === 'Return of Capital' || tx.type === 'Capital Gains Dividend') {
+        const price = tx.amountPerShare && tx.amount ? tx.amount : 0;
+        return {
+            price: price ? `$${fmt4(price)}` : '—',
+            rawPrice: price,
+            amount: tx.amount ? `$${fmt2(tx.amount)}` : '—',
+            rawAmount: tx.amount ?? 0,
+        };
+    }
+    return {
+        price: '—',
+        rawPrice: 0,
+        amount: '—',
+        rawAmount: 0,
+    };
+};
+
 function computeAcbHistory(txs: AcbTransaction[]) {
     const sorted = [...txs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const rows: AcbHistoryRow[] = [];
@@ -286,6 +344,8 @@ const AcbTracker = () => {
             'Date',
             'Transaction',
             'Memo',
+            'Price/Share',
+            'Amount',
             'Shares Change',
             'Shares Balance',
             'ACB Change',
@@ -296,19 +356,22 @@ const AcbTracker = () => {
 
         const formatNumber = (num: number) => num.toFixed(4);
 
-        const rows = filteredRows.map(row =>
-            [
+        const rows = filteredRows.map(row => {
+            const info = getRowPriceAndAmount(row);
+            return [
                 row.tx.date,
                 row.tx.type,
                 `"${row.tx.memo?.replace(/"/g, '""') || ''}"`,
+                formatNumber(info.rawPrice),
+                formatNumber(info.rawAmount),
                 formatNumber(row.sharesChange),
                 formatNumber(row.sharesAfter),
                 formatNumber(row.acbChange),
                 formatNumber(row.acbAfter),
                 formatNumber(row.acbPerShare),
                 formatNumber(row.capitalGainOrLoss),
-            ].join(',')
-        );
+            ].join(',');
+        });
 
         const csvContent = [headers.join(','), ...rows].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -628,6 +691,8 @@ const AcbTracker = () => {
                                                     <th className="px-4 py-3.5 w-28">Date</th>
                                                     <th className="px-4 py-3.5">Transaction</th>
                                                     <th className="px-4 py-3.5 text-right">Shares +/-</th>
+                                                    <th className="px-4 py-3.5 text-right">Price/Share</th>
+                                                    <th className="px-4 py-3.5 text-right">Amount</th>
                                                     <th className="px-4 py-3.5 text-right">Shares Bal.</th>
                                                     <th className="px-4 py-3.5 text-right">ACB +/-</th>
                                                     <th className="px-4 py-3.5 text-right bg-blue-500/10 text-blue-400">
@@ -643,61 +708,69 @@ const AcbTracker = () => {
                                             <tbody className="divide-y divide-slate-700/60 text-sm">
                                                 {filteredRows.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={9} className="text-center py-10 text-slate-300">
+                                                        <td colSpan={11} className="text-center py-10 text-slate-300">
                                                             No transactions found for {selectedYear}.
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    filteredRows.map(row => (
-                                                        <tr
-                                                            key={row.tx.id}
-                                                            className="hover:bg-slate-750/60 transition-colors"
-                                                        >
-                                                            <td className="px-4 py-3.5 text-slate-300 font-mono tabular-nums whitespace-nowrap">
-                                                                {row.tx.date}
-                                                            </td>
-                                                            <td className="px-4 py-3.5">
-                                                                <div className="flex flex-col items-start gap-1">
-                                                                    <span
-                                                                        className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase border ${
-                                                                            [
-                                                                                'Buy',
-                                                                                'Reinvested Dividend',
-                                                                                'Reinvested Capital Gains Distribution',
-                                                                                'Split',
-                                                                            ].includes(row.tx.type)
-                                                                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                                                : row.tx.type === 'Sell'
-                                                                                ? 'bg-red-500/15 border-red-500/35 text-red-400'
-                                                                                : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
-                                                                        }`}
-                                                                    >
-                                                                        {row.tx.type}
-                                                                    </span>
-                                                                    {row.tx.memo && (
-                                                                        <span className="text-xs text-slate-300">
-                                                                            {row.tx.memo}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td
-                                                                className={`px-4 py-3.5 text-right font-mono tabular-nums font-semibold ${
-                                                                    row.sharesChange > 0
-                                                                        ? 'text-green-400'
-                                                                        : row.sharesChange < 0
-                                                                        ? 'text-red-400'
-                                                                        : 'text-slate-400'
-                                                                }`}
+                                                    filteredRows.map(row => {
+                                                        const rowInfo = getRowPriceAndAmount(row);
+                                                        return (
+                                                            <tr
+                                                                key={row.tx.id}
+                                                                className="hover:bg-slate-750/60 transition-colors"
                                                             >
-                                                                {row.sharesChange > 0 ? '+' : ''}
-                                                                {row.sharesChange !== 0
-                                                                    ? formatShares(row.sharesChange)
-                                                                    : '—'}
-                                                            </td>
-                                                            <td className="px-4 py-3.5 text-right font-mono tabular-nums text-slate-200">
-                                                                {formatShares(row.sharesAfter)}
-                                                            </td>
+                                                                <td className="px-4 py-3.5 text-slate-300 font-mono tabular-nums whitespace-nowrap">
+                                                                    {row.tx.date}
+                                                                </td>
+                                                                <td className="px-4 py-3.5">
+                                                                    <div className="flex flex-col items-start gap-1">
+                                                                        <span
+                                                                            className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase border ${
+                                                                                [
+                                                                                    'Buy',
+                                                                                    'Reinvested Dividend',
+                                                                                    'Reinvested Capital Gains Distribution',
+                                                                                    'Split',
+                                                                                ].includes(row.tx.type)
+                                                                                    ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                                                    : row.tx.type === 'Sell'
+                                                                                    ? 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                                                    : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
+                                                                            }`}
+                                                                        >
+                                                                            {row.tx.type}
+                                                                        </span>
+                                                                        {row.tx.memo && (
+                                                                            <span className="text-xs text-slate-300">
+                                                                                {row.tx.memo}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td
+                                                                    className={`px-4 py-3.5 text-right font-mono tabular-nums font-semibold ${
+                                                                        row.sharesChange > 0
+                                                                            ? 'text-green-400'
+                                                                            : row.sharesChange < 0
+                                                                            ? 'text-red-400'
+                                                                            : 'text-slate-400'
+                                                                    }`}
+                                                                >
+                                                                    {row.sharesChange > 0 ? '+' : ''}
+                                                                    {row.sharesChange !== 0
+                                                                        ? formatShares(row.sharesChange)
+                                                                        : '—'}
+                                                                </td>
+                                                                <td className="px-4 py-3.5 text-right font-mono tabular-nums text-slate-200">
+                                                                    {rowInfo.price}
+                                                                </td>
+                                                                <td className="px-4 py-3.5 text-right font-mono tabular-nums text-slate-200">
+                                                                    {rowInfo.amount}
+                                                                </td>
+                                                                <td className="px-4 py-3.5 text-right font-mono tabular-nums text-slate-200">
+                                                                    {formatShares(row.sharesAfter)}
+                                                                </td>
                                                             <td
                                                                 className={`px-4 py-3.5 text-right font-mono tabular-nums font-semibold ${
                                                                     row.acbChange > 0
