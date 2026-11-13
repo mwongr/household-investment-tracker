@@ -31,6 +31,7 @@ interface CsvImportModalProps {
     isOpen: boolean;
     onClose: () => void;
     defaultAccountId?: string;
+    initialTargetType?: 'existing' | 'new';
     onSuccess?: (accountId: string) => void;
 }
 
@@ -38,6 +39,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     isOpen,
     onClose,
     defaultAccountId,
+    initialTargetType,
     onSuccess,
 }) => {
     const {
@@ -46,13 +48,15 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         institutions,
         accountTypes,
         addAccount,
+        addInstitution,
+        addMember,
         addTransactions,
         refreshPrices,
     } = useData();
 
     // Account Selection / Creation State
     const [targetType, setTargetType] = useState<'existing' | 'new'>(() =>
-        accounts.length === 0 ? 'new' : defaultAccountId ? 'existing' : 'existing'
+        initialTargetType || (accounts.length === 0 ? 'new' : defaultAccountId ? 'existing' : 'existing')
     );
     const [selectedAccountId, setSelectedAccountId] = useState<string>(() =>
         defaultAccountId || (accounts[0] ? accounts[0].id : '')
@@ -96,18 +100,26 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const [importError, setImportError] = useState<string | null>(null);
     const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
     const [isMaximized, setIsMaximized] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
+    const modalBodyRef = useRef<HTMLDivElement>(null);
 
-    // Update selectedAccountId when defaultAccountId changes or accounts load
+    // Update selectedAccountId & targetType when modal opens or props change
     useEffect(() => {
-        if (defaultAccountId) {
+        if (!isOpen) return;
+        if (initialTargetType) {
+            setTargetType(initialTargetType);
+        } else if (defaultAccountId) {
             setSelectedAccountId(defaultAccountId);
             setTargetType('existing');
-        } else if (accounts.length > 0 && !selectedAccountId) {
-            setSelectedAccountId(accounts[0].id);
         } else if (accounts.length === 0) {
             setTargetType('new');
         }
-    }, [defaultAccountId, accounts, selectedAccountId]);
+
+        if (defaultAccountId) {
+            setSelectedAccountId(defaultAccountId);
+        } else if (accounts.length > 0 && !selectedAccountId) {
+            setSelectedAccountId(accounts[0].id);
+        }
+    }, [isOpen, initialTargetType, defaultAccountId, accounts, selectedAccountId]);
 
     // Read file text when file changes
     useEffect(() => {
@@ -156,28 +168,32 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     // Auto-populate new account details if broker preset detected
     useEffect(() => {
         if (!parseResult) return;
-        if (targetType === 'new') {
-            if (parseResult.detectedInstitution) {
-                const matchInst = institutions.find(i =>
-                    i.name.toLowerCase().includes(parseResult.detectedInstitution!.toLowerCase())
-                );
-                if (matchInst) {
+        if (parseResult.detectedInstitution) {
+            const matchInst = institutions.find(i =>
+                i.name.toLowerCase().includes(parseResult.detectedInstitution!.toLowerCase())
+            );
+            if (matchInst) {
+                if (newInstitutionId !== matchInst.id) {
                     setNewInstitutionId(matchInst.id);
                 }
-            }
-            if (parseResult.detectedAccountType) {
-                const matchType = accountTypes.find(t =>
-                    t.toLowerCase() === parseResult.detectedAccountType!.toLowerCase()
-                );
-                if (matchType) {
-                    setNewAccType(matchType);
-                }
-            }
-            if (!newAccountName && parseResult.detectedInstitution) {
-                setNewAccountName(`${parseResult.detectedInstitution} ${parseResult.detectedAccountType || 'Account'}`);
+            } else {
+                // Auto-create institution so user has it immediately in the selector
+                const created = addInstitution(parseResult.detectedInstitution);
+                setNewInstitutionId(created.id);
             }
         }
-    }, [parseResult, targetType, institutions, accountTypes, newAccountName]);
+        if (parseResult.detectedAccountType) {
+            const matchType = accountTypes.find(t =>
+                t.toLowerCase() === parseResult.detectedAccountType!.toLowerCase()
+            );
+            if (matchType) {
+                setNewAccType(matchType);
+            }
+        }
+        if (!newAccountName && parseResult.detectedInstitution) {
+            setNewAccountName(`${parseResult.detectedInstitution} ${parseResult.detectedAccountType || 'Account'}`);
+        }
+    }, [parseResult, institutions, accountTypes, newAccountName, newInstitutionId, addInstitution]);
 
     if (!isOpen) return null;
 
@@ -291,17 +307,20 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         setImportError(null);
         if (!parseResult) {
             setImportError('No CSV data loaded.');
+            modalBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
         const validRows = parseResult.validatedRows.filter(r => r.isValid);
         if (validRows.length === 0) {
             setImportError('No valid rows found to import. Please check column mappings and data errors.');
+            modalBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
         if (!skipInvalidRows && parseResult.stats.invalidRows > 0) {
             setImportError(`There are ${parseResult.stats.invalidRows} invalid rows. Please resolve them or enable "Skip invalid rows".`);
+            modalBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
@@ -312,22 +331,39 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
             // 1. Create Account if target is 'new'
             if (targetType === 'new') {
-                if (!newAccountName.trim()) {
-                    setImportError('Please enter a name for the new account.');
-                    setIsSubmitting(false);
-                    return;
+                const finalAccountName =
+                    newAccountName.trim() ||
+                    `${parseResult.detectedInstitution || 'New'} ${parseResult.detectedAccountType || 'Investment'} Account`;
+
+                // Resolve or create Member
+                let targetMemberId = newMemberId;
+                if (!targetMemberId) {
+                    if (members.length > 0) {
+                        targetMemberId = members[0].id;
+                    } else {
+                        const newMem = addMember('Primary User');
+                        targetMemberId = newMem.id;
+                    }
                 }
-                if (!newMemberId || !newInstitutionId) {
-                    setImportError('Please select a member and institution.');
-                    setIsSubmitting(false);
-                    return;
+
+                // Resolve or create Institution
+                let targetInstitutionId = newInstitutionId;
+                if (!targetInstitutionId) {
+                    const instName = parseResult.detectedInstitution || (institutions[0]?.name ?? 'Primary Institution');
+                    const existingInst = institutions.find(i => i.name.toLowerCase() === instName.toLowerCase());
+                    if (existingInst) {
+                        targetInstitutionId = existingInst.id;
+                    } else {
+                        const createdInst = addInstitution(instName);
+                        targetInstitutionId = createdInst.id;
+                    }
                 }
 
                 const cashParsed = parseFloat(newCashBalance) || 0;
                 const createdAcc = addAccount({
-                    name: newAccountName.trim(),
-                    memberId: newMemberId,
-                    institutionId: newInstitutionId,
+                    name: finalAccountName,
+                    memberId: targetMemberId,
+                    institutionId: targetInstitutionId,
                     type: newAccType,
                     cashBalance: cashParsed,
                 });
@@ -336,6 +372,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
             if (!finalAccountId) {
                 setImportError('No valid account selected.');
+                modalBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                 setIsSubmitting(false);
                 return;
             }
@@ -361,7 +398,11 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
             const count = transactionsToImport.length;
             const modeLabel = mode === 'holdings' ? 'holding(s)' : 'transaction(s)';
-            setImportSuccessMessage(`Successfully imported ${count} ${modeLabel}!`);
+            setImportSuccessMessage(
+                targetType === 'new'
+                    ? `Created account & successfully imported ${count} ${modeLabel}!`
+                    : `Successfully imported ${count} ${modeLabel}!`
+            );
 
             setTimeout(() => {
                 onSuccess?.(finalAccountId);
@@ -370,6 +411,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         } catch (err: any) {
             console.error('Import execution failed:', err);
             setImportError(err.message || 'Failed to complete import.');
+            modalBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
         } finally {
             setIsSubmitting(false);
         }
@@ -434,7 +476,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 </div>
 
                 {/* Body Content */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div ref={modalBodyRef} className="flex-1 overflow-y-auto p-6 space-y-6">
                     {/* Success Notice */}
                     {importSuccessMessage && (
                         <div className="bg-green-500/15 border border-green-500/35 rounded-xl p-4 flex items-center gap-3 text-green-300 animate-in fade-in">
@@ -453,11 +495,18 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
                     {/* Step 1: Destination Account */}
                     <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 space-y-3.5">
-                        <div className="flex items-center justify-between">
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                                <Wallet size={15} className="text-blue-400" /> Destination Account
-                            </label>
-                            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700 text-xs font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                                    <Wallet size={15} className="text-blue-400" /> Destination Account
+                                </label>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                    {targetType === 'new'
+                                        ? 'A new investment account will be created and populated with these records.'
+                                        : 'Records will be added to the selected existing account.'}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700 text-xs font-semibold self-start sm:self-auto">
                                 <button
                                     type="button"
                                     onClick={() => setTargetType('existing')}
@@ -1324,16 +1373,24 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/90">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-                    >
-                        Cancel
-                    </button>
-
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-6 py-4 border-t border-slate-800 bg-slate-900/90">
                     <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        {importError && (
+                            <div className="flex items-center gap-2 text-xs text-red-300 bg-red-500/15 border border-red-500/30 px-3 py-1.5 rounded-xl animate-in fade-in max-w-sm sm:max-w-md">
+                                <AlertCircle size={15} className="shrink-0 text-red-400" />
+                                <span className="font-semibold truncate">{importError}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3">
                         {parseResult && (
                             <button
                                 type="button"

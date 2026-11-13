@@ -12,6 +12,7 @@ const Accounts = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importTargetAccountId, setImportTargetAccountId] = useState<string | undefined>(undefined);
+    const [importTargetType, setImportTargetType] = useState<'existing' | 'new'>('new');
 
     // Form State
     const [memberId, setMemberId] = useState('');
@@ -91,6 +92,7 @@ const Accounts = () => {
                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors"
                             onClick={() => {
                                 setImportTargetAccountId(undefined);
+                                setImportTargetType(accounts.length === 0 ? 'new' : 'existing');
                                 setIsImportModalOpen(true);
                             }}
                         >
@@ -226,6 +228,7 @@ const Accounts = () => {
                                     onClick={() => {
                                         resetForm();
                                         setImportTargetAccountId(undefined);
+                                        setImportTargetType('new');
                                         setIsImportModalOpen(true);
                                     }}
                                     className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30 transition-colors"
@@ -329,6 +332,7 @@ const Accounts = () => {
                                                         type="button"
                                                         onClick={() => {
                                                             setImportTargetAccountId(acc.id);
+                                                            setImportTargetType('existing');
                                                             setIsImportModalOpen(true);
                                                         }}
                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
@@ -375,6 +379,10 @@ const Accounts = () => {
                 isOpen={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
                 defaultAccountId={importTargetAccountId}
+                initialTargetType={importTargetType}
+                onSuccess={() => {
+                    resetForm();
+                }}
             />
         </div>
     );

@@ -26,12 +26,12 @@ interface DataContextType {
         initialAccount: { name: string; type: string; cashBalance: number }
     ) => { memberId: string; institutionId: string; accountId: string };
 
-    addMember: (name: string) => void;
+    addMember: (name: string) => Member;
     updateMember: (id: string, name: string) => void;
     setBackupPath: (path: string) => void;
     deleteMember: (id: string) => void;
 
-    addInstitution: (name: string) => void;
+    addInstitution: (name: string) => Institution;
     updateInstitution: (id: string, name: string) => void;
     deleteInstitution: (id: string) => void;
 
@@ -429,8 +429,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [assets, refreshPrices]);
 
-    const addMember = (name: string) => {
-        setMembers(prev => [...prev, { id: uuidv4(), name }]);
+    const addMember = (name: string): Member => {
+        const newMember = { id: uuidv4(), name: name.trim() };
+        setMembers(prev => [...prev, newMember]);
+        return newMember;
     };
 
     const updateMember = (id: string, name: string) => {
@@ -441,8 +443,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMembers(prev => prev.filter(m => m.id !== id));
     };
 
-    const addInstitution = (name: string) => {
-        setInstitutions(prev => [...prev, { id: uuidv4(), name }]);
+    const addInstitution = (name: string): Institution => {
+        const newInst = { id: uuidv4(), name: name.trim() };
+        setInstitutions(prev => [...prev, newInst]);
+        return newInst;
     };
 
     const updateInstitution = (id: string, name: string) => {
