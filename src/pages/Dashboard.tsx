@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
+import { buildPortfolioHistory } from '../utils/portfolioHistory';
 import {
     ResponsiveContainer,
     PieChart,
@@ -756,20 +757,15 @@ const Dashboard = () => {
         }
     };
 
-    // 6. Portfolio History
-    const sortedHistory = [...netWorthHistory].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    const portfolioHistory = sortedHistory.map(entry => ({
-        name: entry.date,
-        value: entry.value,
-    }));
-
-    if (portfolioHistory.length === 0 && totalValue > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        portfolioHistory.push({ name: today, value: totalValue });
-    }
+    // 6. Portfolio History (reconstructed from imported transactions + recorded snapshots + live totalValue)
+    const portfolioHistory = buildPortfolioHistory({
+        transactions,
+        assets,
+        accounts,
+        netWorthHistory,
+        totalValue,
+        isDemoData,
+    });
 
     return (
         <div className="space-y-8">
@@ -1153,7 +1149,7 @@ const Dashboard = () => {
                                 <XAxis
                                     dataKey="name"
                                     tickFormatter={val => {
-                                        const d = new Date(val);
+                                        const d = new Date(val.includes('T') ? val : `${val}T12:00:00`);
                                         return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
                                     }}
                                     interval={Math.max(1, Math.floor(portfolioHistory.length / 5))}
@@ -1172,7 +1168,10 @@ const Dashboard = () => {
                                 />
                                 <Tooltip
                                     formatter={(value) => [`$${fmt2(Number(value))}`, 'Net Worth']}
-                                    labelFormatter={label => new Date(label).toLocaleDateString()}
+                                    labelFormatter={label => {
+                                        const str = String(label);
+                                        return new Date(str.includes('T') ? str : `${str}T12:00:00`).toLocaleDateString();
+                                    }}
                                     contentStyle={chartTheme.tooltipStyle}
                                     itemStyle={chartTheme.tooltipItemStyle}
                                     labelStyle={chartTheme.tooltipLabelStyle}
