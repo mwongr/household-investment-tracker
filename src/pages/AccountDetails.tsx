@@ -36,7 +36,7 @@ import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 import CsvImportModal from '../components/CsvImportModal';
 import AssetSimulators from '../components/AssetSimulators';
 
-type AssetViewMode = 'cards' | 'compact' | 'table';
+type AssetViewMode = 'table' | 'cards' | 'compact';
 type AssetSortField = 'ticker' | 'profit' | 'profitPercent' | 'marketValue' | 'bookCost' | 'averageCost' | 'todayChange';
 type SortDirection = 'asc' | 'desc';
 
@@ -115,7 +115,7 @@ const AccountDetails = () => {
     // Assets View, Sorting & Tools Dropdown State
     const [assetView, setAssetView] = useState<AssetViewMode>(() => {
         const saved = localStorage.getItem('accountDetails.assetView');
-        return saved === 'cards' || saved === 'compact' || saved === 'table' ? saved : 'cards';
+        return saved === 'cards' || saved === 'compact' || saved === 'table' ? saved : 'table';
     });
     const [sortField, setSortField] = useState<AssetSortField>(() => {
         const saved = localStorage.getItem('accountDetails.sortField');
@@ -410,31 +410,38 @@ const AccountDetails = () => {
         );
     };
 
-    const renderSignalBadge = (asset: Asset) => {
+    const renderSignalBadge = (asset: Asset, size: 'normal' | 'sm' = 'normal') => {
+        const badgeClasses = size === 'sm'
+            ? 'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap'
+            : 'px-2 py-0.5 rounded text-xs font-bold uppercase whitespace-nowrap';
+        const neutralClasses = size === 'sm'
+            ? 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase whitespace-nowrap'
+            : 'px-2 py-0.5 rounded text-xs font-semibold uppercase whitespace-nowrap';
+
         if (asset.goldenCross) {
             return (
-                <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 uppercase border border-blue-500/35 whitespace-nowrap">
+                <span className={`${badgeClasses} bg-blue-500/15 text-blue-400 border border-blue-500/35`}>
                     Golden Cross
                 </span>
             );
         }
         if (asset.signal === 'buy' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30)) {
             return (
-                <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/15 text-green-400 uppercase border border-green-500/35 whitespace-nowrap">
+                <span className={`${badgeClasses} bg-green-500/15 text-green-400 border border-green-500/35`}>
                     Buy Signal
                 </span>
             );
         }
         if (asset.signal === 'sell' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70)) {
             return (
-                <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-500/15 text-red-400 uppercase border border-red-500/35 whitespace-nowrap">
+                <span className={`${badgeClasses} bg-red-500/15 text-red-400 border border-red-500/35`}>
                     Sell Signal
                 </span>
             );
         }
         if (typeof asset.signal === 'string') {
             return (
-                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-300 uppercase border border-slate-700 whitespace-nowrap">
+                <span className={`${neutralClasses} bg-slate-800 text-slate-300 border border-slate-700`}>
                     Neutral
                 </span>
             );
@@ -901,6 +908,20 @@ const AccountDetails = () => {
                             >
                                 <button
                                     type="button"
+                                    style={assetView === 'table' ? { color: '#ffffff' } : undefined}
+                                    onClick={() => setAssetView('table')}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                        assetView === 'table'
+                                            ? 'bg-blue-600 shadow-sm'
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                    title="Table View"
+                                >
+                                    <Table size={14} />
+                                    <span>Table</span>
+                                </button>
+                                <button
+                                    type="button"
                                     style={assetView === 'cards' ? { color: '#ffffff' } : undefined}
                                     onClick={() => setAssetView('cards')}
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
@@ -926,20 +947,6 @@ const AccountDetails = () => {
                                 >
                                     <LayoutList size={14} />
                                     <span>Compact</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    style={assetView === 'table' ? { color: '#ffffff' } : undefined}
-                                    onClick={() => setAssetView('table')}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                                        assetView === 'table'
-                                            ? 'bg-blue-600 shadow-sm'
-                                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                                    }`}
-                                    title="Table View"
-                                >
-                                    <Table size={14} />
-                                    <span>Table</span>
                                 </button>
                             </div>
 
@@ -1665,7 +1672,7 @@ const AccountDetails = () => {
                                                                 >
                                                                     <Pencil size={12} />
                                                                 </button>
-                                                                {renderSignalBadge(asset)}
+                                                                {renderSignalBadge(asset, 'sm')}
                                                             </div>
                                                             <p className="text-xs text-slate-400 font-mono mt-0.5">
                                                                 {asset.quantity.toLocaleString()} shares

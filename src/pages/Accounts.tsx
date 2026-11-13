@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2, X, Save, Wallet, Pencil, TrendingUp, Upload } from 'lucide-react';
+import { Plus, Trash2, X, Save, Wallet, Pencil, TrendingUp, Upload, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import type { Account, AccountType } from '../types';
 import CsvImportModal from '../components/CsvImportModal';
 import { COMMON_INSTITUTIONS } from '../components/OnboardingModal';
 import '../styles/shared.css';
+
+type AccountSortField = 'name' | 'member' | 'institution' | 'type' | 'assets' | 'cashBalance';
+type SortDirection = 'asc' | 'desc';
 
 const Accounts = () => {
     const {
@@ -117,8 +120,83 @@ const Accounts = () => {
 
     const availableAccountTypes = type && !accountTypes.includes(type) ? [type, ...accountTypes] : accountTypes;
 
+    // Sorting State: default to alphabetical by account name
+    const [sortField, setSortField] = useState<AccountSortField>('name');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
     const getMemberName = (id: string) => members.find(m => m.id === id)?.name || 'Unknown';
     const getInstName = (id: string) => institutions.find(i => i.id === id)?.name || 'Unknown';
+
+    const assetCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const a of assets) {
+            counts[a.accountId] = (counts[a.accountId] || 0) + 1;
+        }
+        return counts;
+    }, [assets]);
+
+    const handleColumnSort = (field: AccountSortField) => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortDirection(field === 'assets' || field === 'cashBalance' ? 'desc' : 'asc');
+        }
+    };
+
+    const renderSortIcon = (field: AccountSortField) => {
+        if (sortField !== field) return <ArrowUpDown size={12} className="opacity-40" />;
+        return sortDirection === 'asc' ? (
+            <ArrowUp size={12} className="text-blue-400" />
+        ) : (
+            <ArrowDown size={12} className="text-blue-400" />
+        );
+    };
+
+    const sortedAccounts = useMemo(() => {
+        const list = [...accounts];
+        return list.sort((a, b) => {
+            let comparison = 0;
+            switch (sortField) {
+                case 'name':
+                    comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                    break;
+                case 'member': {
+                    const memA = getMemberName(a.memberId);
+                    const memB = getMemberName(b.memberId);
+                    comparison = memA.localeCompare(memB, undefined, { sensitivity: 'base' });
+                    break;
+                }
+                case 'institution': {
+                    const instA = getInstName(a.institutionId);
+                    const instB = getInstName(b.institutionId);
+                    comparison = instA.localeCompare(instB, undefined, { sensitivity: 'base' });
+                    break;
+                }
+                case 'type':
+                    comparison = a.type.localeCompare(b.type, undefined, { sensitivity: 'base' });
+                    break;
+                case 'assets': {
+                    const countA = assetCounts[a.id] || 0;
+                    const countB = assetCounts[b.id] || 0;
+                    comparison = countA - countB;
+                    break;
+                }
+                case 'cashBalance':
+                    comparison = a.cashBalance - b.cashBalance;
+                    break;
+                default:
+                    comparison = 0;
+            }
+
+            // Secondary tie-breaker: alphabetical by account name
+            if (comparison === 0 && sortField !== 'name') {
+                comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+            }
+
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+    }, [accounts, sortField, sortDirection, members, institutions, assetCounts]);
 
     return (
         <div className="space-y-6">
@@ -437,18 +515,72 @@ const Accounts = () => {
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-slate-900/90 border-b border-slate-700/80">
                                 <tr className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                                    <th className="px-5 py-3.5">Account Name</th>
-                                    <th className="px-5 py-3.5">Member</th>
-                                    <th className="px-5 py-3.5">Institution</th>
-                                    <th className="px-5 py-3.5">Type</th>
-                                    <th className="px-5 py-3.5 text-right">Assets</th>
-                                    <th className="px-5 py-3.5 text-right">Cash Balance</th>
+                                    <th className="px-5 py-3.5" aria-sort={sortField === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleColumnSort('name')}
+                                            className="inline-flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer select-none"
+                                        >
+                                            <span>Account Name</span>
+                                            {renderSortIcon('name')}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-3.5" aria-sort={sortField === 'member' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleColumnSort('member')}
+                                            className="inline-flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer select-none"
+                                        >
+                                            <span>Member</span>
+                                            {renderSortIcon('member')}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-3.5" aria-sort={sortField === 'institution' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleColumnSort('institution')}
+                                            className="inline-flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer select-none"
+                                        >
+                                            <span>Institution</span>
+                                            {renderSortIcon('institution')}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-3.5" aria-sort={sortField === 'type' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleColumnSort('type')}
+                                            className="inline-flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer select-none"
+                                        >
+                                            <span>Type</span>
+                                            {renderSortIcon('type')}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-3.5 text-right" aria-sort={sortField === 'assets' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleColumnSort('assets')}
+                                            className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto cursor-pointer select-none"
+                                        >
+                                            <span>Assets</span>
+                                            {renderSortIcon('assets')}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-3.5 text-right" aria-sort={sortField === 'cashBalance' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleColumnSort('cashBalance')}
+                                            className="inline-flex items-center justify-end gap-1.5 hover:text-white transition-colors ml-auto cursor-pointer select-none"
+                                        >
+                                            <span>Cash Balance</span>
+                                            {renderSortIcon('cashBalance')}
+                                        </button>
+                                    </th>
                                     <th className="px-5 py-3.5 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-700/60 text-sm">
-                                {accounts.map(acc => {
-                                    const assetCount = assets.filter(a => a.accountId === acc.id).length;
+                                {sortedAccounts.map(acc => {
+                                    const assetCount = assetCounts[acc.id] || 0;
                                     return (
                                         <tr key={acc.id} className="hover:bg-slate-750/60 transition-colors">
                                             <td className="px-5 py-4">
