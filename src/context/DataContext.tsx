@@ -491,8 +491,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const deleteAccount = (id: string) => {
-        setAccounts(accounts.filter(a => a.id !== id));
+        setAccounts(prev => prev.filter(a => a.id !== id));
+        setTransactions(prev => prev.filter(t => t.accountId !== id));
+        setAssets(prev => prev.filter(a => a.accountId !== id));
     };
+
+    // Clean up any orphaned transactions or assets whose account no longer exists
+    useEffect(() => {
+        const validAccountIds = new Set(accounts.map(a => a.id));
+        setTransactions(prev => {
+            const filtered = prev.filter(t => validAccountIds.has(t.accountId));
+            return filtered.length === prev.length ? prev : filtered;
+        });
+        setAssets(prev => {
+            const filtered = prev.filter(a => validAccountIds.has(a.accountId));
+            return filtered.length === prev.length ? prev : filtered;
+        });
+    }, [accounts]);
 
     const calculateCashImpact = (tx: Partial<Transaction>) => {
         if (tx.ignoreCashImpact) return 0;

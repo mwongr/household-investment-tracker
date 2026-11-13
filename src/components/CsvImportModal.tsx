@@ -128,7 +128,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
         if (defaultAccountId) {
             setSelectedAccountId(defaultAccountId);
-        } else if (accounts.length > 0 && !selectedAccountId) {
+        } else if (accounts.length > 0 && (!selectedAccountId || !accounts.some(a => a.id === selectedAccountId))) {
             setSelectedAccountId(accounts[0].id);
         }
 
