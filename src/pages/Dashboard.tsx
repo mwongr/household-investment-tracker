@@ -35,6 +35,8 @@ import {
     LayoutDashboard,
     Building2,
     Sparkles,
+    Plus,
+    Upload,
 } from 'lucide-react';
 import EventsTable from '../components/EventsTable';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
@@ -644,7 +646,6 @@ const Dashboard = () => {
                         accounts: instAccounts
                             .map(account => {
                                 const accountAssets = memberAssets.filter(a => a.accountId === account.id);
-                                if (accountAssets.length === 0 && account.cashBalance === 0) return null;
 
                                 const bookCost = accountAssets.reduce(
                                     (sum, a) => sum + (a.customBookCost || a.totalCost),
@@ -839,6 +840,39 @@ const Dashboard = () => {
                                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all"
                             >
                                 <Users size={15} /> Configure in Settings
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Newly Created Accounts / Ready to Populate Banner */}
+            {accounts.length > 0 && assets.length === 0 && !isDemoData && (
+                <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-600/20 via-indigo-600/15 to-purple-600/15 border border-blue-500/30 shadow-2xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="space-y-1.5 max-w-2xl">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                                <Sparkles size={13} /> Account Ready
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                                Ready to Add Your First Holdings
+                            </h2>
+                            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                                Your account <span className="text-white font-semibold">{accounts[0]?.name}</span> is set up. Next, import statements from your brokerage or add your first stock or ETF holding.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <Link
+                                to={`/accounts/${accounts[0]?.id}`}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all"
+                            >
+                                <Plus size={15} /> Go to {accounts[0]?.name} &amp; Add Holding
+                            </Link>
+                            <Link
+                                to="/settings"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs shadow-md transition-all"
+                            >
+                                <Users size={15} /> Manage Household in Settings
                             </Link>
                         </div>
                     </div>
@@ -1721,7 +1755,30 @@ const Dashboard = () => {
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-700/50 text-sm">
-                                                            {accGroup.assets.map(asset => (
+                                                            {accGroup.assets.length === 0 ? (
+                                                                <tr>
+                                                                    <td colSpan={14} className="px-6 py-6 text-center text-slate-400">
+                                                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                                                            <span className="text-xs text-slate-400">No holdings recorded in this account yet.</span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Link
+                                                                                    to={`/accounts/${accGroup.account.id}`}
+                                                                                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                                                                                >
+                                                                                    <Plus size={13} /> Add Transaction
+                                                                                </Link>
+                                                                                <Link
+                                                                                    to={`/accounts/${accGroup.account.id}`}
+                                                                                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
+                                                                                >
+                                                                                    <Upload size={13} className="text-blue-400" /> Import CSV
+                                                                                </Link>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ) : (
+                                                                accGroup.assets.map(asset => (
                                                                 <tr key={asset.id} className="hover:bg-slate-800/70 transition-colors">
                                                                     <td className="px-4 py-2.5 text-white font-mono font-bold">
                                                                         <span className="inline-flex items-center gap-1.5">
@@ -1811,7 +1868,7 @@ const Dashboard = () => {
                                                                         </Link>
                                                                     </td>
                                                                 </tr>
-                                                            ))}
+                                                            )))}
                                                         </tbody>
                                                     </table>
                                                 </div>

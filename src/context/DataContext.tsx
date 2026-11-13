@@ -20,7 +20,11 @@ interface DataContextType {
     isDemoData: boolean;
     loadDemoData: () => void;
     clearAllData: () => void;
-    setupHousehold: (memberName: string, institutionName: string, initialAccount: { name: string; type: string; cashBalance: number }) => void;
+    setupHousehold: (
+        memberName: string,
+        institutionName: string,
+        initialAccount: { name: string; type: string; cashBalance: number }
+    ) => { memberId: string; institutionId: string; accountId: string };
 
     addMember: (name: string) => void;
     updateMember: (id: string, name: string) => void;
@@ -1099,6 +1103,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAssets([]);
         setTransactions([]);
         setIsDemoData(false);
+
+        return { memberId, institutionId: instId, accountId: accId };
     }, []);
 
     return (

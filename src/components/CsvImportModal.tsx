@@ -13,6 +13,8 @@ import {
     Tag,
     ArrowRight,
     RotateCcw,
+    Maximize2,
+    Minimize2,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import {
@@ -93,6 +95,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
     const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
+    const [isMaximized, setIsMaximized] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
 
     // Update selectedAccountId when defaultAccountId changes or accounts load
     useEffect(() => {
@@ -373,11 +376,15 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-all duration-200 ${isMaximized ? 'p-2 sm:p-4' : 'p-4'}`}>
+            <div className={`bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col transition-all duration-200 ${
+                isMaximized
+                    ? 'w-[98vw] max-w-[1600px] h-[95vh] rounded-2xl'
+                    : 'w-full max-w-5xl rounded-2xl max-h-[92vh]'
+            }`}>
                 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-blue-500/15 rounded-xl border border-blue-500/30 text-blue-400">
                             <Upload size={22} />
@@ -406,13 +413,24 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                        aria-label="Close dialog"
-                    >
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setIsMaximized(prev => !prev)}
+                            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                            aria-label={isMaximized ? "Standard size" : "Maximize dialog"}
+                            title={isMaximized ? "Switch to standard dialog" : "Expand to wide view"}
+                        >
+                            {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                            aria-label="Close dialog"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Body Content */}
@@ -1175,9 +1193,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                     </span>
                                 </div>
 
-                                <div className="max-h-60 overflow-y-auto overflow-x-auto">
+                                <div className={`${isMaximized ? 'max-h-[48vh]' : 'max-h-72'} overflow-y-auto overflow-x-auto`}>
                                     <table className="w-full text-left text-xs border-collapse">
-                                        <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 sticky top-0">
+                                        <thead className="bg-slate-950 text-slate-300 border-b border-slate-700/80 sticky top-0 z-10 shadow-sm">
                                             <tr>
                                                 <th className="px-3 py-2">Status</th>
                                                 <th className="px-3 py-2">Row</th>
