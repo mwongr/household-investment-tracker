@@ -19,29 +19,31 @@ export function useChartTheme(): ChartTheme {
     return useMemo<ChartTheme>(
         () => ({
             isDark,
-            tickColor: isDark ? '#94a3b8' : '#475569',
-            gridColor: isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(15, 23, 42, 0.08)',
+            tickColor: isDark ? '#94a3b8' : '#57534E',
+            gridColor: isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(28, 25, 23, 0.08)',
             tooltipStyle: {
                 backgroundColor: isDark ? '#0f172a' : '#ffffff',
-                borderColor: isDark ? '#334155' : '#cbd5e1',
+                borderColor: isDark ? '#334155' : '#e4ddd0',
                 borderRadius: '0.75rem',
-                color: isDark ? '#f8fafc' : '#0f172a',
+                color: isDark ? '#f8fafc' : '#1c1917',
                 fontSize: '12px',
                 padding: '8px 12px',
-                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
+                boxShadow: isDark
+                    ? '0 10px 25px -5px rgba(0,0,0,0.4)'
+                    : '0 10px 25px -5px rgba(28, 25, 23, 0.12)',
             },
             tooltipItemStyle: {
-                color: isDark ? '#f8fafc' : '#0f172a',
+                color: isDark ? '#f8fafc' : '#1c1917',
                 fontWeight: 700,
                 fontFamily: 'monospace',
             },
             tooltipLabelStyle: {
-                color: isDark ? '#cbd5e1' : '#475569',
+                color: isDark ? '#cbd5e1' : '#57534e',
                 fontWeight: 600,
                 marginBottom: '2px',
             },
-            cursorFill: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.06)',
-            cursorStroke: isDark ? '#64748b' : '#94a3b8',
+            cursorFill: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(28, 25, 23, 0.06)',
+            cursorStroke: isDark ? '#64748b' : '#78716c',
         }),
         [isDark]
     );

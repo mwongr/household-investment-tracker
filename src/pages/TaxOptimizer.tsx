@@ -8,6 +8,7 @@ import {
 } from '../utils/taxEngine';
 import type { OptimizationResult, TaxScenario, LayerCakeSegment, TaxSettings, TaxBracket } from '../types';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
 import '../styles/taxoptimizer.css';
 
 const API_BASE = '';
@@ -21,6 +22,15 @@ function rateColor(rate: number): string {
   if (rate >= 0.38) return '#f59e0b'; // amber-500
   if (rate >= 0.30) return '#eab308'; // yellow-500
   return '#22c55e';                    // green-500
+}
+
+function rateTextColor(rate: number, isDark: boolean): string {
+  if (isDark) return rateColor(rate);
+  if (rate >= 0.48) return '#b91c1c'; // red-700
+  if (rate >= 0.43) return '#c2410c'; // orange-700
+  if (rate >= 0.38) return '#b45309'; // amber-700
+  if (rate >= 0.30) return '#a16207'; // yellow-700
+  return '#047857';                    // emerald-700
 }
 
 function rateClass(rate: number): string {
@@ -100,6 +110,8 @@ const FormattedNumberInput = ({
 
 // ─── Layer Cake Bar ──────────────────────────────────────────────────────────
 const LayerCakeBar: React.FC<{ layers: LayerCakeSegment[]; income: number }> = ({ layers, income }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   if (!layers.length || income <= 0) return <div className="tax-empty">Enter income to see the tax layer visualization.</div>;
 
   return (
@@ -180,10 +192,10 @@ const LayerCakeBar: React.FC<{ layers: LayerCakeSegment[]; income: number }> = (
               </td>
               <td>
                 {layer.isShielded
-                  ? <span style={{ color: '#818cf8', fontWeight: 600 }}>🛡 Shielded</span>
+                  ? <span style={{ color: isDark ? '#818cf8' : '#4338ca', fontWeight: 600 }}>🛡 Shielded</span>
                   : layer.partialShield > 0
-                  ? <span style={{ color: '#a5b4fc' }}>🛡 {(layer.partialShield * 100).toFixed(0)}% covered</span>
-                  : <span style={{ color: '#64748b' }}>Taxed</span>}
+                  ? <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600 }}>🛡 {(layer.partialShield * 100).toFixed(0)}% covered</span>
+                  : <span style={{ color: 'var(--color-text-muted)' }}>Taxed</span>}
               </td>
             </tr>
           ))}
@@ -195,6 +207,8 @@ const LayerCakeBar: React.FC<{ layers: LayerCakeSegment[]; income: number }> = (
 
 // ─── Next Milestone Card ─────────────────────────────────────────────────────
 const NextMilestoneCard: React.FC<{ result: OptimizationResult; contribution: number; settings: TaxSettings }> = ({ result, contribution, settings }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { remainingRoomInCurrentBracket, currentCombinedRate, sweetSpotContribution } = result;
   const { federalBrackets, provincialBrackets, abatement } = settings;
   const additionalNeeded = Math.max(0, sweetSpotContribution - contribution);
@@ -216,7 +230,7 @@ const NextMilestoneCard: React.FC<{ result: OptimizationResult; contribution: nu
     return (
       <div className="milestone-card">
         <div className="milestone-title"><Target size={13} /> Next Milestone</div>
-        <div className="milestone-amount" style={{ color: '#34d399', fontSize: '1.1rem' }}>✓ Bracket Drop Achieved!</div>
+        <div className="milestone-amount" style={{ color: isDark ? '#34d399' : '#047857', fontSize: '1.1rem' }}>✓ Bracket Drop Achieved!</div>
         <div className="milestone-desc">Your current contribution already pushes you into a lower bracket.</div>
       </div>
     );
@@ -228,16 +242,16 @@ const NextMilestoneCard: React.FC<{ result: OptimizationResult; contribution: nu
       <div className="milestone-amount">{fmt.format(additionalNeeded)}</div>
       <div className="milestone-desc">
         more to contribute to exit the{' '}
-        <strong style={{ color: rateColor(result.newCombinedRate) }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong> combined bracket.
+        <strong style={{ color: rateTextColor(result.newCombinedRate, isDark) }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong> combined bracket.
       </div>
       {nextRate !== null && (
         <div className="milestone-bracket-drop">
           <span>Current top: <span className="milestone-from-rate">{(currentCombinedRate * 100).toFixed(1)}%</span></span>
-          <ChevronRight size={14} style={{ color: '#64748b' }} />
+          <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
           <span>Target: <span className="milestone-to-rate">{(nextRate * 100).toFixed(1)}%</span></span>
         </div>
       )}
-      <div style={{ marginTop: '0.75rem', fontSize: '0.74rem', color: '#64748b' }}>
+      <div style={{ marginTop: '0.75rem', fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
         {fmt.format(remainingRoomInCurrentBracket)} remaining in current bracket
       </div>
     </div>
@@ -259,12 +273,14 @@ const DiminishingWarning: React.FC = () => (
 
 // ─── Bracket Reference Table ─────────────────────────────────────────────────
 const BracketReference: React.FC<{ settings: TaxSettings }> = ({ settings }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { federalBrackets, provincialBrackets, abatement } = settings;
   return (
     <div className="tax-panel">
       <div className="tax-panel-header">
         <span className="tax-panel-title"><BarChart3 size={15} /> Bracket Reference</span>
-        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Abatement: {(abatement * 100).toFixed(1)}%</span>
+        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Abatement: {(abatement * 100).toFixed(1)}%</span>
       </div>
       <div className="tax-panel-body" style={{ padding: '0.75rem 1rem' }}>
         <table className="scenarios-table">
@@ -294,7 +310,7 @@ const BracketReference: React.FC<{ settings: TaxSettings }> = ({ settings }) => 
                       ${Math.round(minI / 1000)}k – {maxI >= 999_000 ? '∞' : `$${Math.round(maxI / 1000)}k`}
                     </td>
                     <td>{(fb.rate * 100).toFixed(1)}%</td>
-                    <td style={{ color: '#93c5fd' }}>{(effFed * 100).toFixed(1)}%</td>
+                    <td style={{ color: isDark ? '#93c5fd' : '#1d4ed8', fontWeight: 500 }}>{(effFed * 100).toFixed(1)}%</td>
                     <td>{(pb.rate * 100).toFixed(1)}%</td>
                     <td>
                       <span className={`lc-rate-badge ${rateClass(combined)}`}
@@ -315,6 +331,8 @@ const BracketReference: React.FC<{ settings: TaxSettings }> = ({ settings }) => 
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 const TaxOptimizer: React.FC = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [settings, setSettings] = useState<TaxSettings>({
     federalBrackets: defaultFederalBrackets,
     provincialBrackets: defaultProvincialBrackets,
@@ -628,13 +646,13 @@ const TaxOptimizer: React.FC = () => {
               <div style={{ marginTop: '0.75rem' }}>
                 <button
                   onClick={() => setAdvancedMode(m => !m)}
-                  style={{ fontSize: '0.72rem', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  style={{ fontSize: '0.72rem', color: isDark ? '#818cf8' : '#4338ca', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                 >
                   <span>{advancedMode ? '▼' : '▶'}</span> Advanced: Federal / Quebec Split
                 </button>
                 {advancedMode && (
-                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(99,102,241,0.07)', borderRadius: '0.5rem', border: '1px solid rgba(99,102,241,0.2)' }}>
-                    <p style={{ fontSize: '0.71rem', color: '#818cf8', margin: '0 0 0.5rem' }}>Quebec taxable income is sometimes higher than federal (e.g. employer-paid health premiums).</p>
+                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: isDark ? 'rgba(99,102,241,0.07)' : 'rgba(79,70,229,0.05)', borderRadius: '0.5rem', border: isDark ? '1px solid rgba(99,102,241,0.2)' : '1px solid rgba(79,70,229,0.22)' }}>
+                    <p style={{ fontSize: '0.71rem', color: isDark ? '#818cf8' : '#4338ca', margin: '0 0 0.5rem' }}>Quebec taxable income is sometimes higher than federal (e.g. employer-paid health premiums).</p>
                     <div className="tax-input-grid">
                       <div className="tax-input-group">
                         <label className="tax-input-label">Federal Taxable Income</label>
@@ -802,7 +820,7 @@ const TaxOptimizer: React.FC = () => {
                        const remainingToFund = Math.max(0, contribution - extraCash);
                        if (remainingToFund === 0) {
                          return (
-                           <div style={{ margin: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: '#6ee7b7', padding: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.25rem' }}>
+                           <div style={{ margin: '0.75rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, color: isDark ? '#6ee7b7' : '#047857', padding: '0.5rem', background: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(4, 120, 87, 0.1)', borderRadius: '0.375rem' }}>
                              <Check size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
                              Extra cash covers your full {fmt.format(contribution)} contribution!
                            </div>
@@ -865,7 +883,7 @@ const TaxOptimizer: React.FC = () => {
                       <div style={{ padding: '0.75rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
                           <span style={{ color: 'var(--color-text-secondary)' }}>Account Value: <strong style={{ color: 'var(--color-text-light)' }}>{fmt.format(totalValue)}</strong></span>
-                          <span style={{ color: 'var(--color-text-secondary)' }}>Cash: <strong style={{ color: '#6ee7b7' }}>{fmt.format(selectedAcc.cashBalance)}</strong></span>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Cash: <strong style={{ color: isDark ? '#6ee7b7' : '#047857' }}>{fmt.format(selectedAcc.cashBalance)}</strong></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.75rem', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <span style={{ color: 'var(--color-text-secondary)' }} title={`Deposits from Jan 1, ${taxYear} to Mar 1, ${taxYear + 1}`}>
@@ -900,7 +918,7 @@ const TaxOptimizer: React.FC = () => {
                             </div>
                           </>
                         ) : (
-                           <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#6ee7b7', padding: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.25rem' }}>
+                           <div style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, color: isDark ? '#6ee7b7' : '#047857', padding: '0.5rem', background: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(4, 120, 87, 0.1)', borderRadius: '0.375rem' }}>
                              <Check size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }}/>
                              {ytdDeposits >= contribution
                                ? `Target reached for the ${taxYear} tax year!`
@@ -914,9 +932,9 @@ const TaxOptimizer: React.FC = () => {
 
               {/* Bracket-crossing warning */}
               {result?.bracketCrossed && (
-                <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.875rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.875rem', background: isDark ? 'rgba(99,102,241,0.1)' : '#eef2ff', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(79,70,229,0.28)', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1rem' }}>🎯</span>
-                  <span><strong>Bracket Drop!</strong> Your contribution crosses a bracket boundary: <strong style={{ color: '#f87171' }}>{(result.currentCombinedRate * 100).toFixed(1)}%</strong> → <strong style={{ color: '#34d399' }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong>. Further contributions shield income at a lower rate.</span>
+                  <span><strong>Bracket Drop!</strong> Your contribution crosses a bracket boundary: <strong style={{ color: isDark ? '#f87171' : '#b91c1c' }}>{(result.currentCombinedRate * 100).toFixed(1)}%</strong> → <strong style={{ color: isDark ? '#34d399' : '#047857' }}>{(result.newCombinedRate * 100).toFixed(1)}%</strong>. Further contributions shield income at a lower rate.</span>
                 </div>
               )}
             </div>
@@ -987,7 +1005,7 @@ const TaxOptimizer: React.FC = () => {
                 className={`save-btn ${saveState === 'saved' ? 'saved' : saveState === 'error' ? 'error' : ''}`}
                 onClick={handleSave}
                 disabled={saveState === 'saving' || !result}
-                style={saveState === 'error' ? { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5' } : {}}
+                style={saveState === 'error' ? { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: isDark ? '#fca5a5' : '#b91c1c' } : {}}
               >
                 {saveState === 'saved'
                   ? <><Check size={16} /> Scenario Saved!</>
@@ -998,11 +1016,11 @@ const TaxOptimizer: React.FC = () => {
                   : <><Save size={16} /> Save Current Scenario</>}
               </button>
               {saveState === 'error' && saveError && (
-                <p style={{ fontSize: '0.7rem', color: '#f87171', textAlign: 'center', marginTop: '0.4rem', wordBreak: 'break-all' }}>
+                <p style={{ fontSize: '0.7rem', color: isDark ? '#f87171' : '#b91c1c', textAlign: 'center', marginTop: '0.4rem', wordBreak: 'break-all' }}>
                   {saveError}
                 </p>
               )}
-              <p style={{ fontSize: '0.72rem', color: '#475569', textAlign: 'center', marginTop: '0.5rem' }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: '0.5rem' }}>
                 Snapshots are persisted to your local database.
               </p>
             </div>
@@ -1031,13 +1049,13 @@ const TaxOptimizer: React.FC = () => {
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
                             onClick={() => handleLoadScenario(s)} 
-                            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '0.25rem', cursor: 'pointer', color: '#a5b4fc', padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', transition: 'all 0.2s' }} 
+                            style={{ background: isDark ? 'rgba(99,102,241,0.1)' : '#eef2ff', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(79,70,229,0.3)', borderRadius: '0.25rem', cursor: 'pointer', color: isDark ? '#a5b4fc' : '#4338ca', fontWeight: 600, padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', transition: 'all 0.2s' }} 
                             title="Load Scenario into Calculator">
                             <Eye size={12} /> Load
                           </button>
                           <button 
                             onClick={() => handleDeleteScenario(s.id)} 
-                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.25rem', cursor: 'pointer', color: '#fca5a5', padding: '0.25rem', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }} 
+                            style={{ background: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2', border: isDark ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(185,28,28,0.25)', borderRadius: '0.25rem', cursor: 'pointer', color: isDark ? '#fca5a5' : '#b91c1c', padding: '0.25rem', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }} 
                             title="Delete Scenario">
                             <Trash2 size={12} />
                           </button>

@@ -51,7 +51,7 @@
 }
 
 .tax-kpi-card {
-  background: rgb(var(--color-slate-800) / 0.85);
+  background: rgb(var(--color-slate-800) / 0.95);
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
   padding: 1.25rem 1.35rem;
@@ -60,6 +60,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 0.35rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 12px 24px -6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
@@ -257,15 +258,17 @@
 
 /* ─── Panel / Card Base ────────────────────────────────────── */
 .tax-panel {
-  background: rgb(var(--color-slate-800) / 0.75);
+  background: rgb(var(--color-slate-800) / 0.95);
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
   backdrop-filter: blur(12px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 16px 32px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 
 .tax-panel-header {
   padding: 1rem 1.5rem;
+  background: rgb(var(--color-slate-900) / 0.65);
   border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
@@ -1197,4 +1200,250 @@
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
+}
+
+/* ============================================================
+   Light Mode Design System Overrides (Crisp Cards on Cream Canvas)
+   ============================================================ */
+.light .tax-kpi-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 8px 20px -6px rgba(15, 23, 42, 0.08);
+}
+
+.light .tax-kpi-card:hover {
+  border-color: #94a3b8;
+}
+
+.light .tax-kpi-card.tax-kpi-hero {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 58%, #ecfdf5 100%);
+  border: 1px solid rgba(79, 70, 229, 0.4);
+  box-shadow: 0 8px 24px -8px rgba(79, 70, 229, 0.2), 0 2px 6px -1px rgba(15, 23, 42, 0.05);
+}
+
+.light .tax-kpi-card.tax-kpi-hero::before {
+  opacity: 0.14;
+}
+
+.light .tax-kpi-card.tax-kpi-hero:hover {
+  border-color: rgba(79, 70, 229, 0.6);
+  box-shadow: 0 12px 28px -8px rgba(79, 70, 229, 0.26);
+}
+
+.light .tax-kpi-hero-icon {
+  background: linear-gradient(135deg, rgba(4, 120, 87, 0.12), rgba(79, 70, 229, 0.12));
+  border-color: rgba(79, 70, 229, 0.3);
+  color: #047857;
+}
+
+.light .tax-kpi-hero-value {
+  color: #047857;
+}
+
+.light .tax-net-cost-pill {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--color-text-secondary);
+}
+
+.light .tax-refund-bar {
+  background: #e2e8f0;
+}
+
+.light .tax-panel {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 10px 24px -6px rgba(15, 23, 42, 0.08);
+}
+
+.light .tax-panel-header {
+  background: #f8fafc;
+  border-bottom-color: #cbd5e1;
+}
+
+.light .tax-input {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--color-text-primary);
+}
+
+.light .tax-input:focus {
+  background: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}
+
+.light .tax-slider-card {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.light .tax-slider-currency {
+  color: #4338ca;
+}
+
+.light .tax-slider-input {
+  background: #ffffff;
+  border-color: rgba(79, 70, 229, 0.38);
+}
+
+.light .tax-slider {
+  background: linear-gradient(
+    to right,
+    #4f46e5 0%,
+    #7c3aed var(--slider-pct, 50%),
+    #cbd5e1 var(--slider-pct, 50%),
+    #cbd5e1 100%
+  );
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+
+.light .tax-slider::-moz-range-track {
+  background: #cbd5e1;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+
+.light .tax-preset-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: var(--color-text-secondary);
+}
+
+.light .tax-preset-btn:hover:not(:disabled) {
+  background: #eef2ff;
+  border-color: rgba(79, 70, 229, 0.45);
+  color: #312e81;
+}
+
+.light .tax-preset-btn.active {
+  background: #e0e7ff;
+  border-color: #4f46e5;
+  color: #3730a3;
+}
+
+.light .tax-preset-btn.sweetspot {
+  background: #ecfdf5;
+  border-color: rgba(4, 120, 87, 0.38);
+  color: #047857;
+}
+
+.light .tax-preset-btn.sweetspot:hover:not(:disabled),
+.light .tax-preset-btn.sweetspot.active {
+  background: #d1fae5;
+  border-color: #059669;
+  color: #065f46;
+}
+
+.light .tax-schedule-card {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.light .tax-schedule-header {
+  background: #f1f5f9;
+  border-bottom-color: #cbd5e1;
+}
+
+.light .tax-extra-cash-row {
+  background: #ffffff;
+  border-bottom-color: #e2e8f0;
+}
+
+.light .layer-cake-bar-wrap {
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+  border: 1px solid #cbd5e1;
+}
+
+.light .layer-cake-table th {
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.light .layer-cake-table td {
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.light .layer-cake-table tr.shielded-row td {
+  background: rgba(79, 70, 229, 0.08);
+  color: #3730a3;
+  font-weight: 500;
+}
+
+.light .milestone-card {
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  border-color: rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 16px -4px rgba(79, 70, 229, 0.12);
+}
+
+.light .milestone-title {
+  color: #4338ca;
+}
+
+.light .milestone-amount {
+  color: #312e81;
+}
+
+.light .milestone-bracket-drop {
+  background: #ffffff;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+
+.light .milestone-from-rate { color: #b91c1c; }
+.light .milestone-to-rate   { color: #047857; }
+
+.light .diminishing-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: rgba(217, 119, 6, 0.45);
+}
+
+.light .diminishing-warning-icon {
+  background: rgba(217, 119, 6, 0.16);
+  color: #b45309;
+}
+
+.light .diminishing-warning-title {
+  color: #92400e;
+}
+
+.light .diminishing-warning-body {
+  color: #78350f;
+}
+
+.light .rate-high    { color: #b91c1c; }
+.light .rate-medium  { color: #c2410c; }
+.light .rate-low-mid { color: #b45309; }
+.light .rate-low     { color: #047857; }
+
+.light .tax-modal-overlay {
+  background: rgba(28, 25, 23, 0.45);
+}
+
+.light .tax-modal-content {
+  background: #ffffff;
+  border-color: var(--color-border);
+  box-shadow: 0 20px 50px rgba(28, 25, 23, 0.22);
+}
+
+.light .tax-modal-header,
+.light .tax-modal-footer {
+  border-color: var(--color-border);
+}
+
+.light .add-bracket-btn {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--color-text-secondary);
+}
+
+.light .add-bracket-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: var(--color-text-primary);
+}
+
+.light .delete-bracket-btn {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--color-text-muted);
 }

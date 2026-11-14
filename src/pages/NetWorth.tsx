@@ -203,7 +203,7 @@ const NetWorth = () => {
         const canvas = await html2canvas(contentRef.current, {
             scale: 2,
             useCORS: true,
-            backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9',
+            backgroundColor: theme === 'dark' ? '#090e1a' : '#FAF7F0',
         });
 
         const imgData = canvas.toDataURL('image/png');
