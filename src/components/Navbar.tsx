@@ -14,14 +14,17 @@ import {
     Moon,
     Menu,
     X,
+    Info,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
+import { useVersion } from '../hooks/useVersion';
 import '../styles/navbar.css';
 
 const Navbar = () => {
     const { assets, accounts, preferences } = useData();
     const { theme, toggleTheme } = useTheme();
+    const { versionInfo } = useVersion();
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const totalPortfolioValue =
@@ -77,6 +80,27 @@ const Navbar = () => {
                         </span>
                     </div>
 
+                    <NavLink
+                        to="/about"
+                        title={
+                            versionInfo?.updateAvailable
+                                ? `Update available (v${versionInfo.latestVersion}) - About`
+                                : 'About Household Investment Tracker'
+                        }
+                        className={({ isActive }) =>
+                            `nav-icon-btn relative ${isActive ? 'text-blue-400 border-blue-500/50' : ''}`
+                        }
+                        aria-label="About"
+                    >
+                        <Info size={17} />
+                        {versionInfo?.updateAvailable && (
+                            <span
+                                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse ring-2 ring-slate-900"
+                                aria-label="Update available"
+                            />
+                        )}
+                    </NavLink>
+
                     <button
                         type="button"
                         onClick={toggleTheme}
@@ -112,6 +136,24 @@ const Navbar = () => {
                             <span className="nav-label">{item.label}</span>
                         </NavLink>
                     ))}
+                    <NavLink
+                        to="/about"
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    >
+                        <div className="relative inline-flex items-center">
+                            <Info size={16} className="nav-icon" />
+                            {versionInfo?.updateAvailable && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                            )}
+                        </div>
+                        <span className="nav-label">About</span>
+                        {versionInfo?.updateAvailable && (
+                            <span className="ml-auto text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                Update
+                            </span>
+                        )}
+                    </NavLink>
                 </nav>
             )}
         </>

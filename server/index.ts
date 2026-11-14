@@ -6,6 +6,7 @@ import { createMarketRouter } from './routes/market.js';
 import { createPortfolioRouter } from './routes/portfolio.js';
 import { createStateRouter } from './routes/state.js';
 import { createTaxRouter } from './routes/tax.js';
+import { createVersionRouter } from './routes/version.js';
 
 export function createApp(options?: {
     store?: typeof db;
@@ -24,6 +25,7 @@ export function createApp(options?: {
     app.use('/api', createTaxRouter(store));
     app.use('/api', createPortfolioRouter());
     app.use('/api', createMarketRouter());
+    app.use('/api', createVersionRouter());
 
     app.use(errorHandler);
     return app;

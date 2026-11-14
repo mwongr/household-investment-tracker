@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import { DemoModeBanner } from './DemoModeBanner';
 import { OnboardingModal } from './OnboardingModal';
+import { UpdateModal } from './UpdateModal';
 import { useData } from '../context/DataContext';
 import '../styles/layout.css';
 
@@ -23,6 +24,7 @@ const Layout = () => {
     return (
         <div className="app-layout">
             <Navbar />
+            <UpdateModal />
             <main className="main-content">
                 <div className="content-container">
                     <DemoModeBanner />
