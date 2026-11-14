@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
-import { buildPortfolioHistory } from '../utils/portfolioHistory';
+import { buildPortfolioHistory, type HistoricalQuote } from '../utils/portfolioHistory';
 import {
     ResponsiveContainer,
     PieChart,
@@ -328,6 +328,43 @@ const Dashboard = () => {
     const { theme } = useTheme();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
+    const [historicalPrices, setHistoricalPrices] = useState<Record<string, HistoricalQuote[]>>({});
+
+    const txTickerKey = useMemo(() => {
+        if (isDemoData || transactions.length === 0) return '';
+        const tickers = Array.from(new Set(transactions.map(t => t.ticker).filter(Boolean) as string[])).sort();
+        const minDate = transactions.reduce((min, t) => (t.date && t.date < min ? t.date : min), '9999-12-31');
+        return `${minDate}|${tickers.join(',')}`;
+    }, [transactions, isDemoData]);
+
+    useEffect(() => {
+        if (!txTickerKey) {
+            setHistoricalPrices({});
+            return;
+        }
+        const [startDate, tickersStr] = txTickerKey.split('|');
+        const tickers = tickersStr ? tickersStr.split(',') : [];
+        if (tickers.length === 0) return;
+
+        let cancelled = false;
+        fetch('http://localhost:3001/api/portfolio/history-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tickers, startDate }),
+        })
+            .then(r => (r.ok ? r.json() : null))
+            .then(data => {
+                if (!cancelled && data?.prices) {
+                    setHistoricalPrices(data.prices);
+                }
+            })
+            .catch(() => {
+                // Backend unavailable — buildPortfolioHistory falls back gracefully
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [txTickerKey]);
 
     const isDark = theme === 'dark';
     const chartTheme: ChartTheme = {
@@ -757,15 +794,20 @@ const Dashboard = () => {
         }
     };
 
-    // 6. Portfolio History (reconstructed from imported transactions + recorded snapshots + live totalValue)
-    const portfolioHistory = buildPortfolioHistory({
-        transactions,
-        assets,
-        accounts,
-        netWorthHistory,
-        totalValue,
-        isDemoData,
-    });
+    // 6. Portfolio History (reconstructed from imported transactions + historical market prices + live totalValue)
+    const portfolioHistory = useMemo(
+        () =>
+            buildPortfolioHistory({
+                transactions,
+                assets,
+                accounts,
+                netWorthHistory,
+                totalValue,
+                isDemoData,
+                historicalPrices,
+            }),
+        [transactions, assets, accounts, netWorthHistory, totalValue, isDemoData, historicalPrices]
+    );
 
     return (
         <div className="space-y-8">

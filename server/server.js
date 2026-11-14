@@ -996,6 +996,78 @@ app.get('/api/stocks/compare', async (req, res) => {
     res.json(responseData);
 });
 
+// ─── Portfolio Historical Prices (for Portfolio Value History chart) ──────────
+const historyPriceCache = new Map(); // key: `${ticker}:${startDate}` -> { quotes, expiresAt }
+const HISTORY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+app.post('/api/portfolio/history-prices', async (req, res) => {
+    const { tickers, startDate } = req.body || {};
+    if (!Array.isArray(tickers) || tickers.length === 0) {
+        return res.json({ prices: {} });
+    }
+
+    const uniqueTickers = [...new Set(tickers.map(t => String(t).trim()).filter(Boolean))];
+    const period1 = startDate || '2020-01-01';
+    const period2 = new Date();
+    const now = Date.now();
+    const prices = {};
+    const toFetch = [];
+
+    for (const ticker of uniqueTickers) {
+        const cacheKey = `${ticker}:${period1}`;
+        const cached = historyPriceCache.get(cacheKey);
+        if (cached && cached.expiresAt > now) {
+            prices[ticker] = cached.quotes;
+        } else {
+            toFetch.push(ticker);
+        }
+    }
+
+    const fetchTickerHistory = async (ticker) => {
+        const cacheKey = `${ticker}:${period1}`;
+        try {
+            const chart = await yahooFinance.chart(ticker, {
+                period1,
+                period2,
+                interval: '1wk',
+            });
+
+            const rawQuotes = (chart?.quotes || []).filter(q => q.date && typeof q.close === 'number' && q.close > 0);
+            const splits = (chart?.events?.splits || [])
+                .filter(s => s.date && s.numerator > 0 && s.denominator > 0)
+                .map(s => ({
+                    dateStr: new Date(s.date).toISOString().split('T')[0],
+                    factor: s.numerator / s.denominator,
+                }));
+
+            const quotes = rawQuotes.map(q => {
+                const dateStr = new Date(q.date).toISOString().split('T')[0];
+                let unadjustedClose = q.close;
+                for (const sp of splits) {
+                    if (sp.dateStr > dateStr) {
+                        unadjustedClose *= sp.factor;
+                    }
+                }
+                return { date: dateStr, close: unadjustedClose };
+            });
+
+            historyPriceCache.set(cacheKey, { quotes, expiresAt: Date.now() + HISTORY_CACHE_TTL_MS });
+            prices[ticker] = quotes;
+        } catch {
+            // Delisted or unrecognized ticker — fall back to transaction-based pricing on client
+            historyPriceCache.set(cacheKey, { quotes: [], expiresAt: Date.now() + HISTORY_CACHE_TTL_MS });
+            prices[ticker] = [];
+        }
+    };
+
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
+        await Promise.all(toFetch.slice(i, i + BATCH_SIZE).map(fetchTickerHistory));
+    }
+
+    res.json({ prices });
+});
+
 app.listen(PORT, () => {
     console.log(`Proxy server running on http://localhost:${PORT}`);
 });
