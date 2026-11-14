@@ -15,7 +15,7 @@
 
 **A privacy-first, local-first personal finance, portfolio analytics, and tax planning platform — built and optimized for Canadian investors.**
 
-[Features](#-features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#️-technology-stack) • [Getting Started](#-installation) • [Backups & Security](#-backup--data-management) • [Disclaimer](#️-disclaimer)
+[Screenshots](#-screenshots) • [Features](#-features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#️-technology-stack) • [Getting Started](#-installation) • [Backups & Security](#-backup--data-management) • [Disclaimer](#️-disclaimer)
 
 </div>
 
@@ -24,6 +24,33 @@
 ## 📖 Overview
 
 **Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/Dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Accounts%20List.webp" alt="Accounts List" /><br /><sub><b>Accounts List</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Account%20Holdings.webp" alt="Account Holdings" /><br /><sub><b>Account Holdings</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/Account%20Balancer.webp" alt="Account Balancer" /><br /><sub><b>Account Balancer</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Account%20Tools.webp" alt="Account Tools" /><br /><sub><b>Account Tools</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Reports.webp" alt="Reports" /><br /><sub><b>Reports</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/Stock%20Research.webp" alt="Stock Research" /><br /><sub><b>Stock Research</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Research%20Chart.webp" alt="Research Chart" /><br /><sub><b>Research Chart</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Net%20Worth%20Dashboard.webp" alt="Net Worth Dashboard" /><br /><sub><b>Net Worth Dashboard</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/Tax%20Optimizer.webp" alt="Tax Optimizer" /><br /><sub><b>Tax Optimizer</b></sub></td>
+    <td align="center"><img src="docs/screenshots/ACB%20Tracker.webp" alt="ACB Tracker" /><br /><sub><b>ACB Tracker</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Investment%20Tools.webp" alt="Investment Tools" /><br /><sub><b>Investment Tools</b></sub></td>
+  </tr>
+</table>
 
 ---
 
