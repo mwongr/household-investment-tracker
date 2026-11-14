@@ -308,7 +308,7 @@ const StockBuyingPlanner: React.FC = () => {
     return (
         <CardShell
             icon={<ShoppingCart size={20} />}
-            iconTone="bg-green-500/15 border-green-500/35 text-green-400"
+            iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
             title="Stock Buying Planner"
             subtitle="Plan purchases by account, track remaining cash, and preview updated average cost"
             onClear={handleClear}
@@ -745,7 +745,7 @@ const PositionSizingCalc: React.FC = () => {
     return (
         <CardShell
             icon={<Shield size={20} />}
-            iconTone="bg-indigo-500/15 border-indigo-500/35 text-indigo-400"
+            iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
             title="Position Sizing"
             subtitle="Cap maximum dollar risk per trade using account size & stop distance"
             onClear={handleClear}
@@ -943,7 +943,7 @@ const PortfolioSplitter: React.FC = () => {
     return (
         <CardShell
             icon={<PieChart size={20} />}
-            iconTone="bg-purple-500/15 border-purple-500/35 text-purple-400"
+            iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
             title="Portfolio Allocation Splitter"
             subtitle="Divide available cash across target weights with exact dollar amounts"
             onClear={handleClear}
@@ -1004,7 +1004,7 @@ const PortfolioSplitter: React.FC = () => {
                             </div>
                             <div className="flex-1 text-right">
                                 {dollars !== null ? (
-                                    <span className="font-mono tabular-nums font-bold text-sm text-purple-400">
+                                    <span className="font-mono tabular-nums font-bold text-sm text-blue-400">
                                         ${fmtCurrency(dollars)}
                                     </span>
                                 ) : (
@@ -1026,7 +1026,7 @@ const PortfolioSplitter: React.FC = () => {
 
             <button
                 onClick={addAsset}
-                className="flex items-center gap-2 justify-center py-2.5 text-sm font-semibold text-slate-300 hover:text-purple-400 border border-dashed border-slate-600 hover:border-purple-500/60 rounded-xl transition-colors"
+                className="flex items-center gap-2 justify-center py-2.5 text-sm font-semibold text-slate-300 hover:text-blue-400 border border-dashed border-slate-600 hover:border-blue-500/60 rounded-xl transition-colors"
             >
                 <Plus size={15} /> Add Asset
             </button>
@@ -1104,7 +1104,7 @@ const DripCalculator: React.FC = () => {
     return (
         <CardShell
             icon={<Leaf size={20} />}
-            iconTone="bg-green-500/15 border-green-500/35 text-green-400"
+            iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
             title="DRIP Calculator"
             subtitle="Compare dividend reinvestment compounding vs. taking cash dividends"
             onClear={handleClear}

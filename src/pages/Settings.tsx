@@ -15,7 +15,6 @@ import {
     Pencil,
     Sun,
     Moon,
-    Monitor,
     ToggleRight,
     TrendingUp,
     Calculator,
@@ -296,7 +295,7 @@ const FeaturesCard = () => {
             title: 'Tax Optimizer',
             description: 'Model RRSP contributions and marginal tax bracket refunds',
             icon: <Percent size={18} />,
-            tone: 'bg-green-500/15 border-green-500/35 text-green-400',
+            tone: 'bg-blue-500/15 border-blue-500/35 text-blue-400',
             enabled: preferences.enableTaxOptimizer,
         },
         {
@@ -304,7 +303,7 @@ const FeaturesCard = () => {
             title: 'ACB Tracker',
             description: 'Track Adjusted Cost Base and capital gains for non-registered accounts',
             icon: <Calculator size={18} />,
-            tone: 'bg-amber-500/15 border-amber-500/35 text-amber-400',
+            tone: 'bg-blue-500/15 border-blue-500/35 text-blue-400',
             enabled: preferences.enableAcbTracker,
         },
     ];
@@ -312,7 +311,7 @@ const FeaturesCard = () => {
     return (
         <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden flex flex-col">
             <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-purple-500/15 border border-purple-500/35 text-purple-400 shrink-0">
+                <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400 shrink-0">
                     <ToggleRight size={20} />
                 </div>
                 <div>
@@ -336,7 +335,7 @@ const FeaturesCard = () => {
                                     <span
                                         className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${
                                             mod.enabled
-                                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                ? 'bg-blue-500/15 border-blue-500/35 text-blue-400'
                                                 : 'bg-slate-800 border-slate-700 text-slate-400'
                                         }`}
                                     >
@@ -377,84 +376,6 @@ const FeaturesCard = () => {
 
 // ─── Appearance Card ──────────────────────────────────────────────────────────
 
-const AppearanceCard = () => {
-    const { theme, setTheme } = useTheme();
-
-    const options = [
-        {
-            value: 'dark' as const,
-            title: 'Dark Mode',
-            description: 'Deep slate background optimized for low-light viewing',
-            icon: <Moon size={18} />,
-        },
-        {
-            value: 'light' as const,
-            title: 'Light Mode',
-            description: 'Crisp high-contrast daylight palette',
-            icon: <Sun size={18} />,
-        },
-    ];
-
-    return (
-        <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-            <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400 shrink-0">
-                    <Monitor size={20} />
-                </div>
-                <div>
-                    <h2 className="text-lg font-bold text-white tracking-tight">Appearance</h2>
-                    <p className="text-xs text-slate-300">Select your preferred interface colour theme</p>
-                </div>
-            </div>
-
-            <div className="p-5 space-y-3 flex-1" role="radiogroup" aria-label="Color theme">
-                {options.map(opt => {
-                    const isSelected = theme === opt.value;
-                    return (
-                        <button
-                            key={opt.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={isSelected}
-                            onClick={() => setTheme(opt.value)}
-                            className={`w-full text-left flex items-center justify-between gap-4 p-4 rounded-xl border transition-colors ${
-                                isSelected
-                                    ? 'bg-blue-500/15 border-blue-500/60'
-                                    : 'bg-slate-900/65 hover:bg-slate-900/90 border-slate-700/80'
-                            }`}
-                        >
-                            <div className="flex items-center gap-3.5 min-w-0">
-                                <div
-                                    className={`p-2 rounded-xl border shrink-0 ${
-                                        isSelected
-                                            ? 'bg-blue-500/15 border-blue-500/40 text-blue-400'
-                                            : 'bg-slate-800 border-slate-700 text-slate-300'
-                                    }`}
-                                >
-                                    {opt.icon}
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-sm text-white">{opt.title}</h3>
-                                    <p className="text-xs text-slate-300 mt-0.5">{opt.description}</p>
-                                </div>
-                            </div>
-
-                            {/* Radio indicator */}
-                            <span
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                    isSelected ? 'border-blue-500' : 'border-slate-500'
-                                }`}
-                            >
-                                {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-        </section>
-    );
-};
-
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 
 const Settings = () => {
@@ -478,7 +399,7 @@ const Settings = () => {
         loadDemoData,
         clearAllData,
     } = useData();
-    const { theme } = useTheme();
+    const { theme, setTheme } = useTheme();
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const STORAGE_KEY = 'wealth-tracker-storage';
@@ -559,23 +480,43 @@ const Settings = () => {
                     </div>
                 </div>
 
-                {/* Quick Summary Pills */}
-                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
-                        {members.length} {members.length === 1 ? 'Member' : 'Members'}
+                {/* Theme Toggle */}
+                <div className="inline-flex items-center gap-3 px-3.5 py-2 rounded-2xl bg-slate-800 border border-slate-700 shadow-md self-start md:self-auto">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        View Mode
                     </span>
-                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
-                        {institutions.length} {institutions.length === 1 ? 'Institution' : 'Institutions'}
-                    </span>
-                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
-                        {accountTypes.length} {accountTypes.length === 1 ? 'Type' : 'Types'}
-                    </span>
-                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-slate-200 font-mono">
-                        {accounts.length} {accounts.length === 1 ? 'Account' : 'Accounts'}
-                    </span>
-                    <span className="px-3 py-1.5 rounded-xl bg-slate-800/95 border border-slate-700/90 text-blue-400 capitalize">
-                        {theme} Theme
-                    </span>
+                    <div
+                        className="inline-flex items-center p-1 rounded-xl bg-slate-900 border border-slate-700"
+                        role="radiogroup"
+                        aria-label="Color theme"
+                    >
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={theme === 'dark'}
+                            onClick={() => setTheme('dark')}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                theme === 'dark'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-slate-300 hover:text-white'
+                            }`}
+                        >
+                            <Moon size={13} /> Dark
+                        </button>
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={theme === 'light'}
+                            onClick={() => setTheme('light')}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                theme === 'light'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-slate-300 hover:text-white'
+                            }`}
+                        >
+                            <Sun size={13} /> Light
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -620,7 +561,7 @@ const Settings = () => {
 
                 <EntityManagerCard
                     icon={<Building2 size={20} />}
-                    iconTone="bg-green-500/15 border-green-500/35 text-green-400"
+                    iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
                     title="Financial Institutions"
                     description="Brokerages and banks holding your accounts"
                     itemLabel="Institution"
@@ -634,7 +575,7 @@ const Settings = () => {
 
                 <EntityManagerCard
                     icon={<Tag size={20} />}
-                    iconTone="bg-purple-500/15 border-purple-500/35 text-purple-400"
+                    iconTone="bg-blue-500/15 border-blue-500/35 text-blue-400"
                     title="Account Types"
                     description="Account classifications (TFSA, RRSP, FHSA, etc.)"
                     itemLabel="Type"
@@ -647,11 +588,8 @@ const Settings = () => {
                 />
             </div>
 
-            {/* Row 2: Features & Appearance */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <FeaturesCard />
-                <AppearanceCard />
-            </div>
+            {/* Row 2: Features */}
+            <FeaturesCard />
 
             {/* Row 3: Data Management & Danger Zone */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -692,7 +630,7 @@ const Settings = () => {
                                     <h3 className="font-bold text-sm text-white">Restore Data</h3>
                                     <p className="text-xs text-slate-300 mt-1">
                                         Upload a previously exported backup.{' '}
-                                        <span className="text-amber-400 font-semibold">Replaces all current data.</span>
+                                        <span className="text-slate-200 font-semibold">Replaces all current data.</span>
                                     </p>
                                 </div>
                                 <input
@@ -710,10 +648,10 @@ const Settings = () => {
                                 </button>
                             </div>
 
-                            <div className={`bg-slate-900/65 border rounded-xl p-4 flex flex-col justify-between gap-4 ${isDemoData ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-700/80'}`}>
+                            <div className={`bg-slate-900/65 border rounded-xl p-4 flex flex-col justify-between gap-4 ${isDemoData ? 'border-blue-500/40 bg-blue-500/5' : 'border-slate-700/80'}`}>
                                 <div>
                                     <div className="flex items-center gap-1.5">
-                                        <Sparkles size={16} className={isDemoData ? 'text-amber-400' : 'text-blue-400'} />
+                                        <Sparkles size={16} className="text-blue-400" />
                                         <h3 className="font-bold text-sm text-white">
                                             {isDemoData ? 'Demo Mode Active' : 'Sample / Demo Data'}
                                         </h3>
@@ -744,7 +682,7 @@ const Settings = () => {
                                                 setImportStatus({ type: 'success', message: 'Demo portfolio loaded!' });
                                             }
                                         }}
-                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold transition-colors"
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/35 text-blue-400 rounded-xl text-xs font-bold transition-colors"
                                     >
                                         <Sparkles size={15} /> Load Demo Data
                                     </button>

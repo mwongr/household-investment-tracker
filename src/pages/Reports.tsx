@@ -419,6 +419,14 @@ const Reports = () => {
                                                                 ? 'bg-green-500/15 border-green-500/35 text-green-400'
                                                                 : tx.type === 'Sell'
                                                                 ? 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                                : tx.type === 'Dividend Income' || tx.type === 'Dividend'
+                                                                ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
+                                                                : tx.type === 'Withdrawal'
+                                                                ? 'bg-purple-500/15 border-purple-500/35 text-purple-400'
+                                                                : tx.type === 'Interest'
+                                                                ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                                                                : tx.type === 'Fee'
+                                                                ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
                                                                 : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
                                                         }`}
                                                     >
@@ -516,7 +524,7 @@ const Reports = () => {
                                             <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
                                                 Total Sells
                                             </span>
-                                            <span className="text-purple-400 font-mono tabular-nums font-bold text-lg">
+                                            <span className="text-red-400 font-mono tabular-nums font-bold text-lg">
                                                 ${fmt2(totals.sells)}
                                             </span>
                                         </div>

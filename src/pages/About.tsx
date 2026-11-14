@@ -16,10 +16,13 @@ import {
     Lock,
 } from 'lucide-react';
 import { useVersion } from '../hooks/useVersion';
+import { useTheme } from '../context/ThemeContext';
 import '../styles/shared.css';
 
 const About: React.FC = () => {
     const { versionInfo, isChecking, checkForUpdates, openModal } = useVersion();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [copied, setCopied] = useState(false);
 
     const commandText = 'git pull origin main && npm install';
@@ -46,15 +49,15 @@ const About: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-12 animate-in fade-in duration-200">
             {/* Top Hero Banner */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm relative overflow-hidden">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 shadow-lg relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left relative z-10">
                     <img
-                        src="/Household-Investment-Tracker-Logo-white.svg"
+                        src={isDark ? '/Household-Investment-Tracker-Logo-white.svg' : '/Household-Investment-Tracker-Logo-black.svg'}
                         alt="Household Investment Tracker Logo"
-                        className="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-md shrink-0"
+                        className="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-sm shrink-0"
                     />
 
                     <div className="space-y-2 flex-1">
@@ -97,8 +100,8 @@ const About: React.FC = () => {
             </div>
 
             {/* Version & Update Card */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-5 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
                     <div>
                         <h2 className="text-lg font-bold text-white flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-emerald-400" />
@@ -122,7 +125,7 @@ const About: React.FC = () => {
 
                 {/* Status Block */}
                 {versionInfo?.updateAvailable ? (
-                    <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-5 space-y-4">
+                    <div className={`${isDark ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'} border rounded-xl p-5 space-y-4`}>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
@@ -162,7 +165,7 @@ const About: React.FC = () => {
                         )}
                     </div>
                 ) : versionInfo?.error ? (
-                    <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3 text-xs text-amber-200">
+                    <div className={`${isDark ? 'bg-amber-950/20 border-amber-500/30 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-900'} border rounded-xl p-4 flex items-start gap-3 text-xs`}>
                         <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                         <div>
                             <span className="font-semibold text-amber-300 block">Unable to fetch latest release</span>
@@ -173,7 +176,7 @@ const About: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between">
+                    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
                                 <CheckCircle2 className="w-4 h-4" />
@@ -218,43 +221,43 @@ const About: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-emerald-300 overflow-x-auto">
+                    <div className="bg-slate-950 border border-slate-700 rounded-lg p-3 font-mono text-xs text-emerald-400 font-semibold overflow-x-auto">
                         <code>{commandText}</code>
                     </div>
 
                     <p className="text-xs text-slate-400">
-                        In your command prompt or terminal in the project folder, stop the app (<kbd className="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded border border-slate-700">Ctrl + C</kbd>), run the command above, then start the app again with <kbd className="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded border border-slate-700">Start App.bat</kbd>.
+                        In your command prompt or terminal in the project folder, stop the app (<kbd className="px-1.5 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">Ctrl + C</kbd>), run the command above, then start the app again with <kbd className="px-1.5 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">Start App.bat</kbd>.
                     </p>
                 </div>
             </div>
 
             {/* Core Features & Canadian Optimization Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-2">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-2 shadow-md">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
                         <DollarSign className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-200 text-sm">Optimized for Canada</h3>
+                    <h3 className="font-semibold text-slate-100 text-sm">Optimized for Canada</h3>
                     <p className="text-xs text-slate-400 leading-relaxed">
                         Full support for TFSA, RRSP, FHSA, and Non-Registered accounts. Combined CRA and Revenu Québec bracket drop simulations and ACB ledger tracking.
                     </p>
                 </div>
 
-                <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-2 shadow-md">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
                         <Lock className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-200 text-sm">100% Local & Private</h3>
+                    <h3 className="font-semibold text-slate-100 text-sm">100% Local & Private</h3>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                        Financial data is stored strictly on your local disk in <code className="text-slate-300">server/database.json</code> with atomic writes and rolling backups. No cloud accounts required.
+                        Financial data is stored strictly on your local disk in <code className="text-slate-200 font-medium">server/database.json</code> with atomic writes and rolling backups. No cloud accounts required.
                     </p>
                 </div>
 
-                <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-2">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-2 shadow-md">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
                         <Layers className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-200 text-sm">Modern Stack</h3>
+                    <h3 className="font-semibold text-slate-100 text-sm">Modern Stack</h3>
                     <p className="text-xs text-slate-400 leading-relaxed">
                         Built with React 19, TypeScript, Vite 7, Express 5, Recharts, TradingView Lightweight Charts, and Tailwind CSS for speed and responsiveness.
                     </p>

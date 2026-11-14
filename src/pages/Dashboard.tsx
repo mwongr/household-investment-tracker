@@ -733,7 +733,7 @@ const Dashboard = () => {
 
             {/* Empty State / Welcome Hero Card */}
             {members.length === 0 && accounts.length === 0 && !isDemoData && (
-                <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-600/20 via-indigo-600/15 to-purple-600/15 border border-blue-500/30 shadow-2xl">
+                <div className="rounded-3xl p-6 sm:p-8 bg-slate-800 border border-slate-700 shadow-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div className="space-y-1.5 max-w-2xl">
                             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/35 text-blue-300 text-xs font-bold uppercase tracking-wider">
@@ -766,7 +766,7 @@ const Dashboard = () => {
 
             {/* Newly Created Accounts / Ready to Populate Banner */}
             {accounts.length > 0 && assets.length === 0 && !isDemoData && (
-                <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-blue-600/20 via-indigo-600/15 to-purple-600/15 border border-blue-500/30 shadow-2xl">
+                <div className="rounded-3xl p-6 sm:p-8 bg-slate-800 border border-slate-700 shadow-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div className="space-y-1.5 max-w-2xl">
                             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 text-xs font-bold uppercase tracking-wider">
@@ -821,7 +821,7 @@ const Dashboard = () => {
                                 ${fmt2(totalInvested)}
                             </h2>
                         </div>
-                        <div className="p-2.5 bg-purple-500/15 border border-purple-500/30 rounded-xl text-purple-400 shrink-0">
+                        <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400 shrink-0">
                             <Wallet size={20} />
                         </div>
                     </div>
@@ -1137,7 +1137,7 @@ const Dashboard = () => {
 
                 <AllocationDonut
                     title="Allocation by Account Type"
-                    icon={<Wallet size={19} className="text-purple-400" />}
+                    icon={<Wallet size={19} className="text-blue-400" />}
                     data={allocationByAccountType}
                     chartTheme={chartTheme}
                 />
@@ -1685,7 +1685,7 @@ const Dashboard = () => {
             {/* Aggregated Stocks View */}
             <section className="space-y-4">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2.5 tracking-tight">
-                    <Layers size={22} className="text-purple-400" />
+                    <Layers size={22} className="text-blue-400" />
                     <span>Combined Stocks (All Accounts)</span>
                 </h3>
                 <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">

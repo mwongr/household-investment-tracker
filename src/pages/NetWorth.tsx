@@ -411,11 +411,11 @@ const NetWorth = () => {
                             <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                                 Mo. Expenses
                             </span>
-                            <div className="p-2 bg-purple-500/15 border border-purple-500/30 rounded-xl text-purple-400">
+                            <div className="p-2 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400">
                                 <Receipt size={18} />
                             </div>
                         </div>
-                        <span className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-purple-400">
+                        <span className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-blue-400">
                             {formatter.format(totalExpenses)}
                         </span>
                     </div>
@@ -884,12 +884,12 @@ const NetWorth = () => {
                         <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
                             <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex justify-between items-center gap-4">
                                 <h2 className="text-lg font-bold text-white flex items-center gap-2.5">
-                                    <span className="p-2 rounded-xl bg-purple-500/15 border border-purple-500/35 text-purple-400">
+                                    <span className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
                                         <Home size={18} />
                                     </span>
                                     <span>Mo. Expenses</span>
                                 </h2>
-                                <span className="font-mono tabular-nums font-bold text-lg text-purple-400">
+                                <span className="font-mono tabular-nums font-bold text-lg text-blue-400">
                                     {formatter.format(totalExpenses)}
                                 </span>
                             </div>
@@ -931,7 +931,7 @@ const NetWorth = () => {
                                     <button
                                         type="submit"
                                         style={{ color: '#ffffff' }}
-                                        className="inline-flex items-center justify-center p-2.5 bg-purple-600 hover:bg-purple-500 rounded-xl transition-colors shrink-0"
+                                        className="inline-flex items-center justify-center p-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors shrink-0"
                                         aria-label="Add Expense"
                                     >
                                         <Plus size={18} />
@@ -1021,7 +1021,7 @@ const NetWorth = () => {
                                                                     {exp.category}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-purple-400">
+                                                            <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-blue-400">
                                                                 {formatter.format(exp.amount)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right whitespace-nowrap">

@@ -76,7 +76,7 @@ const AverageDownCalc: React.FC<Props> = ({ assets }) => {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 bg-slate-900/80 border-b border-slate-700/80">
                 <div className="flex items-center gap-3.5">
-                    <div className="p-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/35 text-indigo-400">
+                    <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
                         <TrendingDown size={20} />
                     </div>
                     <div>

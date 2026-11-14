@@ -97,16 +97,22 @@ body {
 
 /* ── Tailwind utility overrides for light mode ────────────────────── */
 /* High-contrast semantic ink overrides for light surfaces */
+.light .text-green-200,
 .light .text-green-300,
 .light .text-green-400,
+.light .text-emerald-200,
 .light .text-emerald-300,
 .light .text-emerald-400     { color: #047857 !important; }
+.light .text-red-200,
 .light .text-red-300,
 .light .text-red-400,
+.light .text-rose-200,
 .light .text-rose-300,
 .light .text-rose-400        { color: #B91C1C !important; }
+.light .text-amber-200,
 .light .text-amber-300,
 .light .text-amber-400,
+.light .text-yellow-200,
 .light .text-yellow-300,
 .light .text-yellow-400      { color: #B45309 !important; }
 .light .text-orange-300,
@@ -134,23 +140,69 @@ body {
 .light .text-white\/60       { color: rgba(28, 25, 23, 0.65) !important; }
 .light .text-white\/80       { color: rgba(28, 25, 23, 0.85) !important; }
 
-/* Subtle tinted badges & pills in light mode */
+/* High-contrast tinted badges & pills in light mode */
 .light .bg-green-500\/10,
-.light .bg-emerald-500\/10   { background-color: rgba(4, 120, 87, 0.11) !important; }
+.light .bg-green-500\/15,
+.light .bg-green-500\/20,
+.light .bg-emerald-500\/10,
+.light .bg-emerald-500\/15,
+.light .bg-emerald-500\/20   { background-color: #DCFCE7 !important; }
+
 .light .bg-red-500\/10,
-.light .bg-rose-500\/10      { background-color: rgba(185, 28, 28, 0.10) !important; }
-.light .bg-amber-500\/10     { background-color: rgba(180, 83, 9, 0.11) !important; }
-.light .bg-blue-500\/10      { background-color: rgba(29, 78, 216, 0.10) !important; }
-.light .bg-indigo-500\/10    { background-color: rgba(67, 56, 202, 0.10) !important; }
-.light .bg-purple-500\/10    { background-color: rgba(109, 40, 217, 0.10) !important; }
+.light .bg-red-500\/15,
+.light .bg-red-500\/20,
+.light .bg-rose-500\/10,
+.light .bg-rose-500\/15,
+.light .bg-rose-500\/20      { background-color: #FEE2E2 !important; }
+
+.light .bg-amber-500\/10,
+.light .bg-amber-500\/15,
+.light .bg-amber-500\/20     { background-color: #FEF3C7 !important; }
+
+.light .bg-blue-500\/10,
+.light .bg-blue-500\/15,
+.light .bg-blue-500\/20      { background-color: #DBEAFE !important; }
+
+.light .bg-indigo-500\/10,
+.light .bg-indigo-500\/15,
+.light .bg-indigo-500\/20    { background-color: #E0E7FF !important; }
+
+.light .bg-purple-500\/10,
+.light .bg-purple-500\/15,
+.light .bg-purple-500\/20    { background-color: #F3E8FF !important; }
 
 .light .border-green-500\/20,
-.light .border-emerald-500\/20 { border-color: rgba(4, 120, 87, 0.28) !important; }
+.light .border-green-500\/30,
+.light .border-green-500\/35,
+.light .border-emerald-500\/20,
+.light .border-emerald-500\/30,
+.light .border-emerald-500\/35 { border-color: #86EFAC !important; }
+
 .light .border-red-500\/20,
-.light .border-rose-500\/20    { border-color: rgba(185, 28, 28, 0.28) !important; }
-.light .border-amber-500\/20   { border-color: rgba(180, 83, 9, 0.28) !important; }
-.light .border-blue-500\/20    { border-color: rgba(29, 78, 216, 0.28) !important; }
-.light .border-indigo-500\/20  { border-color: rgba(67, 56, 202, 0.28) !important; }
+.light .border-red-500\/30,
+.light .border-red-500\/35,
+.light .border-red-500\/40,
+.light .border-rose-500\/20,
+.light .border-rose-500\/30,
+.light .border-rose-500\/35    { border-color: #FCA5A5 !important; }
+
+.light .border-amber-500\/20,
+.light .border-amber-500\/30,
+.light .border-amber-500\/35,
+.light .border-amber-500\/40   { border-color: #FCD34D !important; }
+
+.light .border-blue-500\/20,
+.light .border-blue-500\/30,
+.light .border-blue-500\/35,
+.light .border-blue-500\/40    { border-color: #93C5FD !important; }
+
+.light .border-indigo-500\/20,
+.light .border-indigo-500\/30,
+.light .border-indigo-500\/35  { border-color: #A5B4FC !important; }
+
+.light .border-purple-500\/20,
+.light .border-purple-500\/30,
+.light .border-purple-500\/35  { border-color: #D8B4FE !important; }
 
 /* Warm stone borders in light mode */
 .light .border-white\/10     { border-color: rgba(120, 108, 92, 0.14) !important; }
@@ -185,11 +237,18 @@ body {
 .light .glass-panel {
   background-color: var(--color-bg-secondary);
   border-color: var(--color-border);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 10px 24px -6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
 .light .card {
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 10px 24px -6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+}
+
+.light .shadow-md,
+.light .shadow-lg,
+.light .shadow-xl {
+  --tw-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow) !important;
 }
 
 /* Hide number input spinners */

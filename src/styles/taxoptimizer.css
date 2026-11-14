@@ -1208,7 +1208,7 @@
 .light .tax-kpi-card {
   background: #ffffff;
   border-color: #cbd5e1;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 8px 20px -6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
 .light .tax-kpi-card:hover {
@@ -1217,8 +1217,8 @@
 
 .light .tax-kpi-card.tax-kpi-hero {
   background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 58%, #ecfdf5 100%);
-  border: 1px solid rgba(79, 70, 229, 0.4);
-  box-shadow: 0 8px 24px -8px rgba(79, 70, 229, 0.2), 0 2px 6px -1px rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(79, 70, 229, 0.35);
+  box-shadow: 0 2px 6px -1px rgba(79, 70, 229, 0.1), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .light .tax-kpi-card.tax-kpi-hero::before {
@@ -1226,8 +1226,8 @@
 }
 
 .light .tax-kpi-card.tax-kpi-hero:hover {
-  border-color: rgba(79, 70, 229, 0.6);
-  box-shadow: 0 12px 28px -8px rgba(79, 70, 229, 0.26);
+  border-color: rgba(79, 70, 229, 0.55);
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.14);
 }
 
 .light .tax-kpi-hero-icon {
@@ -1253,7 +1253,7 @@
 .light .tax-panel {
   background: #ffffff;
   border-color: #cbd5e1;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 10px 24px -6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
 .light .tax-panel-header {
@@ -1373,7 +1373,7 @@
 .light .milestone-card {
   background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
   border-color: rgba(79, 70, 229, 0.3);
-  box-shadow: 0 4px 16px -4px rgba(79, 70, 229, 0.12);
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.08);
 }
 
 .light .milestone-title {

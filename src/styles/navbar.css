@@ -165,10 +165,22 @@
     flex-shrink: 0;
 }
 
-.nav-icon-btn:hover {
+.light .nav-icon-btn {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.nav-icon-btn:hover,
+.light .nav-icon-btn:hover {
     background-color: var(--color-accent-blue);
-    color: #ffffff;
+    color: #ffffff !important;
     border-color: var(--color-accent-blue);
+}
+
+.light .net-worth-pill {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
 .mobile-menu-btn {

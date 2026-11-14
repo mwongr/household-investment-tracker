@@ -49,7 +49,7 @@ const Navbar = () => {
                 <div className="navbar-left">
                     <Link to="/" className="brand-logo" onClick={() => setMobileOpen(false)}>
                         <img
-                            src="/Household-Investment-Tracker-Logo-white.svg"
+                            src={theme === 'dark' ? '/Household-Investment-Tracker-Logo-white.svg' : '/Household-Investment-Tracker-Logo-black.svg'}
                             alt="Household Investment Tracker"
                             className="brand-logo-img"
                         />
