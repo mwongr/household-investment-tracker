@@ -45,13 +45,11 @@ const Navbar = () => {
             <header className="navbar">
                 <div className="navbar-left">
                     <Link to="/" className="brand-logo" onClick={() => setMobileOpen(false)}>
-                        <span className="brand-mark" aria-hidden="true">
-                            <TrendingUp size={16} strokeWidth={2.5} />
-                        </span>
-                        <span className="brand-text">
-                            <span className="brand-main">Household</span>
-                            <span className="brand-sub">Investment Tracker</span>
-                        </span>
+                        <img
+                            src="/Household-Investment-Tracker-Logo-white.svg"
+                            alt="Household Investment Tracker"
+                            className="brand-logo-img"
+                        />
                     </Link>
 
                     <nav className="navbar-nav" aria-label="Primary navigation">

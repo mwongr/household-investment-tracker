@@ -40,23 +40,11 @@
     opacity: 0.9;
 }
 
-.brand-mark {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 0.55rem;
-    background: linear-gradient(135deg, var(--color-accent-blue), var(--color-accent-green));
-    color: #ffffff;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
-}
-
-.brand-text {
-    display: flex;
-    flex-direction: column;
-    line-height: 1;
+.brand-logo-img {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    display: block;
 }
 
 .brand-main {

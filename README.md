@@ -1,125 +1,185 @@
-# Household Investment Tracker
+<div align="center">
 
-A comprehensive personal finance and investment analysis application designed to track household investments, analyze portfolio performance, manage assets across multiple family members and institutions, and optimize tax strategies. Built with React 19, TypeScript, Tailwind CSS, lightweight-charts, and a local Express backend.
+<img src="public/Household-Investment-Tracker-Logo-black.svg" alt="Household Investment Tracker" width="360" />
+
+<br />
+<br />
+
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://expressjs.com/)
+[![Zod](https://img.shields.io/badge/Zod-Validated-3E67B1?style=for-the-badge&logo=zod&logoColor=white)](https://zod.dev/)
+[![License](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey?style=for-the-badge)](LICENSE)
+
+**A privacy-first, local-first personal finance, portfolio analytics, and tax planning platform — built and optimized for Canadian investors.**
+
+[Features](#-features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#️-technology-stack) • [Getting Started](#-installation) • [Backups & Security](#-backup--data-management) • [Disclaimer](#️-disclaimer)
+
+</div>
+
+---
+
+## 📖 Overview
+
+**Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
+
+---
+
+## 🍁 Optimized for Canadian Investors
+
+While flexible enough for general portfolio tracking, the app is purpose-built around Canadian investing workflows:
+*   **Canadian Account Types**: Pre-configured for **TFSA**, **RRSP**, **FHSA**, **Margin**, **Cash**, and **Crypto** accounts (with custom type support).
+*   **Native Brokerage CSV Parsers**: Direct activity and transaction import support for **Wealthsimple** and **Questrade**, alongside a custom CSV mapper for any institution.
+*   **CAD / USD Dual-Currency Engine**: Live `CAD=X` exchange rate fetching with automatic CAD-normalized market values, book costs, and profit/loss calculations.
+*   **CRA & Revenu Québec Tax Optimizer**: Models combined Federal & Provincial brackets (including the Quebec Abatement) to pinpoint the exact RRSP contribution "sweet spot" for maximum tax refunds.
+*   **Canadian Capital Gains (ACB) Tracker**: Dedicated running Adjusted Cost Base ledger for non-registered accounts, handling Return of Capital (RoC), Capital Gains Dividends, DRIPs, and Stock Splits.
+
+---
 
 ## 🚀 Features
 
 ### 📊 Portfolio Dashboard & Management
-*   **Household Overview**: Real-time tracking of net worth, daily performance, and asset allocation across the entire household.
-*   **Multi-Member & Institution Support**: Track investments for multiple family members separately or aggregately across institutions.
-*   **Multi-Currency (CAD & USD)**: Live exchange rate integration, multi-currency account support, and seamless currency conversion across views.
-*   **Asset Management**: Detailed tracking for Stocks, ETFs, Mutual Funds, and Cash with custom book cost overrides.
-*   **Live Market Data**: Yahoo Finance integration for real-time price quotes, daily changes, and sparkline charts.
-*   **Watchlist**: Keep tabs on key securities with detailed metrics (volume, average volume, 52-week high/low) and technical indicators.
-*   **Interactive Onboarding & Demo Mode**: Step-by-step onboarding wizard for new users and a one-click Demo Mode with sample portfolios to explore features safely.
-*   **Theme Toggle**: Sleek, harmonious dark and light modes accessible from the navigation bar.
+*   **Household Overview**: Real-time tracking of net worth, daily gains/losses, portfolio value history, and allocation breakdowns by member, account type, and institution.
+*   **Multi-Member & Institution Support**: View individual family member portfolios or aggregate the entire household.
+*   **Asset Management**: Detailed tracking for Stocks, ETFs, Mutual Funds, and Cash with custom book cost overrides and currency migration tools.
+*   **Live Market Data & Watchlist**: Yahoo Finance integration for quotes, daily changes, 52-week ranges, volume, sparklines, and upcoming earnings/dividend events.
+*   **Onboarding Wizard & Demo Mode**: Guided first-run setup plus a one-click Demo Mode populated with sample household data.
+*   **Dark & Light Themes**: Full theme support toggled directly from the navigation bar.
 
-### 📥 CSV Import (Wealthsimple, Questrade & Custom)
-*   **Native Brokerage Parsers**: Seamlessly import activity and transaction history exports directly from **Wealthsimple** and **Questrade** without manual reformatting.
-*   **Custom CSV Mapping**: Flexible mapper for holdings and transactions from any brokerage, featuring downloadable sample templates, interactive column mapping, and duplicate detection.
-*   **Import Preview & Validation**: Review, validate, and preview rows before committing them to your accounts.
+### 📥 CSV Import & Data Portability
+*   **Wealthsimple & Questrade**: Zero-reformatting import for exported transaction histories.
+*   **Custom CSV Mapper**: Interactive column mapping for holdings and transactions from any brokerage, complete with downloadable templates, validation previews, and duplicate detection.
 
-### ⚖️ Account Balancer & Average Down Calculator
-*   **Portfolio Balancer**: Set desired target allocation percentages per holding, visualize allocation drift, and generate an instant rebalancing action plan.
-*   **Average Down Calculator**: Model prospective purchases on existing holdings to determine your new average cost, required capital, and break-even recovery targets.
+### ⚖️ Portfolio Balancer & Calculators
+*   **Portfolio Balancer**: Define target allocation percentages per holding, spot drift immediately, and generate a buy/sell rebalancing action plan.
+*   **Average Down Calculator**: Simulate additional share purchases to preview new average cost, capital required, and break-even recovery targets.
 
-### 🛡️ Tax Bracket Optimizer
-*   **Bracket Drop Optimization**: Custom tax engine that models combined Federal & Provincial/State brackets, with support for customizable tax rates and regional abatements.
-*   **"Sweet Spot" Analysis**: Calculates the exact RRSP contribution needed to drop taxable income into the next lower combined tax bracket to maximize refund rates.
-*   **Interactive Simulation**: RRSP contribution slider with live feedback on estimated refunds (Federal & Provincial/State), effective savings rate, top marginal rate, and final taxable income.
-*   **Funding Schedule Widget**: Link to a specific RRSP account, track year-to-date deposits, and calculate the required monthly, bi-weekly, or weekly contributions needed to meet your tax target before the RRSP deadline.
-*   **Scenario Snapshots**: Save, load, or delete optimized tax scenario snapshots stored in your local database. Tax brackets and parameters are fully customizable via the Settings interface.
+### 🛡️ RRSP Tax Bracket Optimizer
+*   **Bracket Drop Optimization**: Models combined Federal and Provincial tax brackets with customizable rates and regional abatements.
+*   **"Sweet Spot" & Slider Simulation**: Live feedback on Federal (CRA) and Provincial (Revenu Québec) refunds, effective tax savings rate, and marginal bracket drops.
+*   **Funding Schedule & Snapshots**: Link an RRSP account to track YTD deposits, calculate periodic contributions needed before the deadline, and save/compare scenario snapshots.
 
 ### 🧮 Adjusted Cost Base (ACB) Tracker
-*   **Capital Gains Calculation**: Dedicated tracker for non-registered investment accounts to calculate capital gains/losses for tax reporting.
-*   **Comprehensive Transaction Types**: Supports Buy, Sell, Return of Capital (RoC), Capital Gains Dividend, Reinvested Dividend (DRIP), Reinvested Capital Gains Distribution, and Stock Splits.
-*   **Running Log**: Computes running share counts, adjusted cost base changes, total ACB, ACB per share, and realized capital gains/losses on every transaction.
-*   **Data Portability**: Filter tracking history by year and export detailed ACB transaction ledgers to CSV.
+*   **Full Transaction Support**: Tracks Buy, Sell, Return of Capital (RoC), Capital Gains Dividend, Reinvested Dividend (DRIP), Reinvested Capital Gains Distribution, and Stock Splits.
+*   **Running Ledger & Export**: Computes running share counts, total ACB, ACB per share, and realized capital gains/losses by tax year with one-click CSV export.
 
-### 📈 Advanced Stock Research & Analytics
-*   **Interactive Candlestick Charts**: Render interactive OHLCV data using high-performance Lightweight Charts (`lightweight-charts`).
-*   **Trend & Volatility Indicators**: Overlaid EMA 50/200 lines, RSI (14) gauge with oversold (<30) and overbought (>70) alert zones, MACD (12, 26, 9) histogram panels, and Bollinger Band metrics.
-*   **Target Entry Levels**: Display suggested buy zones (lower Bollinger Band), sell zones (upper Bollinger Band), and Fibonacci 61.8% entry levels alongside 52-week high/low overlays.
-*   **Multi-Ticker Comparison**: Compare historical normalized returns starting at 0% for up to 8 tickers simultaneously across multiple timeframes (`1M`, `6M`, `1Y`, `5Y`, `YTD`).
+### 📈 Stock Research & Technical Analysis
+*   **Interactive Candlestick Charts**: Powered by TradingView's `lightweight-charts` with overlaid **EMA 50 / EMA 200** lines.
+*   **Indicators & Signals**: Automated **RSI (14)**, **MACD (12, 26, 9)**, **ATR (14)**, **Golden Cross** detection, **Bollinger Bands**, and **61.8% Fibonacci** entry targets.
+*   **Multi-Ticker Comparison**: Normalized percentage return comparison (dividend-adjusted) for up to 8 tickers across `1M`, `6M`, `1Y`, `5Y`, and `YTD`.
 
 ### 💰 Net Worth & Cashflow Dashboard
-*   **Full Balance Sheet**: Record bank account balances (checking/savings) and liabilities (mortgages, credit cards, loans) alongside investment holdings.
-*   **Debt-to-Asset Analysis**: Visual distribution bar showing the percentage split of investments, cash, and debt.
-*   **Passive Income & Cashflow Projections**: Estimates a monthly income stream using the 4% safe withdrawal rate rule of thumb and compares it to household expenses for a passive net cashflow projection.
-*   **Exportable Reports**: Generate print-ready PDF reports (via `html2canvas` and `jspdf`) or export comprehensive financial balance sheets to CSV (via `papaparse`).
+*   **Complete Balance Sheet**: Track bank accounts (chequing/savings) and liabilities (mortgages, credit cards, loans) alongside investments.
+*   **Debt-to-Asset & Passive Income**: Visual asset/cash/debt breakdown plus a 4% safe-withdrawal-rate passive income vs. monthly expense projection.
+*   **PDF & CSV Exports**: Generate print-ready PDF balance sheets (`jsPDF` + `html2canvas`) or export raw data to CSV (`PapaParse`).
 
 ### 🧰 Investment Tools Suite
-*   **Stock Buying Planner**: Select accounts, fetch live market prices, input purchase plans, and preview how new buys will impact cash balances and average cost bases.
-*   **Profit/Loss & Risk-Reward Calculator**: Model entry, target, and stop-loss levels to compute risk-reward ratios with a quick "Auto 1:2" stop-loss helper.
-*   **Position Sizing Calculator**: Determine recommended shares and total position size based on portfolio risk tolerance. Integrates ATR (Average True Range) volatility lookups to dynamically establish stop-loss levels.
-*   **Portfolio Allocation Splitter**: Divide cash sums across custom asset weights with instant dollar calculations.
-*   **DRIP Calculator**: Simulates wealth compound differentials of reinvesting dividends vs. taking them as cash over up to 50 years.
+*   **Stock Buying Planner**: Preview cash balance and average cost impact before placing trades.
+*   **Profit/Loss & Risk-Reward Calculator**: Model entry, target, and stop-loss levels with an "Auto 1:2" helper.
+*   **Position Sizing Calculator**: Risk-based share sizing with live ATR volatility stop-loss suggestions.
+*   **Allocation Splitter & DRIP Simulator**: Split cash across custom asset weights and project dividend reinvestment compounding up to 50 years.
+
+---
 
 ## 🛠️ Technology Stack
 
-*   **Frontend**: React 19, TypeScript, Vite, Recharts, Lightweight Charts (by TradingView)
-*   **Reporting & Data**: jsPDF, html2canvas, PapaParse
-*   **Styling**: Tailwind CSS, Lucide Icons
-*   **Backend**: Node.js, Express, Yahoo Finance API integration (`yahoo-finance2`), Technical Indicators API (`technicalindicators`)
-*   **Data Storage**: Local JSON database (`server/database.json`) with auto-sync and local file system backup logic.
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | React 19, TypeScript, Vite 7, React Router 7 |
+| **Charts & UI** | TradingView Lightweight Charts, Recharts, Tailwind CSS, Lucide Icons |
+| **Reporting & CSV** | jsPDF, html2canvas, PapaParse |
+| **Backend** | Node.js, Express 5, TypeScript (`tsx`), Zod, Helmet, express-rate-limit |
+| **Market & TA Data** | `yahoo-finance2` (with rate-limiting & TTL caching), `technicalindicators` |
+| **Storage** | Local JSON (`server/database.json`) with atomic writes & rolling snapshots |
+| **Testing** | Vitest |
+
+---
 
 ## 📋 Prerequisites
 
-*   [Node.js](https://nodejs.org/) (Version 18 or higher recommended)
-*   Windows OS (for the easy start batch script) - *App runs on Mac/Linux via terminal commands.*
+*   **[Node.js](https://nodejs.org/)** (v20 or higher recommended)
+*   **Windows OS** for `Start App.bat` *(macOS and Linux are fully supported via `npm run dev`)*
+
+---
 
 ## 💿 Installation
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/mwongr/household-investment-tracker.git
-    ```
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/mwongr/household-investment-tracker.git
+   cd household-investment-tracker
+   ```
 
-2.  **Navigate into the project directory**:
-    ```bash
-    cd household-investment-tracker
-    ```
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-3.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
+---
 
 ## ▶️ How to Run
 
-### **Option 1: Windows Easy Start (Recommended)**
-Double-click the included `Start App.bat` file in the root directory.
-*   This will launch the local backend server and the frontend application concurrently.
-*   It also handles the automated backup process when you exit.
+### Option 1: Windows Easy Start (Recommended)
+Double-click `Start App.bat` in the project root.
+* Launches the Express API server (`127.0.0.1:3001`) and the Vite frontend (`localhost:5847`) concurrently.
+* Prompts to create a timestamped backup when you stop the app.
 
-### **Option 2: Manual Start (Command Line)**
-Open a terminal in the project directory and run:
+### Option 2: Command Line
 ```bash
 npm run dev
 ```
-Access the application at `http://localhost:5847`.
+Open **[http://localhost:5847](http://localhost:5847)** in your browser.
+
+### Available Scripts
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Starts both the backend server and Vite dev server |
+| `npm run build` | Type-checks and builds the production bundle to `dist/` |
+| `npm run typecheck` | Runs strict TypeScript checks for both frontend and backend |
+| `npm test` | Runs the Vitest unit and route test suite |
+| `npm run lint` | Runs ESLint across `src/` and `server/` |
+
+---
 
 ## 💾 Backup & Data Management
 
-### **Automated Backups**
-1.  Go to the **Settings** page in the application.
-2.  Enter a local folder path in the **Automated Backup Location** field (e.g., `D:\MyBackups`).
-3.  When you use `Start App.bat` to run the app, closing the terminal window (Ctrl+C) will prompt you to create a timestamped backup of your data.
+### Automated Backups
+1. Open **Settings** in the app.
+2. Set your **Automated Backup Location** to a local folder (e.g., `D:\Backups`).
+3. When exiting `Start App.bat`, confirm the backup prompt to save a timestamped JSON copy.
+4. The server also maintains rolling pre-write snapshots in `server/backups/` (gitignored).
 
-### **Manual Import/Export**
-*   **Export**: Click "Export Backup" in Settings to download a JSON snapshot.
-*   **Restore**: Use "Import Backup" to load a previously saved JSON file (either from the automated system or a manual export).
+### Manual Import / Export
+* **Export**: Download a full JSON snapshot anytime from **Settings**.
+* **Restore**: Import a previously saved JSON backup from **Settings**.
 
-## 🔒 Security Note
-This application runs locally. Your financial data is stored in `server/database.json` and is **not** uploaded to any cloud service by the application itself. Ensure you include `server/database.json` in your `.gitignore` if you fork this repository (already configured by default).
+---
+
+## 🔒 Privacy & Local Security
+
+* **Local-First Storage**: All portfolio, tax, and net worth data stays on your machine in `server/database.json` (gitignored by default) and browser `localStorage`. Nothing is uploaded to a remote database.
+* **Hardened Local Server**: The Express backend binds strictly to `127.0.0.1`, enforces localhost-only CORS, applies `helmet` security headers and rate limiting, validates all payloads and backup paths with `zod`, and uses serialized atomic file writes to prevent corruption.
+
+---
+
+## ⚠️ Disclaimer
+
+**For Informational & Educational Purposes Only — Not Financial, Tax, or Legal Advice.**
+
+* This software is a personal tracking and calculation tool. Nothing in this application constitutes investment, financial, tax, accounting, or legal advice, nor is it a recommendation to buy, sell, or hold any security.
+* **Market Data**: Quotes, historical prices, exchange rates, and technical indicators are fetched from third-party sources (Yahoo Finance) and may be delayed, incomplete, or inaccurate.
+* **Tax & ACB Calculations**: Tax bracket estimates, RRSP refund projections, and Adjusted Cost Base (ACB) calculations are approximations based on user-entered data and configurable rates. Canadian tax rules (including superficial loss rules, spousal attribution, and provincial surtaxes) are complex—always verify figures with official CRA / Revenu Québec documentation or a qualified financial/tax professional before filing or making investment decisions.
+* **Use at Your Own Risk**: The author assumes no responsibility or liability for any financial losses, tax penalties, data loss, or decisions made based on the output of this application.
+
+---
 
 ## 📄 License
 
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
 
-### In Plain English:
-* **Allowed**: You are free to view, download, run, share, and adapt the code for personal, educational, and non-commercial purposes, provided appropriate attribution is given to the author.
-* **Prohibited**: **Commercial use is strictly forbidden.** Anyone is explicitly blocked from making money off this code, selling or reselling it, offering it as a paid or subscription-based service (SaaS), bundling it into commercial products, or monetizing it in any manner without prior express written consent.
+* **Allowed**: View, download, run, share, and adapt the code for personal, educational, and non-commercial purposes with proper attribution.
+* **Prohibited**: **Commercial use is strictly forbidden.** You may not sell, resell, bundle into commercial products, offer as a paid/SaaS service, or monetize this software in any manner without prior express written consent.
 
-For complete legal terms, see the [LICENSE](file:///d:/Apps/Household%20Investment%20Tracker/LICENSE) file or visit [Creative Commons](https://creativecommons.org/licenses/by-nc/4.0/).
-
+See the [LICENSE](LICENSE) file or [Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) for full legal terms.
