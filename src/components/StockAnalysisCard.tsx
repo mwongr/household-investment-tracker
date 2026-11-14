@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { createChart, CandlestickSeries, LineSeries, type UTCTimestamp } from 'lightweight-charts';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    createChart,
+    CandlestickSeries,
+    LineSeries,
+    type IChartApi,
+    type ISeriesApi,
+    type UTCTimestamp,
+} from 'lightweight-charts';
 import { TrendingUp, TrendingDown, Minus, RefreshCw, AlertCircle, Activity } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import type { AnalysisData } from '../types';
@@ -305,29 +312,50 @@ const TargetLevels = ({ targets, currentPrice }: {
 // ─── Lightweight Chart with EMA Overlay ───────────────────────────────────────
 const TaChart = ({ data }: { data: AnalysisData }) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
+    const chartRef = useRef<IChartApi | null>(null);
+    const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+    const ema50SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const ema200SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    const candleData = useMemo(
+        () =>
+            data.ohlcv.map((bar) => ({
+                time: bar.time as UTCTimestamp,
+                open: bar.open,
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+            })),
+        [data.ohlcv]
+    );
+
+    const ema50Data = useMemo(
+        () =>
+            data.emaSeries
+                .filter((e) => e.ema50 != null)
+                .map((e) => ({ time: e.time as UTCTimestamp, value: e.ema50! })),
+        [data.emaSeries]
+    );
+
+    const ema200Data = useMemo(
+        () =>
+            data.emaSeries
+                .filter((e) => e.ema200 != null)
+                .map((e) => ({ time: e.time as UTCTimestamp, value: e.ema200! })),
+        [data.emaSeries]
+    );
 
     useEffect(() => {
-        if (!chartContainerRef.current || !data.ohlcv.length) return;
+        const container = chartContainerRef.current;
+        if (!container) return;
 
-        const isDark = theme === 'dark';
-        const chart = createChart(chartContainerRef.current, {
-            layout: {
-                background: { color: 'transparent' },
-                textColor: isDark ? '#cbd5e1' : '#334155',
-            },
-            grid: {
-                vertLines: { color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.08)' },
-                horzLines: { color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.08)' },
-            },
+        const chart = createChart(container, {
+            layout: { background: { color: 'transparent' } },
             crosshair: { mode: 1 },
-            rightPriceScale: { borderColor: isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.15)' },
-            timeScale: {
-                borderColor: isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.15)',
-                timeVisible: true,
-                secondsVisible: false,
-            },
-            width: chartContainerRef.current.clientWidth,
+            timeScale: { timeVisible: true, secondsVisible: false },
+            width: container.clientWidth,
             height: 340,
         });
 
@@ -340,60 +368,72 @@ const TaChart = ({ data }: { data: AnalysisData }) => {
             wickDownColor: '#ef4444',
         });
 
-        candleSeries.setData(
-            data.ohlcv.map(bar => ({
-                time: bar.time as UTCTimestamp,
-                open: bar.open,
-                high: bar.high,
-                low: bar.low,
-                close: bar.close,
-            }))
-        );
-
         const ema50Series = chart.addSeries(LineSeries, {
-            color: isDark ? '#f59e0b' : '#d97706',
             lineWidth: 2,
             title: 'EMA 50',
             priceLineVisible: false,
             lastValueVisible: true,
         });
-        ema50Series.setData(
-            data.emaSeries
-                .filter(e => e.ema50 != null)
-                .map(e => ({ time: e.time as UTCTimestamp, value: e.ema50! }))
-        );
 
         const ema200Series = chart.addSeries(LineSeries, {
-            color: isDark ? '#a855f7' : '#7c3aed',
             lineWidth: 2,
             title: 'EMA 200',
             priceLineVisible: false,
             lastValueVisible: true,
         });
-        ema200Series.setData(
-            data.emaSeries
-                .filter(e => e.ema200 != null)
-                .map(e => ({ time: e.time as UTCTimestamp, value: e.ema200! }))
-        );
 
-        chart.timeScale().fitContent();
+        chartRef.current = chart;
+        candleSeriesRef.current = candleSeries;
+        ema50SeriesRef.current = ema50Series;
+        ema200SeriesRef.current = ema200Series;
 
-        const handleResize = () => {
+        const observer = new ResizeObserver(() => {
             if (chartContainerRef.current) {
                 chart.applyOptions({ width: chartContainerRef.current.clientWidth });
             }
-        };
-
-        const observer = new ResizeObserver(handleResize);
-        observer.observe(chartContainerRef.current);
-        window.addEventListener('resize', handleResize);
+        });
+        observer.observe(container);
 
         return () => {
             observer.disconnect();
-            window.removeEventListener('resize', handleResize);
             chart.remove();
+            chartRef.current = null;
+            candleSeriesRef.current = null;
+            ema50SeriesRef.current = null;
+            ema200SeriesRef.current = null;
         };
-    }, [data, theme]);
+    }, []);
+
+    useEffect(() => {
+        const chart = chartRef.current;
+        if (!chart) return;
+        chart.applyOptions({
+            layout: {
+                background: { color: 'transparent' },
+                textColor: isDark ? '#cbd5e1' : '#334155',
+            },
+            grid: {
+                vertLines: { color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.08)' },
+                horzLines: { color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.08)' },
+            },
+            rightPriceScale: {
+                borderColor: isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.15)',
+            },
+            timeScale: {
+                borderColor: isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.15)',
+            },
+        });
+        ema50SeriesRef.current?.applyOptions({ color: isDark ? '#f59e0b' : '#d97706' });
+        ema200SeriesRef.current?.applyOptions({ color: isDark ? '#a855f7' : '#7c3aed' });
+    }, [isDark]);
+
+    useEffect(() => {
+        if (!candleData.length) return;
+        candleSeriesRef.current?.setData(candleData);
+        ema50SeriesRef.current?.setData(ema50Data);
+        ema200SeriesRef.current?.setData(ema200Data);
+        chartRef.current?.timeScale().fitContent();
+    }, [candleData, ema50Data, ema200Data]);
 
     return (
         <div className="bg-slate-900/75 border border-slate-700/80 rounded-xl p-4 space-y-3">
@@ -423,28 +463,44 @@ const StockAnalysisCard = ({ ticker }: StockAnalysisCardProps) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchAnalysis = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`http://localhost:3001/api/stocks/${ticker}/analysis`);
-            if (!res.ok) {
-                const errJson = await res.json().catch(() => ({}));
-                throw new Error(errJson.error || `HTTP ${res.status}`);
-            }
-            const json: AnalysisData = await res.json();
-            setData(json);
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Failed to load analysis');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [reloadToken, setReloadToken] = useState(0);
+
+    const fetchAnalysis = () => setReloadToken((n) => n + 1);
 
     useEffect(() => {
-        fetchAnalysis();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ticker]);
+        const controller = new AbortController();
+
+        (async () => {
+            await Promise.resolve();
+            if (controller.signal.aborted) return;
+            setLoading(true);
+            setError(null);
+            try {
+                const res = await fetch(
+                    `/api/stocks/${encodeURIComponent(ticker)}/analysis`,
+                    { signal: controller.signal }
+                );
+                if (!res.ok) {
+                    const errJson = await res.json().catch(() => ({}));
+                    throw new Error(errJson.error || `HTTP ${res.status}`);
+                }
+                const json: AnalysisData = await res.json();
+                if (!controller.signal.aborted) {
+                    setData(json);
+                }
+            } catch (err: unknown) {
+                if (!controller.signal.aborted) {
+                    setError(err instanceof Error ? err.message : 'Failed to load analysis');
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
+            }
+        })();
+
+        return () => controller.abort();
+    }, [ticker, reloadToken]);
 
     return (
         <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">

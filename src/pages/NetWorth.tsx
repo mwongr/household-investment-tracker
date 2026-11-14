@@ -19,8 +19,6 @@ import {
     FileText,
     Download,
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import Papa from 'papaparse';
 import '../styles/networth.css';
 
@@ -196,6 +194,11 @@ const NetWorth = () => {
     // Export Handlers
     const exportToPDF = async () => {
         if (!contentRef.current) return;
+
+        const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+            import('jspdf'),
+            import('html2canvas'),
+        ]);
 
         const canvas = await html2canvas(contentRef.current, {
             scale: 2,

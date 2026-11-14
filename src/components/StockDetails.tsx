@@ -131,14 +131,18 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
 
     const handleAdd = async () => {
         if (isAdded) return;
-        await addToWatchlist(data.symbol);
+        try {
+            await addToWatchlist(data.symbol);
+        } catch (err) {
+            console.error('Failed to add to watchlist', err);
+        }
     };
 
     useEffect(() => {
         const fetchChart = async () => {
             setLoadingChart(true);
             try {
-                const res = await fetch(`http://localhost:3001/api/quote?symbol=${data.symbol}&range=${range}`);
+                const res = await fetch(`/api/quote?symbol=${encodeURIComponent(data.symbol)}&range=${encodeURIComponent(range)}`);
                 if (res.ok) {
                     const result = await res.json();
                     if (result.sparkline) {

@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import type { CompareRange, CompareApiResponse } from '../types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:3001';
+const API_BASE = '';
 
 const SERIES_COLORS = [
   '#3b82f6', // blue

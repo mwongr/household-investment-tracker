@@ -180,7 +180,7 @@ const AccountDetails = () => {
     const handleResearchClick = async (symbol: string) => {
         setLoadingResearch(true);
         try {
-            const res = await fetch(`http://localhost:3001/api/quote-detailed?symbol=${symbol}`);
+            const res = await fetch(`/api/quote-detailed?symbol=${encodeURIComponent(symbol)}`);
             if (res.ok) {
                 const data: StockData = await res.json();
                 setResearchData(data);

@@ -7,15 +7,18 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"vite\"",
-    "server": "node server/server.js",
+    "server": "tsx server/index.ts",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b && tsc -p tsconfig.server.json",
+    "test": "vitest run",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "lightweight-charts": "^5.1.0",
@@ -26,26 +29,30 @@
     "react-router-dom": "^7.12.0",
     "recharts": "^3.6.0",
     "technicalindicators": "^3.1.0",
-    "uuid": "^13.0.0",
-    "yahoo-finance2": "^3.11.2"
+    "yahoo-finance2": "^3.11.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.10.1",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
-    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "concurrently": "^10.0.7",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^5.1.0"
   }
 }

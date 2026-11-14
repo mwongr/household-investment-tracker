@@ -22,7 +22,7 @@ const StockResearch = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         try {
-            const res = await fetch(`http://localhost:3001/api/quote-detailed?symbol=${symbol}`);
+            const res = await fetch(`/api/quote-detailed?symbol=${encodeURIComponent(symbol)}`);
             if (!res.ok) {
                 if (res.status === 404) throw new Error(`Stock "${symbol}" not found`);
                 throw new Error('Failed to fetch quote data');
@@ -85,9 +85,15 @@ const StockResearch = () => {
         e.preventDefault();
         if (!newItem.trim()) return;
         setAddingItem(true);
-        await addToWatchlist(newItem.trim().toUpperCase());
-        setNewItem('');
-        setAddingItem(false);
+        try {
+            await addToWatchlist(newItem.trim().toUpperCase());
+            setNewItem('');
+        } catch (err) {
+            console.error('Failed to add to watchlist', err);
+            setError(`Could not add "${newItem.trim().toUpperCase()}". Check symbol or try again.`);
+        } finally {
+            setAddingItem(false);
+        }
     };
 
     const handleRefreshWatchlist = async () => {

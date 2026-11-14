@@ -218,7 +218,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                                     type="button"
                                     onClick={() => {
                                         if (step === 1) setMode('choose');
-                                        else setStep((s) => (s - 1) as any);
+                                        else if (step === 2) setStep(1);
+                                        else if (step === 3) setStep(2);
                                     }}
                                     className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                                     aria-label="Back to previous step"

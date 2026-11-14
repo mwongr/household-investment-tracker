@@ -173,7 +173,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 tickerOverrides
             );
             return res;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('CSV parse error:', err);
             return null;
         }
@@ -441,9 +441,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 onSuccess?.(finalAccountId);
                 onClose();
             }, 1200);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Import execution failed:', err);
-            setImportError(err.message || 'Failed to complete import.');
+            setImportError(err instanceof Error ? err.message : 'Failed to complete import.');
             modalBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
         } finally {
             setIsSubmitting(false);

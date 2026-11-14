@@ -112,7 +112,7 @@ const SYNONYMS: Record<keyof ColumnMapping, string[]> = {
 /**
  * Clean and parse numeric values, handling $, commas, parenthesized negatives, etc.
  */
-export const parseCleanNumber = (val: any): number => {
+export const parseCleanNumber = (val: unknown): number => {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
     let s = String(val).trim();

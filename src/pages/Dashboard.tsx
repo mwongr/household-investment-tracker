@@ -1,22 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { useTheme } from '../context/ThemeContext';
 import { buildPortfolioHistory, type HistoricalQuote } from '../utils/portfolioHistory';
-import {
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    Tooltip,
-    AreaChart,
-    Area,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-} from 'recharts';
+import { useChartTheme, type ChartTheme } from '../hooks/useChartTheme';
+import { Sparkline } from '../components/charts/Sparkline';
+import { AllocationDonut } from '../components/charts/AllocationDonut';
+import { TopMoversBar } from '../components/charts/TopMoversBar';
+import { PortfolioHistoryChart } from '../components/charts/PortfolioHistoryChart';
 import {
     DollarSign,
     TrendingUp,
@@ -44,30 +34,17 @@ import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 import type { Asset } from '../types';
 import '../styles/shared.css';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
-
 type AssetWithMeta = Asset & {
     accountName: string;
     memberName: string;
     percentTo52WeekHigh: number;
 };
 
-interface ChartTheme {
-    tickColor: string;
-    gridColor: string;
-    tooltipStyle: React.CSSProperties;
-    tooltipItemStyle: React.CSSProperties;
-    tooltipLabelStyle: React.CSSProperties;
-    cursorFill: string;
-    cursorStroke: string;
-}
-
 interface PerformerCardProps {
     title: string;
     mode: 'positive' | 'negative';
     badgeMode: 'percent' | 'dollar';
     asset: AssetWithMeta;
-    gradientId: string;
     chartTheme: ChartTheme;
 }
 
@@ -79,13 +56,11 @@ const PerformerCard: React.FC<PerformerCardProps> = ({
     mode,
     badgeMode,
     asset,
-    gradientId,
     chartTheme,
 }) => {
     const isPosMode = mode === 'positive';
     const badgeVal = badgeMode === 'percent' ? asset.profitPercent : asset.profit;
     const isBadgePos = badgeVal >= 0;
-    const strokeColor = isPosMode ? '#10b981' : '#ef4444';
 
     const footerLabel = badgeMode === 'percent' ? 'Total Profit/Loss' : 'Total Return (%)';
     const footerVal = badgeMode === 'percent' ? asset.profit : asset.profitPercent;
@@ -204,31 +179,11 @@ const PerformerCard: React.FC<PerformerCardProps> = ({
                             1 Year Trend
                         </p>
                         <div className="h-20">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={asset.sparkline}>
-                                    <defs>
-                                        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={strokeColor} stopOpacity={0.32} />
-                                            <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <Tooltip
-                                        contentStyle={chartTheme.tooltipStyle}
-                                        itemStyle={chartTheme.tooltipItemStyle}
-                                        formatter={(value) => [`$${fmt2(Number(value))}`, 'Price']}
-                                        labelStyle={{ display: 'none' }}
-                                        cursor={{ stroke: chartTheme.cursorStroke, strokeWidth: 1 }}
-                                    />
-                                    <YAxis domain={['auto', 'auto']} hide />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="price"
-                                        stroke={strokeColor}
-                                        strokeWidth={2}
-                                        fill={`url(#${gradientId})`}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <Sparkline
+                                data={asset.sparkline}
+                                isPositive={isPosMode}
+                                chartTheme={chartTheme}
+                            />
                         </div>
                     </div>
                 )}
@@ -236,81 +191,6 @@ const PerformerCard: React.FC<PerformerCardProps> = ({
         </div>
     );
 };
-
-interface AllocationDonutCardProps {
-    title: string;
-    icon: React.ReactNode;
-    data: { name: string; value: number }[];
-    centerTotal?: number;
-    chartTheme: ChartTheme;
-}
-
-const AllocationDonutCard: React.FC<AllocationDonutCardProps> = ({
-    title,
-    icon,
-    data,
-    centerTotal,
-    chartTheme,
-}) => (
-    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5 pb-3 border-b border-slate-700/70">
-            {icon}
-            <span>{title}</span>
-        </h3>
-        {data.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-slate-300 text-sm">
-                No allocation data available
-            </div>
-        ) : (
-            <>
-                <div className="flex-1 w-full relative min-h-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={76}
-                                outerRadius={112}
-                                paddingAngle={4}
-                                dataKey="value"
-                                stroke="none"
-                            >
-                                {data.map((_entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                formatter={(value) => `$${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
-                                contentStyle={chartTheme.tooltipStyle}
-                                itemStyle={chartTheme.tooltipItemStyle}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    {centerTotal !== undefined && (
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                            <p className="text-slate-300 text-xs uppercase font-bold tracking-wider">Total</p>
-                            <p className="text-xl font-bold font-mono tabular-nums text-white">
-                                ${centerTotal.toLocaleString(undefined, { notation: 'compact', maximumFractionDigits: 1 })}
-                            </p>
-                        </div>
-                    )}
-                </div>
-                <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 pt-3 border-t border-slate-700/60">
-                    {data.map((entry, index) => (
-                        <div key={entry.name} className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                            <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                            />
-                            <span>{entry.name}</span>
-                        </div>
-                    ))}
-                </div>
-            </>
-        )}
-    </div>
-);
 
 const Dashboard = () => {
     const {
@@ -325,7 +205,7 @@ const Dashboard = () => {
         isDemoData,
         loadDemoData
     } = useData();
-    const { theme } = useTheme();
+    const chartTheme = useChartTheme();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [historicalPrices, setHistoricalPrices] = useState<Record<string, HistoricalQuote[]>>({});
@@ -347,7 +227,7 @@ const Dashboard = () => {
         if (tickers.length === 0) return;
 
         let cancelled = false;
-        fetch('http://localhost:3001/api/portfolio/history-prices', {
+        fetch('/api/portfolio/history-prices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tickers, startDate }),
@@ -365,33 +245,6 @@ const Dashboard = () => {
             cancelled = true;
         };
     }, [txTickerKey]);
-
-    const isDark = theme === 'dark';
-    const chartTheme: ChartTheme = {
-        tickColor: isDark ? '#94a3b8' : '#475569',
-        gridColor: isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(15, 23, 42, 0.08)',
-        tooltipStyle: {
-            backgroundColor: isDark ? '#0f172a' : '#ffffff',
-            borderColor: isDark ? '#334155' : '#cbd5e1',
-            borderRadius: '0.75rem',
-            color: isDark ? '#f8fafc' : '#0f172a',
-            fontSize: '12px',
-            padding: '8px 12px',
-            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
-        },
-        tooltipItemStyle: {
-            color: isDark ? '#f8fafc' : '#0f172a',
-            fontWeight: 700,
-            fontFamily: 'monospace',
-        },
-        tooltipLabelStyle: {
-            color: isDark ? '#cbd5e1' : '#475569',
-            fontWeight: 600,
-            marginBottom: '2px',
-        },
-        cursorFill: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(15, 23, 42, 0.06)',
-        cursorStroke: isDark ? '#64748b' : '#94a3b8',
-    };
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -413,39 +266,49 @@ const Dashboard = () => {
     const totalCash = accounts.reduce((sum, a) => sum + a.cashBalance, 0);
 
     // 2. Breakdowns for Pie Charts
-    const allocationByPerson = members
-        .map(member => {
-            const memberAccounts = accounts.filter(a => a.memberId === member.id);
-            const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
-            const value =
-                memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
-                memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
-            return { name: member.name, value };
-        })
-        .filter(d => d.value > 0);
+    const allocationByPerson = useMemo(
+        () =>
+            members
+                .map(member => {
+                    const memberAccounts = accounts.filter(a => a.memberId === member.id);
+                    const memberAssets = assets.filter(a => memberAccounts.find(acc => acc.id === a.accountId));
+                    const value =
+                        memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+                        memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+                    return { name: member.name, value };
+                })
+                .filter(d => d.value > 0),
+        [members, accounts, assets]
+    );
 
-    const accountTypes = Array.from(new Set(accounts.map(a => a.type)));
-    const allocationByAccountType = accountTypes
-        .map(type => {
-            const typeAccounts = accounts.filter(a => a.type === type);
-            const typeAssets = assets.filter(a => typeAccounts.find(acc => acc.id === a.accountId));
-            const value =
-                typeAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
-                typeAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
-            return { name: type, value };
-        })
-        .filter(d => d.value > 0);
+    const allocationByAccountType = useMemo(() => {
+        const accountTypes = Array.from(new Set(accounts.map(a => a.type)));
+        return accountTypes
+            .map(type => {
+                const typeAccounts = accounts.filter(a => a.type === type);
+                const typeAssets = assets.filter(a => typeAccounts.find(acc => acc.id === a.accountId));
+                const value =
+                    typeAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+                    typeAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+                return { name: type, value };
+            })
+            .filter(d => d.value > 0);
+    }, [accounts, assets]);
 
-    const allocationByInstitution = institutions
-        .map(inst => {
-            const instAccounts = accounts.filter(a => a.institutionId === inst.id);
-            const instAssets = assets.filter(a => instAccounts.find(acc => acc.id === a.accountId));
-            const value =
-                instAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
-                instAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
-            return { name: inst.name, value };
-        })
-        .filter(d => d.value > 0);
+    const allocationByInstitution = useMemo(
+        () =>
+            institutions
+                .map(inst => {
+                    const instAccounts = accounts.filter(a => a.institutionId === inst.id);
+                    const instAssets = assets.filter(a => instAccounts.find(acc => acc.id === a.accountId));
+                    const value =
+                        instAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+                        instAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+                    return { name: inst.name, value };
+                })
+                .filter(d => d.value > 0),
+        [institutions, accounts, assets]
+    );
 
     // 3. Member Details
     const currentYear = new Date().getFullYear().toString();
@@ -495,39 +358,56 @@ const Dashboard = () => {
     });
 
     // 4. Best & Worst Performing Assets
-    const assetsWithAccountInfo: AssetWithMeta[] = assets.map(asset => {
-        const account = accounts.find(acc => acc.id === asset.accountId);
-        const member = members.find(m => m.id === account?.memberId);
-        const percentTo52WeekHigh =
-            asset.high52Week && asset.high52Week !== 0
-                ? ((asset.currentPrice - asset.high52Week) / asset.high52Week) * 100
-                : 0;
+    const assetsWithAccountInfo: AssetWithMeta[] = useMemo(
+        () =>
+            assets.map(asset => {
+                const account = accounts.find(acc => acc.id === asset.accountId);
+                const member = members.find(m => m.id === account?.memberId);
+                const percentTo52WeekHigh =
+                    asset.high52Week && asset.high52Week !== 0
+                        ? ((asset.currentPrice - asset.high52Week) / asset.high52Week) * 100
+                        : 0;
 
-        return {
-            ...asset,
-            accountName: account?.name || 'Unknown',
-            memberName: member?.name || 'Unknown',
-            percentTo52WeekHigh,
-        };
-    });
+                return {
+                    ...asset,
+                    accountName: account?.name || 'Unknown',
+                    memberName: member?.name || 'Unknown',
+                    percentTo52WeekHigh,
+                };
+            }),
+        [assets, accounts, members]
+    );
 
-    const sortedByPerformance = [...assetsWithAccountInfo].sort((a, b) => b.profitPercent - a.profitPercent);
+    const sortedByPerformance = useMemo(
+        () => [...assetsWithAccountInfo].sort((a, b) => b.profitPercent - a.profitPercent),
+        [assetsWithAccountInfo]
+    );
     const bestPerformer = sortedByPerformance[0];
     const worstPerformer = sortedByPerformance[sortedByPerformance.length - 1];
 
-    const sortedByProfitDollar = [...assetsWithAccountInfo].sort((a, b) => b.profit - a.profit);
+    const sortedByProfitDollar = useMemo(
+        () => [...assetsWithAccountInfo].sort((a, b) => b.profit - a.profit),
+        [assetsWithAccountInfo]
+    );
     const highestGainerDollar = sortedByProfitDollar[0];
     const lowestGainerDollar = sortedByProfitDollar[sortedByProfitDollar.length - 1];
 
-    const top5AssetsPercent = [...assetsWithAccountInfo]
-        .sort((a, b) => b.profitPercent - a.profitPercent)
-        .slice(0, 5)
-        .map(a => ({ name: `${a.ticker} (${a.accountName})`, value: a.profitPercent, ...a }));
+    const top5AssetsPercent = useMemo(
+        () =>
+            sortedByPerformance
+                .slice(0, 5)
+                .map(a => ({ name: `${a.ticker} (${a.accountName})`, value: a.profitPercent })),
+        [sortedByPerformance]
+    );
 
-    const bottom5AssetsPercent = [...assetsWithAccountInfo]
-        .sort((a, b) => a.profitPercent - b.profitPercent)
-        .slice(0, 5)
-        .map(a => ({ name: `${a.ticker} (${a.accountName})`, value: a.profitPercent, ...a }));
+    const bottom5AssetsPercent = useMemo(
+        () =>
+            [...assetsWithAccountInfo]
+                .sort((a, b) => a.profitPercent - b.profitPercent)
+                .slice(0, 5)
+                .map(a => ({ name: `${a.ticker} (${a.accountName})`, value: a.profitPercent })),
+        [assetsWithAccountInfo]
+    );
 
     // 5. Account Performance Data for Table
     type AccountPerformance = {
@@ -1128,7 +1008,6 @@ const Dashboard = () => {
                             mode="positive"
                             badgeMode="percent"
                             asset={bestPerformer}
-                            gradientId="colorBestPct"
                             chartTheme={chartTheme}
                         />
                         <PerformerCard
@@ -1136,7 +1015,6 @@ const Dashboard = () => {
                             mode="negative"
                             badgeMode="percent"
                             asset={worstPerformer}
-                            gradientId="colorWorstPct"
                             chartTheme={chartTheme}
                         />
                         {highestGainerDollar && (
@@ -1145,7 +1023,6 @@ const Dashboard = () => {
                                 mode="positive"
                                 badgeMode="dollar"
                                 asset={highestGainerDollar}
-                                gradientId="colorBestDollar"
                                 chartTheme={chartTheme}
                             />
                         )}
@@ -1155,7 +1032,6 @@ const Dashboard = () => {
                                 mode="negative"
                                 badgeMode="dollar"
                                 asset={lowestGainerDollar}
-                                gradientId="colorWorstDollar"
                                 chartTheme={chartTheme}
                             />
                         )}
@@ -1168,73 +1044,12 @@ const Dashboard = () => {
 
             {/* Portfolio History Chart */}
             {portfolioHistory.length > 0 && (
-                <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl">
-                    <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-700/70">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2.5 tracking-tight">
-                            <TrendingUp size={20} className="text-blue-400" />
-                            <span>Portfolio Value History</span>
-                        </h3>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                            Net Worth Trend
-                        </span>
-                    </div>
-                    <div className="h-[300px] w-full bg-slate-900/50 border border-slate-700/60 rounded-xl p-3">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={portfolioHistory} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.32} />
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
-                                <XAxis
-                                    dataKey="name"
-                                    tickFormatter={val => {
-                                        const d = new Date(val.includes('T') ? val : `${val}T12:00:00`);
-                                        return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
-                                    }}
-                                    interval={Math.max(1, Math.floor(portfolioHistory.length / 5))}
-                                    tick={{ fill: chartTheme.tickColor, fontSize: 11 }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    domain={['auto', 'auto']}
-                                    orientation="right"
-                                    tickFormatter={val => `$${(val / 1000).toFixed(0)}k`}
-                                    tick={{ fill: chartTheme.tickColor, fontSize: 11 }}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    width={56}
-                                />
-                                <Tooltip
-                                    formatter={(value) => [`$${fmt2(Number(value))}`, 'Net Worth']}
-                                    labelFormatter={label => {
-                                        const str = String(label);
-                                        return new Date(str.includes('T') ? str : `${str}T12:00:00`).toLocaleDateString();
-                                    }}
-                                    contentStyle={chartTheme.tooltipStyle}
-                                    itemStyle={chartTheme.tooltipItemStyle}
-                                    labelStyle={chartTheme.tooltipLabelStyle}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="value"
-                                    stroke="#3b82f6"
-                                    strokeWidth={2.5}
-                                    fillOpacity={1}
-                                    fill="url(#colorValue)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </section>
+                <PortfolioHistoryChart data={portfolioHistory} chartTheme={chartTheme} />
             )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <AllocationDonutCard
+                <AllocationDonut
                     title="Allocation by Person"
                     icon={<Users size={19} className="text-blue-400" />}
                     data={allocationByPerson}
@@ -1320,91 +1135,35 @@ const Dashboard = () => {
                     <p className="text-xs font-medium text-slate-300 mt-1">Current Net Worth</p>
                 </div>
 
-                <AllocationDonutCard
+                <AllocationDonut
                     title="Allocation by Account Type"
                     icon={<Wallet size={19} className="text-purple-400" />}
                     data={allocationByAccountType}
                     chartTheme={chartTheme}
                 />
 
-                <AllocationDonutCard
+                <AllocationDonut
                     title="Allocation by Institution"
                     icon={<Building2 size={19} className="text-amber-400" />}
                     data={allocationByInstitution}
                     chartTheme={chartTheme}
                 />
 
-                {/* Top 5 Assets by % Profit */}
-                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5 pb-3 border-b border-slate-700/70">
-                        <TrendingUp size={19} className="text-green-400" />
-                        <span>Top 5 Assets (% Profit)</span>
-                    </h3>
-                    <div className="flex-1 w-full min-h-0 bg-slate-900/50 border border-slate-700/60 rounded-xl p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={top5AssetsPercent} margin={{ top: 8, right: 24, left: 10, bottom: 8 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} horizontal={false} />
-                                <XAxis type="number" unit="%" tick={{ fill: chartTheme.tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                                <YAxis
-                                    type="category"
-                                    dataKey="name"
-                                    tick={{ fill: chartTheme.tickColor, fontSize: 11, fontWeight: 600 }}
-                                    width={135}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <Tooltip
-                                    cursor={{ fill: chartTheme.cursorFill }}
-                                    contentStyle={chartTheme.tooltipStyle}
-                                    itemStyle={chartTheme.tooltipItemStyle}
-                                    labelStyle={chartTheme.tooltipLabelStyle}
-                                    formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Return']}
-                                />
-                                <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]}>
-                                    {top5AssetsPercent.map((_entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#34d399'} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                <TopMoversBar
+                    title="Top 5 Assets (% Profit)"
+                    icon={<TrendingUp size={19} className="text-green-400" />}
+                    data={top5AssetsPercent}
+                    variant="positive"
+                    chartTheme={chartTheme}
+                />
 
-                {/* Bottom 5 Assets by % Profit */}
-                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl h-[410px] flex flex-col">
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2.5 pb-3 border-b border-slate-700/70">
-                        <TrendingDown size={19} className="text-red-400" />
-                        <span>Bottom 5 Assets (% Profit)</span>
-                    </h3>
-                    <div className="flex-1 w-full min-h-0 bg-slate-900/50 border border-slate-700/60 rounded-xl p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={bottom5AssetsPercent} margin={{ top: 8, right: 24, left: 10, bottom: 8 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} horizontal={false} />
-                                <XAxis type="number" unit="%" tick={{ fill: chartTheme.tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                                <YAxis
-                                    type="category"
-                                    dataKey="name"
-                                    tick={{ fill: chartTheme.tickColor, fontSize: 11, fontWeight: 600 }}
-                                    width={135}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <Tooltip
-                                    cursor={{ fill: chartTheme.cursorFill }}
-                                    contentStyle={chartTheme.tooltipStyle}
-                                    itemStyle={chartTheme.tooltipItemStyle}
-                                    labelStyle={chartTheme.tooltipLabelStyle}
-                                    formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Return']}
-                                />
-                                <Bar dataKey="value" fill="#ef4444" radius={[0, 6, 6, 0]}>
-                                    {bottom5AssetsPercent.map((_entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                <TopMoversBar
+                    title="Bottom 5 Assets (% Profit)"
+                    icon={<TrendingDown size={19} className="text-red-400" />}
+                    data={bottom5AssetsPercent}
+                    variant="negative"
+                    chartTheme={chartTheme}
+                />
             </div>
 
             {/* Account Performance Table */}

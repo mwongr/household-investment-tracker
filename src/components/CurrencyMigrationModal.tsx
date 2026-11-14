@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { AlertTriangle, X, Save } from 'lucide-react';
+import { ApiError } from '../api/client';
 import { useData } from '../context/DataContext';
 
 interface Props {
@@ -59,11 +60,11 @@ const CurrencyMigrationModal: React.FC<Props> = ({ onClose, defaultAssetId }) =>
         needsManualPrice && manualClosePrice ? parseFloat(manualClosePrice) : undefined
       );
       onClose();
-    } catch (err: any) {
-      if (err.requiresManualPrice) {
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.requiresManualPrice) {
         setNeedsManualPrice(true);
       }
-      setError(err.message || "Failed to migrate currency.");
+      setError(err instanceof Error ? err.message : "Failed to migrate currency.");
     } finally {
       setIsSubmitting(false);
     }

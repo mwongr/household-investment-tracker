@@ -19,7 +19,7 @@ import '../styles/shared.css';
 
 // ─── Constants & Helpers ─────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = '';
 
 const fmtCurrency = (n: number): string =>
     n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -10,7 +10,7 @@ import type { OptimizationResult, TaxScenario, LayerCakeSegment, TaxSettings, Ta
 import { useData } from '../context/DataContext';
 import '../styles/taxoptimizer.css';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = '';
 const fmt = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
 const fmtDec = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -30,8 +30,26 @@ function rateClass(rate: number): string {
   return 'rate-low';
 }
 
-const FormattedNumberInput = ({ value, onChange, className, placeholder, id, style, emptyIsInfinity }: any) => {
-  const formatVal = (v: any) => {
+interface FormattedNumberInputProps {
+  value: number;
+  onChange: (val: number) => void;
+  className?: string;
+  placeholder?: string;
+  id?: string;
+  style?: React.CSSProperties;
+  emptyIsInfinity?: boolean;
+}
+
+const FormattedNumberInput = ({
+  value,
+  onChange,
+  className,
+  placeholder,
+  id,
+  style,
+  emptyIsInfinity,
+}: FormattedNumberInputProps) => {
+  const formatVal = (v: number | null | undefined) => {
     if (v == null || (emptyIsInfinity && v === Infinity)) return '';
     return Number(v).toLocaleString('en-CA');
   };
@@ -397,9 +415,9 @@ const TaxOptimizer: React.FC = () => {
         setSaveState('error');
         setTimeout(() => setSaveState('idle'), 4000);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[TaxOptimizer] Save exception:', e);
-      setSaveError(e?.message || 'Network error — is the server running?');
+      setSaveError(e instanceof Error ? e.message : 'Network error — is the server running?');
       setSaveState('error');
       setTimeout(() => setSaveState('idle'), 4000);
     }

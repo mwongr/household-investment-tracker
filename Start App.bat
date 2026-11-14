@@ -17,7 +17,7 @@ set /p "target_folder=Do you want to run a backup now? (y/n): "
 if /i "%target_folder%"=="y" (
     echo.
     echo Running Backup Process...
-    node server/backup.js
+    npx tsx server/backup.ts
     echo.
     echo Done.
     pause
