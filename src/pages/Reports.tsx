@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Download, FileText, Filter, Trash2, FileBarChart, X } from 'lucide-react';
+import { Download, FileText, Filter, Trash2, FileBarChart, X, Calendar } from 'lucide-react';
 import '../styles/shared.css';
+
+const toIsoDate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
 
 const fmt2 = (n: number) =>
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,10 +32,46 @@ const Reports = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(50);
 
     // Unique tickers for dropdown
     const uniqueTickers = Array.from(new Set(transactions.map(tx => tx.ticker).filter(Boolean))).sort();
+
+    // Dynamic Date Presets
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const todayStr = toIsoDate(now);
+    const monthStartStr = toIsoDate(new Date(currentYear, now.getMonth(), 1));
+    const threeMonthsAgo = new Date(now);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const twelveMonthsAgo = new Date(now);
+    twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+    const datePresets = [
+        { id: 'all', label: 'All Time', start: '', end: '' },
+        { id: 'this-month', label: 'This Month', start: monthStartStr, end: todayStr },
+        { id: '3m', label: 'Last 3M', start: toIsoDate(threeMonthsAgo), end: todayStr },
+        { id: '6m', label: 'Last 6M', start: toIsoDate(sixMonthsAgo), end: todayStr },
+        { id: '1y', label: 'Last 12M', start: toIsoDate(twelveMonthsAgo), end: todayStr },
+        { id: 'ytd', label: 'YTD', start: `${currentYear}-01-01`, end: todayStr },
+        ...[0, 1, 2, 3].map(offset => {
+            const yr = currentYear - offset;
+            return {
+                id: `yr-${yr}`,
+                label: String(yr),
+                start: `${yr}-01-01`,
+                end: `${yr}-12-31`,
+            };
+        }),
+    ];
+
+    const applyDatePreset = (start: string, end: string) => {
+        setStartDate(start);
+        setEndDate(end);
+        setCurrentPage(1);
+    };
 
     // Enrich transactions with readable names and preserve original order
     const enrichedTransactions = transactions.map((tx, index) => {
@@ -272,7 +315,7 @@ const Reports = () => {
             {activeTab === 'transactions' && (
                 <div className="space-y-6">
                     {/* Filter Bar */}
-                    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-4 shadow-xl">
+                    <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-4 shadow-xl space-y-3">
                         <div className="flex flex-wrap items-center gap-3 text-sm">
                             <div className="flex items-center gap-2 text-slate-200 font-bold text-xs uppercase tracking-wider whitespace-nowrap border-r border-slate-700 pr-3">
                                 <Filter size={15} className="text-blue-400" /> Filters
@@ -384,6 +427,30 @@ const Reports = () => {
                                     <X size={13} /> Clear Filters
                                 </button>
                             )}
+                        </div>
+
+                        {/* Quick Date Presets */}
+                        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-700/70">
+                            <div className="flex items-center gap-1.5 text-slate-300 font-bold text-xs uppercase tracking-wider whitespace-nowrap mr-1">
+                                <Calendar size={14} className="text-blue-400" /> Presets
+                            </div>
+                            {datePresets.map(preset => {
+                                const isActive = startDate === preset.start && endDate === preset.end;
+                                return (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        onClick={() => applyDatePreset(preset.start, preset.end)}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                                            isActive
+                                                ? 'bg-blue-600 border-blue-500 text-white shadow-sm'
+                                                : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500'
+                                        }`}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
