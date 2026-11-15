@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useVersion } from '../hooks/useVersion';
 import { useTheme } from '../context/ThemeContext';
+import KofiButton from '../components/KofiButton';
 import '../styles/shared.css';
 
 const About: React.FC = () => {
@@ -95,6 +96,10 @@ const About: React.FC = () => {
                                 <ExternalLink className="w-3 h-3" />
                             </a>
                         </div>
+                    </div>
+
+                    <div className="shrink-0 sm:self-start">
+                        <KofiButton size="sm" />
                     </div>
                 </div>
             </div>

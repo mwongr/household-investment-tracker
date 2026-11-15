@@ -23,9 +23,11 @@ import {
     Database,
     Tag,
     Sparkles,
+    Heart,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
+import KofiButton from '../components/KofiButton';
 import '../styles/shared.css';
 
 // ─── Reusable Entity Manager Card (Members / Institutions) ────────────────────
@@ -738,6 +740,24 @@ const Settings = () => {
                     </div>
                 </section>
             </div>
+
+            {/* Row 4: Support the Project */}
+            <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/35 text-rose-400 shrink-0">
+                        <Heart size={18} />
+                    </div>
+                    <div className="min-w-0">
+                        <h2 className="text-sm font-bold text-white tracking-tight">
+                            Support Household Investment Tracker
+                        </h2>
+                        <p className="text-xs text-slate-300">
+                            If this app helps you manage your household portfolio, consider supporting ongoing development.
+                        </p>
+                    </div>
+                </div>
+                <KofiButton size="md" className="self-start sm:self-auto" />
+            </section>
         </div>
     );
 };
