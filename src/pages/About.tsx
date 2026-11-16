@@ -79,7 +79,7 @@ const About: React.FC = () => {
                         <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-slate-400">
                             <div>
                                 <span className="text-slate-400">Author:</span>{' '}
-                                <span className="text-slate-200 font-medium">Mike Wong</span>
+                                <span className="text-slate-200 font-medium">Mike</span>
                             </div>
                             <div>
                                 <span className="text-slate-400">License:</span>{' '}

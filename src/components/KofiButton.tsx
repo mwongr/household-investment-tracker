@@ -28,13 +28,13 @@ export const KofiButton: React.FC<KofiButtonProps> = ({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center justify-center font-bold bg-slate-900/80 hover:bg-slate-750 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white shadow-sm transition-colors shrink-0 ${sizeClasses} ${className}`}
+            className={`inline-flex items-center justify-center font-bold bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 hover:border-amber-400/60 text-amber-300 shadow-sm shadow-amber-500/10 hover:-translate-y-0.5 transition-all shrink-0 ${sizeClasses} ${className}`}
         >
             <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 aria-hidden="true"
-                className="w-4 h-4 shrink-0 text-slate-200"
+                className="w-4 h-4 shrink-0 text-amber-300"
             >
                 <path
                     d="M4 7h12.5a3.5 3.5 0 0 1 0 7H16v1a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V7Z"
