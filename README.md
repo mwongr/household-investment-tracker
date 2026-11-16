@@ -15,19 +15,19 @@
 
 **A privacy-first, local-first personal finance, portfolio analytics, and tax planning platform — built and optimized for Canadian investors.**
 
-[Screenshots](#-screenshots) • [Features](#-features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#️-technology-stack) • [Getting Started](#-installation) • [Backups & Security](#-backup--data-management) • [Disclaimer](#️-disclaimer)
+[Screenshots](#screenshots) • [Features](#features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#technology-stack) • [Getting Started](#installation) • [Backups & Security](#backup--data-management) • [Disclaimer](#️-disclaimer)
 
 </div>
 
 ---
 
-## 📖 Overview
+## Overview
 
 **Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 <table>
   <tr>
@@ -65,9 +65,9 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 
 ---
 
-## 🚀 Features
+## Features
 
-### 📊 Portfolio Dashboard & Management
+### Portfolio Dashboard & Management
 *   **Household Overview**: Real-time tracking of net worth, daily gains/losses, portfolio value history, and allocation breakdowns by member, account type, and institution.
 *   **Multi-Member & Institution Support**: View individual family member portfolios or aggregate the entire household.
 *   **Asset Management**: Detailed tracking for Stocks, ETFs, Mutual Funds, and Cash with custom book cost overrides and currency migration tools.
@@ -75,34 +75,34 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 *   **Onboarding Wizard & Demo Mode**: Guided first-run setup plus a one-click Demo Mode populated with sample household data.
 *   **Dark & Light Themes**: Full theme support toggled directly from the navigation bar.
 
-### 📥 CSV Import & Data Portability
+### CSV Import & Data Portability
 *   **Wealthsimple & Questrade**: Zero-reformatting import for exported transaction histories.
 *   **Custom CSV Mapper**: Interactive column mapping for holdings and transactions from any brokerage, complete with downloadable templates, validation previews, and duplicate detection.
 
-### ⚖️ Portfolio Balancer & Calculators
+### Portfolio Balancer & Calculators
 *   **Portfolio Balancer**: Define target allocation percentages per holding, spot drift immediately, and generate a buy/sell rebalancing action plan.
 *   **Average Down Calculator**: Simulate additional share purchases to preview new average cost, capital required, and break-even recovery targets.
 
-### 🛡️ RRSP Tax Bracket Optimizer
+### RRSP Tax Bracket Optimizer
 *   **Bracket Drop Optimization**: Models combined Federal and Provincial tax brackets with customizable rates and regional abatements.
 *   **"Sweet Spot" & Slider Simulation**: Live feedback on Federal (CRA) and Provincial (Revenu Québec) refunds, effective tax savings rate, and marginal bracket drops.
 *   **Funding Schedule & Snapshots**: Link an RRSP account to track YTD deposits, calculate periodic contributions needed before the deadline, and save/compare scenario snapshots.
 
-### 🧮 Adjusted Cost Base (ACB) Tracker
+### Adjusted Cost Base (ACB) Tracker
 *   **Full Transaction Support**: Tracks Buy, Sell, Return of Capital (RoC), Capital Gains Dividend, Reinvested Dividend (DRIP), Reinvested Capital Gains Distribution, and Stock Splits.
 *   **Running Ledger & Export**: Computes running share counts, total ACB, ACB per share, and realized capital gains/losses by tax year with one-click CSV export.
 
-### 📈 Stock Research & Technical Analysis
+### Stock Research & Technical Analysis
 *   **Interactive Candlestick Charts**: Powered by TradingView's `lightweight-charts` with overlaid **EMA 50 / EMA 200** lines.
 *   **Indicators & Signals**: Automated **RSI (14)**, **MACD (12, 26, 9)**, **ATR (14)**, **Golden Cross** detection, **Bollinger Bands**, and **61.8% Fibonacci** entry targets.
 *   **Multi-Ticker Comparison**: Normalized percentage return comparison (dividend-adjusted) for up to 8 tickers across `1M`, `6M`, `1Y`, `5Y`, and `YTD`.
 
-### 💰 Net Worth & Cashflow Dashboard
+### Net Worth & Cashflow Dashboard
 *   **Complete Balance Sheet**: Track bank accounts (chequing/savings) and liabilities (mortgages, credit cards, loans) alongside investments.
 *   **Debt-to-Asset & Passive Income**: Visual asset/cash/debt breakdown plus a 4% safe-withdrawal-rate passive income vs. monthly expense projection.
 *   **PDF & CSV Exports**: Generate print-ready PDF balance sheets (`jsPDF` + `html2canvas`) or export raw data to CSV (`PapaParse`).
 
-### 🧰 Investment Tools Suite
+### Investment Tools Suite
 *   **Stock Buying Planner**: Preview cash balance and average cost impact before placing trades.
 *   **Profit/Loss & Risk-Reward Calculator**: Model entry, target, and stop-loss levels with an "Auto 1:2" helper.
 *   **Position Sizing Calculator**: Risk-based share sizing with live ATR volatility stop-loss suggestions.
@@ -110,7 +110,7 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Layer | Technologies |
 | :--- | :--- |
@@ -124,14 +124,14 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 *   **[Node.js](https://nodejs.org/)** (v20 or higher recommended)
 *   **Windows OS** for `Start App.bat` *(macOS and Linux are fully supported via `npm run dev`)*
 
 ---
 
-## 💿 Installation
+## Installation
 
 1. **Clone the repository**:
    ```bash
@@ -146,7 +146,7 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 
 ---
 
-## ▶️ How to Run
+## How to Run
 
 ### Option 1: Windows Easy Start (Recommended)
 Double-click `Start App.bat` in the project root.
@@ -170,7 +170,7 @@ Open **[http://localhost:5847](http://localhost:5847)** in your browser.
 
 ---
 
-## 💾 Backup & Data Management
+## Backup & Data Management
 
 ### Automated Backups
 1. Open **Settings** in the app.
@@ -202,7 +202,7 @@ Open **[http://localhost:5847](http://localhost:5847)** in your browser.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
 
