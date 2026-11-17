@@ -10,12 +10,13 @@
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://expressjs.com/)
+[![Electron](https://img.shields.io/badge/Electron-45-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Zod](https://img.shields.io/badge/Zod-Validated-3E67B1?style=for-the-badge&logo=zod&logoColor=white)](https://zod.dev/)
 [![License](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey?style=for-the-badge)](LICENSE)
 
 **A privacy-first, local-first personal finance, portfolio analytics, and tax planning platform — built and optimized for Canadian investors.**
 
-[Screenshots](#screenshots) • [Features](#features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#technology-stack) • [Getting Started](#installation) • [Backups & Security](#backup--data-management) • [Disclaimer](#️-disclaimer)
+[Download (Windows)](#download-for-windows) • [Screenshots](#screenshots) • [Features](#features) • [Canadian Optimization](#-optimized-for-canadian-investors) • [Tech Stack](#technology-stack) • [Getting Started](#installation) • [Electron Build](#desktop-build--release-windows-exe) • [Backups & Security](#backup--data-management) • [Disclaimer](#️-disclaimer)
 
 </div>
 
@@ -23,7 +24,16 @@
 
 ## Overview
 
-**Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
+**Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Available as a standalone Windows desktop app or via local web server, it lets you track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
+
+---
+
+## Download for Windows
+
+No Node.js or terminal setup required — download and run the Windows installer directly:
+
+* **[Download Household Investment Tracker v1.0.0 (.exe)](https://github.com/mwongr/household-investment-tracker/releases/download/v1.0.0/Household.Investment.Tracker.Setup.1.0.0.exe)**
+* Browse all versions and release notes on the **[GitHub Releases page](https://github.com/mwongr/household-investment-tracker/releases)**.
 
 ---
 
@@ -114,41 +124,52 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 
 | Layer | Technologies |
 | :--- | :--- |
+| **Desktop** | Electron 45, `electron-builder`, `electron-updater`, `esbuild` |
 | **Frontend** | React 19, TypeScript, Vite 7, React Router 7 |
 | **Charts & UI** | TradingView Lightweight Charts, Recharts, Tailwind CSS, Lucide Icons |
 | **Reporting & CSV** | jsPDF, html2canvas, PapaParse |
 | **Backend** | Node.js, Express 5, TypeScript (`tsx`), Zod, Helmet, express-rate-limit |
 | **Market & TA Data** | `yahoo-finance2` (with rate-limiting & TTL caching), `technicalindicators` |
-| **Storage** | Local JSON (`server/database.json`) with atomic writes & rolling snapshots |
+| **Storage** | Local JSON (`server/database.json` or `%APPDATA%\Household Investment Tracker\database.json`) with atomic writes & rolling snapshots |
 | **Testing** | Vitest |
 
 ---
 
 ## Prerequisites
 
-*   **[Node.js](https://nodejs.org/)** (v20 or higher recommended)
-*   **Windows OS** for `Start App.bat` *(macOS and Linux are fully supported via `npm run dev`)*
+*   **Windows Installer**: Windows 10/11 (64-bit) — no additional prerequisites required.
+*   **Running / Building from Source**: **[Node.js](https://nodejs.org/)** (v20 or higher recommended). `Start App.bat` is for Windows *(macOS and Linux are supported via `npm run dev`)*.
 
 ---
 
 ## Installation
 
+### Option 1: Windows Installer (Recommended)
+1. Download the installer: **[Household.Investment.Tracker.Setup.1.0.0.exe](https://github.com/mwongr/household-investment-tracker/releases/download/v1.0.0/Household.Investment.Tracker.Setup.1.0.0.exe)** (also available on the **[Releases page](https://github.com/mwongr/household-investment-tracker/releases)**).
+2. Run the `.exe` installer and follow the setup wizard.
+3. Launch **Household Investment Tracker** from your Desktop or Start Menu.
+
+### Option 2: Run from Source
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/mwongr/household-investment-tracker.git
+   ```
+
+2. **Navigate into the project directory**:
+   ```bash
    cd household-investment-tracker
    ```
 
-2. **Install dependencies**:
+3. **Install dependencies**:
    ```bash
    npm install
    ```
 
 ---
 
-## How to Run
+## How to Run (From Source)
 
-### Option 1: Windows Easy Start (Recommended)
+### Option 1: Windows Easy Start
 Double-click `Start App.bat` in the project root.
 * Launches the Express API server (`127.0.0.1:3001`) and the Vite frontend (`localhost:5847`) concurrently.
 * Prompts to create a timestamped backup when you stop the app.
@@ -163,8 +184,12 @@ Open **[http://localhost:5847](http://localhost:5847)** in your browser.
 | Command | Description |
 | :--- | :--- |
 | `npm run dev` | Starts both the backend server and Vite dev server |
-| `npm run build` | Type-checks and builds the production bundle to `dist/` |
-| `npm run typecheck` | Runs strict TypeScript checks for both frontend and backend |
+| `npm run electron:dev` | Launches the app inside Electron in development mode |
+| `npm run build` | Type-checks and builds the frontend production bundle to `dist/` |
+| `npm run build:electron` | Builds the frontend (`dist/`) and bundles Electron + server (`dist-electron/`) |
+| `npm run dist` | Builds and packages the Windows `.exe` installer locally into `release/` |
+| `npm run release` | Builds and publishes the Windows `.exe` installer to GitHub Releases |
+| `npm run typecheck` | Runs strict TypeScript checks for frontend, server, and Electron |
 | `npm test` | Runs the Vitest unit and route test suite |
 | `npm run lint` | Runs ESLint across `src/` and `server/` |
 
@@ -193,9 +218,25 @@ Open **[http://localhost:5847](http://localhost:5847)** in your browser.
 
 ## Desktop Build & Release (Windows `.exe`)
 
-* **Develop in Electron**: `npm run electron:dev`
-* **Build local Windows installer**: `npm run dist` (outputs to `release/Household Investment Tracker Setup <version>.exe`)
-* **Publish release to GitHub**: set `GH_TOKEN` (with `repo` scope), bump `version` in `package.json`, and run `npm run release`
+Make sure you have cloned the repository and run `npm install` first.
+
+1. **Run in Electron (Development)**:
+   ```bash
+   npm run electron:dev
+   ```
+   Starts the Vite dev server, bundles the Electron main/preload/server code into `dist-electron/`, and opens the desktop window.
+
+2. **Build the Windows Installer (`.exe`) Locally**:
+   ```bash
+   npm run dist
+   ```
+   Compiles the frontend (`dist/`), bundles Electron and the Express backend (`dist-electron/`), and packages the NSIS installer into `release/Household Investment Tracker Setup <version>.exe` without publishing.
+
+3. **Publish a Release to GitHub** *(Maintainers)*:
+   Set `GH_TOKEN` (with `repo` scope), bump `version` in `package.json`, and run:
+   ```bash
+   npm run release
+   ```
 
 ---
 
