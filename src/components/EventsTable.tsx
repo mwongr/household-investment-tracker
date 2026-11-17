@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Calendar, DollarSign, CalendarClock } from 'lucide-react';
+import { Calendar, DollarSign, CalendarClock, ChevronDown } from 'lucide-react';
 import type { Asset } from '../types';
 
 interface EventsTableProps {
     assets: Asset[];
+    isCollapsed?: boolean;
+    onToggle?: () => void;
 }
 
 interface CalendarEvent {
@@ -32,9 +34,12 @@ interface EventsApiItem {
     };
 }
 
-const EventsTable = ({ assets }: EventsTableProps) => {
+const EventsTable = ({ assets, isCollapsed: controlledCollapsed, onToggle }: EventsTableProps) => {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
+    const [internalCollapsed, setInternalCollapsed] = useState(false);
+    const isCollapsed = controlledCollapsed ?? internalCollapsed;
+    const handleToggle = onToggle ?? (() => setInternalCollapsed(prev => !prev));
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -119,7 +124,14 @@ const EventsTable = ({ assets }: EventsTableProps) => {
 
     return (
         <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
-            <div className="px-6 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between gap-3">
+            <button
+                type="button"
+                onClick={handleToggle}
+                aria-expanded={!isCollapsed}
+                className={`w-full px-6 py-4 bg-slate-900/80 hover:bg-slate-900 flex items-center justify-between gap-3 text-left transition-colors ${
+                    !isCollapsed ? 'border-b border-slate-700/80' : ''
+                }`}
+            >
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
                         <CalendarClock size={18} />
@@ -131,12 +143,20 @@ const EventsTable = ({ assets }: EventsTableProps) => {
                         <p className="text-xs text-slate-300">Upcoming earnings &amp; ex-dividend dates</p>
                     </div>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-slate-800 border border-slate-700 text-slate-300">
-                    {events.length}
-                </span>
-            </div>
+                <div className="flex items-center gap-2.5 shrink-0">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-slate-800 border border-slate-700 text-slate-300">
+                        {events.length}
+                    </span>
+                    <ChevronDown
+                        size={18}
+                        className={`text-slate-400 transition-transform duration-200 ${
+                            isCollapsed ? '-rotate-90' : ''
+                        }`}
+                    />
+                </div>
+            </button>
 
-            {events.length === 0 ? (
+            {!isCollapsed && (events.length === 0 ? (
                 <div className="text-slate-300 text-sm text-center py-10 px-6">
                     No upcoming earnings or dividends found for your current holdings.
                 </div>
@@ -178,7 +198,7 @@ const EventsTable = ({ assets }: EventsTableProps) => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            ))}
         </section>
     );
 };

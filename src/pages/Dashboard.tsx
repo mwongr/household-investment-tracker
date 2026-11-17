@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { buildPortfolioHistory, type HistoricalQuote } from '../utils/portfolioHistory';
+import {
+    buildMemberPortfolioHistories,
+    buildPortfolioHistory,
+    type HistoricalQuote,
+} from '../utils/portfolioHistory';
 import { useChartTheme, type ChartTheme } from '../hooks/useChartTheme';
 import { Sparkline } from '../components/charts/Sparkline';
 import { AllocationDonut } from '../components/charts/AllocationDonut';
@@ -28,6 +32,7 @@ import {
     Sparkles,
     Plus,
     Upload,
+    ChevronDown,
 } from 'lucide-react';
 import EventsTable from '../components/EventsTable';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
@@ -41,10 +46,13 @@ type AssetWithMeta = Asset & {
 };
 
 interface PerformerCardProps {
-    title: string;
-    mode: 'positive' | 'negative';
+    positiveTitle: string;
+    negativeTitle: string;
+    positiveTabLabel: string;
+    negativeTabLabel: string;
     badgeMode: 'percent' | 'dollar';
-    asset: AssetWithMeta;
+    positiveAsset: AssetWithMeta;
+    negativeAsset?: AssetWithMeta | null;
     chartTheme: ChartTheme;
 }
 
@@ -52,13 +60,21 @@ const fmt2 = (val: number) =>
     val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const PerformerCard: React.FC<PerformerCardProps> = ({
-    title,
-    mode,
+    positiveTitle,
+    negativeTitle,
+    positiveTabLabel,
+    negativeTabLabel,
     badgeMode,
-    asset,
+    positiveAsset,
+    negativeAsset,
     chartTheme,
 }) => {
-    const isPosMode = mode === 'positive';
+    const [mode, setMode] = useState<'positive' | 'negative'>('positive');
+    const effectiveMode = mode === 'negative' && negativeAsset ? 'negative' : 'positive';
+    const isPosMode = effectiveMode === 'positive';
+    const asset = isPosMode ? positiveAsset : (negativeAsset ?? positiveAsset);
+    const title = isPosMode ? positiveTitle : negativeTitle;
+
     const badgeVal = badgeMode === 'percent' ? asset.profitPercent : asset.profit;
     const isBadgePos = badgeVal >= 0;
 
@@ -69,18 +85,48 @@ const PerformerCard: React.FC<PerformerCardProps> = ({
     return (
         <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-4">
             <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-700/70">
+                    <div className="flex items-center gap-2">
+                        {isPosMode ? (
+                            <Award size={18} className="text-green-400 shrink-0" />
+                        ) : (
+                            <AlertTriangle size={18} className="text-red-400 shrink-0" />
+                        )}
+                        <h3 className={`text-sm font-bold uppercase tracking-wider ${isPosMode ? 'text-green-400' : 'text-red-400'}`}>
+                            {title}
+                        </h3>
+                    </div>
+
+                    {negativeAsset && (
+                        <div className="flex items-center gap-1 bg-slate-900/70 p-1 rounded-xl border border-slate-700/70">
+                            <button
+                                type="button"
+                                onClick={() => setMode('positive')}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                    isPosMode
+                                        ? 'bg-emerald-600 text-white shadow-sm'
+                                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                }`}
+                            >
+                                {positiveTabLabel}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMode('negative')}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                    !isPosMode
+                                        ? 'bg-rose-600 text-white shadow-sm'
+                                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                }`}
+                            >
+                                {negativeTabLabel}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                            {isPosMode ? (
-                                <Award size={18} className="text-green-400 shrink-0" />
-                            ) : (
-                                <AlertTriangle size={18} className="text-red-400 shrink-0" />
-                            )}
-                            <h3 className={`text-sm font-bold uppercase tracking-wider ${isPosMode ? 'text-green-400' : 'text-red-400'}`}>
-                                {title}
-                            </h3>
-                        </div>
                         <h4 className="text-xl sm:text-2xl font-bold text-white truncate">
                             {asset.name || asset.ticker}
                         </h4>
@@ -209,6 +255,26 @@ const Dashboard = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [historicalPrices, setHistoricalPrices] = useState<Record<string, HistoricalQuote[]>>({});
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+        try {
+            const saved = localStorage.getItem('dashboard_collapsed_sections');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
+
+    const toggleSection = (key: string) => {
+        setCollapsedSections(prev => {
+            const next = { ...prev, [key]: !prev[key] };
+            try {
+                localStorage.setItem('dashboard_collapsed_sections', JSON.stringify(next));
+            } catch {
+                // Ignore storage quota errors
+            }
+            return next;
+        });
+    };
 
     const txTickerKey = useMemo(() => {
         if (isDemoData || transactions.length === 0) return '';
@@ -689,6 +755,21 @@ const Dashboard = () => {
         [transactions, assets, accounts, netWorthHistory, totalValue, isDemoData, historicalPrices]
     );
 
+    const memberPortfolioHistories = useMemo(
+        () =>
+            buildMemberPortfolioHistories({
+                members,
+                transactions,
+                assets,
+                accounts,
+                netWorthHistory,
+                totalValue,
+                isDemoData,
+                historicalPrices,
+            }),
+        [members, transactions, assets, accounts, netWorthHistory, totalValue, isDemoData, historicalPrices]
+    );
+
     return (
         <div className="space-y-8">
             {/* Page Header */}
@@ -1004,34 +1085,24 @@ const Dashboard = () => {
                     <h2 className="text-xl font-bold text-white tracking-tight">Asset Performance Highlights</h2>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <PerformerCard
-                            title="Best Performer (%)"
-                            mode="positive"
+                            positiveTitle="Best Performer (%)"
+                            negativeTitle="Worst Performer (%)"
+                            positiveTabLabel="Best"
+                            negativeTabLabel="Worst"
                             badgeMode="percent"
-                            asset={bestPerformer}
-                            chartTheme={chartTheme}
-                        />
-                        <PerformerCard
-                            title="Worst Performer (%)"
-                            mode="negative"
-                            badgeMode="percent"
-                            asset={worstPerformer}
+                            positiveAsset={bestPerformer}
+                            negativeAsset={worstPerformer}
                             chartTheme={chartTheme}
                         />
                         {highestGainerDollar && (
                             <PerformerCard
-                                title="Highest Gain ($)"
-                                mode="positive"
+                                positiveTitle="Highest Gain ($)"
+                                negativeTitle="Lowest Gain ($)"
+                                positiveTabLabel="Highest"
+                                negativeTabLabel="Lowest"
                                 badgeMode="dollar"
-                                asset={highestGainerDollar}
-                                chartTheme={chartTheme}
-                            />
-                        )}
-                        {lowestGainerDollar && (
-                            <PerformerCard
-                                title="Lowest Gain ($)"
-                                mode="negative"
-                                badgeMode="dollar"
-                                asset={lowestGainerDollar}
+                                positiveAsset={highestGainerDollar}
+                                negativeAsset={lowestGainerDollar}
                                 chartTheme={chartTheme}
                             />
                         )}
@@ -1040,19 +1111,44 @@ const Dashboard = () => {
             )}
 
             {/* Upcoming Events */}
-            <EventsTable assets={assets} />
+            <EventsTable
+                assets={assets}
+                isCollapsed={!!collapsedSections['events']}
+                onToggle={() => toggleSection('events')}
+            />
 
             {/* Portfolio History Chart */}
             {portfolioHistory.length > 0 && (
-                <PortfolioHistoryChart data={portfolioHistory} chartTheme={chartTheme} />
+                <PortfolioHistoryChart
+                    data={portfolioHistory}
+                    memberSeries={memberPortfolioHistories}
+                    chartTheme={chartTheme}
+                />
             )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <AllocationDonut
-                    title="Allocation by Person"
-                    icon={<Users size={19} className="text-blue-400" />}
-                    data={allocationByPerson}
+                    views={[
+                        {
+                            id: 'person',
+                            label: 'Person',
+                            icon: <Users size={19} className="text-blue-400" />,
+                            data: allocationByPerson,
+                        },
+                        {
+                            id: 'accountType',
+                            label: 'Account Type',
+                            icon: <Wallet size={19} className="text-blue-400" />,
+                            data: allocationByAccountType,
+                        },
+                        {
+                            id: 'institution',
+                            label: 'Institution',
+                            icon: <Building2 size={19} className="text-purple-400" />,
+                            data: allocationByInstitution,
+                        },
+                    ]}
                     centerTotal={totalValue}
                     chartTheme={chartTheme}
                 />
@@ -1135,20 +1231,6 @@ const Dashboard = () => {
                     <p className="text-xs font-medium text-slate-300 mt-1">Current Net Worth</p>
                 </div>
 
-                <AllocationDonut
-                    title="Allocation by Account Type"
-                    icon={<Wallet size={19} className="text-blue-400" />}
-                    data={allocationByAccountType}
-                    chartTheme={chartTheme}
-                />
-
-                <AllocationDonut
-                    title="Allocation by Institution"
-                    icon={<Building2 size={19} className="text-amber-400" />}
-                    data={allocationByInstitution}
-                    chartTheme={chartTheme}
-                />
-
                 <TopMoversBar
                     title="Top 5 Assets (% Profit)"
                     icon={<TrendingUp size={19} className="text-green-400" />}
@@ -1168,12 +1250,28 @@ const Dashboard = () => {
 
             {/* Account Performance Table */}
             <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
-                <div className="px-6 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={() => toggleSection('accountsRanked')}
+                    aria-expanded={!collapsedSections['accountsRanked']}
+                    className={`w-full px-6 py-4 bg-slate-900/80 hover:bg-slate-900 flex items-center justify-between text-left transition-colors ${
+                        !collapsedSections['accountsRanked'] ? 'border-b border-slate-700/80' : ''
+                    }`}
+                >
                     <h3 className="text-lg font-bold text-white tracking-tight">Accounts Ranked by Performance</h3>
-                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                        {sortedAccountPerformance.length}
-                    </span>
-                </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                            {sortedAccountPerformance.length}
+                        </span>
+                        <ChevronDown
+                            size={18}
+                            className={`text-slate-400 transition-transform duration-200 ${
+                                collapsedSections['accountsRanked'] ? '-rotate-90' : ''
+                            }`}
+                        />
+                    </div>
+                </button>
+                {!collapsedSections['accountsRanked'] && (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-900/90 border-b border-slate-700/80">
@@ -1247,16 +1345,33 @@ const Dashboard = () => {
                         </tbody>
                     </table>
                 </div>
+                )}
             </section>
 
             {/* All Assets Performance Table */}
             <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
-                <div className="px-6 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={() => toggleSection('assetsRanked')}
+                    aria-expanded={!collapsedSections['assetsRanked']}
+                    className={`w-full px-6 py-4 bg-slate-900/80 hover:bg-slate-900 flex items-center justify-between text-left transition-colors ${
+                        !collapsedSections['assetsRanked'] ? 'border-b border-slate-700/80' : ''
+                    }`}
+                >
                     <h3 className="text-lg font-bold text-white tracking-tight">All Assets Ranked by Performance</h3>
-                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                        {sortedAssetPerformance.length}
-                    </span>
-                </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                            {sortedAssetPerformance.length}
+                        </span>
+                        <ChevronDown
+                            size={18}
+                            className={`text-slate-400 transition-transform duration-200 ${
+                                collapsedSections['assetsRanked'] ? '-rotate-90' : ''
+                            }`}
+                        />
+                    </div>
+                </button>
+                {!collapsedSections['assetsRanked'] && (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-900/90 border-b border-slate-700/80">
@@ -1391,6 +1506,7 @@ const Dashboard = () => {
                         </tbody>
                     </table>
                 </div>
+                )}
             </section>
 
             {/* Breakdown by Member, Institution & Account */}
@@ -1401,18 +1517,27 @@ const Dashboard = () => {
                 </h3>
 
                 <div className="space-y-6">
-                    {memberBreakdown.map(mb => (
+                    {memberBreakdown.map(mb => {
+                        const memberCollapsed = !!collapsedSections[`member-${mb.member.id}`];
+                        return (
                         <div
                             key={mb.member.id}
                             className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden"
                         >
                             {/* Member Header */}
-                            <div className="bg-slate-900/80 p-6 border-b border-slate-700/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={() => toggleSection(`member-${mb.member.id}`)}
+                                aria-expanded={!memberCollapsed}
+                                className={`w-full bg-slate-900/80 hover:bg-slate-900 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left transition-colors ${
+                                    !memberCollapsed ? 'border-b border-slate-700/80' : ''
+                                }`}
+                            >
                                 <div>
                                     <h4 className="text-2xl font-bold text-white">{mb.member.name}</h4>
                                     <p className="text-slate-300 text-sm">Member Overview</p>
                                 </div>
-                                <div className="flex flex-wrap gap-5 md:gap-8">
+                                <div className="flex flex-wrap items-center gap-5 md:gap-8">
                                     <div>
                                         <p className="text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">
                                             Total Cash
@@ -1460,20 +1585,36 @@ const Dashboard = () => {
                                             </span>
                                         </div>
                                     </div>
+                                    <ChevronDown
+                                        size={20}
+                                        className={`text-slate-400 transition-transform duration-200 shrink-0 ${
+                                            memberCollapsed ? '-rotate-90' : ''
+                                        }`}
+                                    />
                                 </div>
-                            </div>
+                            </button>
 
                             {/* Groups */}
+                            {!memberCollapsed && (
                             <div className="p-5 sm:p-6 space-y-6">
                                 {mb.institutionGroups.map(group => (
                                     <div key={group.institution.id} className="space-y-4">
-                                        {group.accounts.map(accGroup => (
+                                        {group.accounts.map(accGroup => {
+                                            const accountCollapsed = !!collapsedSections[`account-${accGroup.account.id}`];
+                                            return (
                                             <div
                                                 key={accGroup.account.id}
                                                 className="bg-slate-900/70 rounded-xl overflow-hidden border border-slate-700/80"
                                             >
                                                 {/* Account Header */}
-                                                <div className="px-5 py-4 bg-slate-900/95 border-b border-slate-700/80 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSection(`account-${accGroup.account.id}`)}
+                                                    aria-expanded={!accountCollapsed}
+                                                    className={`w-full px-5 py-4 bg-slate-900/95 hover:bg-slate-900 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 text-left transition-colors ${
+                                                        !accountCollapsed ? 'border-b border-slate-700/80' : ''
+                                                    }`}
+                                                >
                                                     <div className="flex items-center gap-3">
                                                         <div className="p-2 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400">
                                                             <Wallet size={18} />
@@ -1530,10 +1671,17 @@ const Dashboard = () => {
                                                                 {accGroup.stats.profitPercent.toFixed(2)}%
                                                             </span>
                                                         </div>
+                                                        <ChevronDown
+                                                            size={18}
+                                                            className={`text-slate-400 transition-transform duration-200 shrink-0 ${
+                                                                accountCollapsed ? '-rotate-90' : ''
+                                                            }`}
+                                                        />
                                                     </div>
-                                                </div>
+                                                </button>
 
                                                 {/* Table */}
+                                                {!accountCollapsed && (
                                                 <div className="overflow-x-auto">
                                                     <table className="w-full text-left border-collapse">
                                                         <thead>
@@ -1672,23 +1820,47 @@ const Dashboard = () => {
                                                         </tbody>
                                                     </table>
                                                 </div>
+                                                )}
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 ))}
                             </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </section>
 
             {/* Aggregated Stocks View */}
-            <section className="space-y-4">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2.5 tracking-tight">
-                    <Layers size={22} className="text-blue-400" />
-                    <span>Combined Stocks (All Accounts)</span>
-                </h3>
-                <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+            <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                <button
+                    type="button"
+                    onClick={() => toggleSection('combinedStocks')}
+                    aria-expanded={!collapsedSections['combinedStocks']}
+                    className={`w-full px-6 py-4 bg-slate-900/80 hover:bg-slate-900 flex items-center justify-between text-left transition-colors ${
+                        !collapsedSections['combinedStocks'] ? 'border-b border-slate-700/80' : ''
+                    }`}
+                >
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2.5 tracking-tight">
+                        <Layers size={20} className="text-blue-400" />
+                        <span>Combined Stocks (All Accounts)</span>
+                    </h3>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                            {aggregatedStocks.length}
+                        </span>
+                        <ChevronDown
+                            size={18}
+                            className={`text-slate-400 transition-transform duration-200 ${
+                                collapsedSections['combinedStocks'] ? '-rotate-90' : ''
+                            }`}
+                        />
+                    </div>
+                </button>
+                {!collapsedSections['combinedStocks'] && (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-slate-900/90 border-b border-slate-700/80">
@@ -1771,7 +1943,7 @@ const Dashboard = () => {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                )}
             </section>
 
             {showMigrationModal && <CurrencyMigrationModal onClose={() => setShowMigrationModal(false)} />}

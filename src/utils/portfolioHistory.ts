@@ -1,8 +1,19 @@
-import type { Account, Asset, NetWorthSnapshot, Transaction } from '../types';
+import type { Account, Asset, Member, NetWorthSnapshot, Transaction } from '../types';
 
 export interface PortfolioHistoryPoint {
     name: string;
     value: number;
+}
+
+export interface MemberPortfolioHistory {
+    id: string;
+    name: string;
+    data: PortfolioHistoryPoint[];
+}
+
+export interface HistoryExtremes {
+    high: PortfolioHistoryPoint;
+    low: PortfolioHistoryPoint;
 }
 
 export interface HistoricalQuote {
@@ -297,4 +308,119 @@ export function buildPortfolioHistory({
     return Array.from(historyByDate.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([name, value]) => ({ name, value }));
+}
+
+/**
+ * Returns the highest and lowest points achieved in a portfolio history series.
+ */
+export function getHistoryExtremes(data: PortfolioHistoryPoint[]): HistoryExtremes | null {
+    if (data.length === 0) return null;
+    let high = data[0];
+    let low = data[0];
+    for (let i = 1; i < data.length; i++) {
+        const pt = data[i];
+        if (pt.value > high.value) high = pt;
+        if (pt.value < low.value) low = pt;
+    }
+    return { high, low };
+}
+
+/**
+ * Builds individual portfolio history series for each household member when
+ * more than one member is tracked. Returns an empty array for single-member households.
+ */
+export function buildMemberPortfolioHistories({
+    members,
+    transactions,
+    assets,
+    accounts,
+    netWorthHistory,
+    totalValue,
+    isDemoData,
+    historicalPrices,
+}: {
+    members: Member[];
+    transactions: Transaction[];
+    assets: Asset[];
+    accounts: Account[];
+    netWorthHistory: NetWorthSnapshot[];
+    totalValue: number;
+    isDemoData: boolean;
+    historicalPrices?: Record<string, HistoricalQuote[]>;
+}): MemberPortfolioHistory[] {
+    if (members.length <= 1) return [];
+
+    return members.map(member => {
+        const memberAccounts = accounts.filter(a => a.memberId === member.id);
+        const memberAccountIds = new Set(memberAccounts.map(a => a.id));
+        const memberAssets = assets.filter(a => memberAccountIds.has(a.accountId));
+        const memberTransactions = transactions.filter(t => memberAccountIds.has(t.accountId));
+        const memberTotalValue =
+            memberAssets.reduce((sum, a) => sum + (a.cadMarketValue || a.marketValue || 0), 0) +
+            memberAccounts.reduce((sum, a) => sum + a.cashBalance, 0);
+
+        if (isDemoData) {
+            const share = totalValue > 0 ? memberTotalValue / totalValue : 0;
+            const scaledHistory = [...netWorthHistory]
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(entry => ({
+                    name: entry.date,
+                    value: Math.round(entry.value * share * 100) / 100,
+                }));
+            if (scaledHistory.length === 0 && memberTotalValue > 0) {
+                scaledHistory.push({ name: getLocalToday(), value: memberTotalValue });
+            }
+            return { id: member.id, name: member.name, data: scaledHistory };
+        }
+
+        const data = buildPortfolioHistory({
+            transactions: memberTransactions,
+            assets: memberAssets,
+            accounts: memberAccounts,
+            netWorthHistory: [],
+            totalValue: memberTotalValue,
+            isDemoData: false,
+            historicalPrices,
+        });
+
+        return { id: member.id, name: member.name, data };
+    });
+}
+
+/**
+ * Merges multiple member history series onto a shared sorted date axis,
+ * carrying forward each member's most recent value after their first recorded date.
+ */
+export function mergeMemberHistories(
+    series: MemberPortfolioHistory[]
+): Array<Record<string, string | number | null>> {
+    const dateSet = new Set<string>();
+    const byMemberDate = new Map<string, Map<string, number>>();
+
+    for (const member of series) {
+        const map = new Map<string, number>();
+        for (const pt of member.data) {
+            dateSet.add(pt.name);
+            map.set(pt.name, pt.value);
+        }
+        byMemberDate.set(member.id, map);
+    }
+
+    const sortedDates = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+    const lastKnown = new Map<string, number | null>();
+    for (const member of series) {
+        lastKnown.set(member.id, null);
+    }
+
+    return sortedDates.map(date => {
+        const row: Record<string, string | number | null> = { name: date };
+        for (const member of series) {
+            const val = byMemberDate.get(member.id)?.get(date);
+            if (val !== undefined) {
+                lastKnown.set(member.id, val);
+            }
+            row[member.id] = lastKnown.get(member.id) ?? null;
+        }
+        return row;
+    });
 }
