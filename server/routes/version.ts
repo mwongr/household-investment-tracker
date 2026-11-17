@@ -4,10 +4,11 @@ import {
     CACHE_TTL,
     GITHUB_REPO_URL,
     VERSION_CHECK_URL,
+    type Distribution,
 } from '../config.js';
 import {
     compareSemver,
-    remoteVersionManifestSchema,
+    githubReleaseSchema,
     type VersionStatus,
 } from '../lib/version.js';
 
@@ -18,13 +19,23 @@ interface CacheEntry {
 
 let versionCache: CacheEntry | null = null;
 
+function formatReleaseDate(publishedAt: string | null | undefined): string | null {
+    if (!publishedAt) return null;
+    const trimmed = publishedAt.trim();
+    if (!trimmed) return null;
+    const isoDate = trimmed.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(isoDate) ? isoDate : trimmed;
+}
+
 export async function checkRemoteVersion(options?: {
     currentVersion?: string;
     url?: string;
+    distribution?: Distribution;
     signal?: AbortSignal;
     fetcher?: typeof fetch;
 }): Promise<VersionStatus> {
     const currentVersion = options?.currentVersion ?? APP_VERSION;
+    const distribution = options?.distribution ?? 'diy';
     const url = options?.url ?? VERSION_CHECK_URL;
     const fetchFn = options?.fetcher ?? globalThis.fetch;
     const nowIso = new Date().toISOString();
@@ -38,10 +49,39 @@ export async function checkRemoteVersion(options?: {
         const res = await fetchFn(url, {
             signal,
             headers: {
-                Accept: 'application/json',
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
                 'User-Agent': `HouseholdInvestmentTracker/${currentVersion}`,
             },
         });
+
+        if (res.status === 404) {
+            // No published releases on GitHub yet — treat cleanly as up-to-date rather than an error
+            return {
+                currentVersion,
+                latestVersion: null,
+                updateAvailable: false,
+                releaseDate: null,
+                githubUrl: GITHUB_REPO_URL,
+                releaseNotes: null,
+                checkedAt: nowIso,
+                distribution,
+            };
+        }
+
+        if (res.status === 403 || res.status === 429) {
+            return {
+                currentVersion,
+                latestVersion: null,
+                updateAvailable: false,
+                releaseDate: null,
+                githubUrl: GITHUB_REPO_URL,
+                releaseNotes: null,
+                checkedAt: nowIso,
+                distribution,
+                error: 'GitHub API rate limit exceeded. Please try again later.',
+            };
+        }
 
         if (!res.ok) {
             return {
@@ -52,12 +92,13 @@ export async function checkRemoteVersion(options?: {
                 githubUrl: GITHUB_REPO_URL,
                 releaseNotes: null,
                 checkedAt: nowIso,
+                distribution,
                 error: `HTTP ${res.status} when checking version`,
             };
         }
 
         const rawJson = await res.json();
-        const parseResult = remoteVersionManifestSchema.safeParse(rawJson);
+        const parseResult = githubReleaseSchema.safeParse(rawJson);
 
         if (!parseResult.success) {
             return {
@@ -68,24 +109,28 @@ export async function checkRemoteVersion(options?: {
                 githubUrl: GITHUB_REPO_URL,
                 releaseNotes: null,
                 checkedAt: nowIso,
-                error: 'Invalid version manifest format',
+                distribution,
+                error: 'Invalid GitHub release format',
             };
         }
 
-        const manifest = parseResult.data;
-        const updateAvailable = compareSemver(manifest.latest_version, currentVersion) > 0;
+        const release = parseResult.data;
+        const latestVersion = release.tag_name.trim().replace(/^v/i, '');
+        const updateAvailable = compareSemver(latestVersion, currentVersion) > 0;
+        const releaseNotes = release.body?.trim() ? release.body : null;
 
         return {
             currentVersion,
-            latestVersion: manifest.latest_version,
+            latestVersion,
             updateAvailable,
-            releaseDate: manifest.release_date || null,
-            githubUrl: manifest.github_url || GITHUB_REPO_URL,
-            releaseNotes: manifest.release_notes || null,
+            releaseDate: formatReleaseDate(release.published_at),
+            githubUrl: release.html_url || GITHUB_REPO_URL,
+            releaseNotes,
             checkedAt: nowIso,
+            distribution,
         };
     } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to reach version server';
+        const message = err instanceof Error ? err.message : 'Failed to reach GitHub Releases API';
         return {
             currentVersion,
             latestVersion: null,
@@ -94,6 +139,7 @@ export async function checkRemoteVersion(options?: {
             githubUrl: GITHUB_REPO_URL,
             releaseNotes: null,
             checkedAt: nowIso,
+            distribution,
             error: message,
         };
     }
@@ -106,6 +152,7 @@ export function resetVersionCache(): void {
 export function createVersionRouter(options?: {
     currentVersion?: string;
     url?: string;
+    distribution?: Distribution;
     fetcher?: typeof fetch;
 }): Router {
     const router = Router();
@@ -121,7 +168,7 @@ export function createVersionRouter(options?: {
 
         const status = await checkRemoteVersion(options);
 
-        // Only cache successful checks (or checks with resolved latestVersion)
+        // Only cache successful checks
         if (!status.error) {
             versionCache = {
                 data: status,

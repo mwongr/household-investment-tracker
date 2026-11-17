@@ -1,33 +1,32 @@
 {
   "name": "investment-tracker",
+  "productName": "Household Investment Tracker",
+  "description": "Local-first household investment portfolio, net worth, and Canadian tax tracker",
   "private": true,
   "version": "1.0.0",
   "license": "CC-BY-NC-4.0",
   "author": "Mike Wong",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"vite\"",
     "server": "tsx server/index.ts",
     "build": "tsc -b && vite build",
-    "typecheck": "tsc -b && tsc -p tsconfig.server.json",
+    "build:electron": "tsc -b && vite build && node scripts/build-electron.mjs",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5847 && node scripts/build-electron.mjs && electron .\"",
+    "dist": "npm run build:electron && electron-builder --win --publish never",
+    "release": "npm run build:electron && electron-builder --win --publish always",
+    "typecheck": "tsc -b && tsc -p tsconfig.server.json && tsc -p tsconfig.electron.json",
     "test": "vitest run",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "electron-updater": "^6.8.11",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.4",
     "helmet": "^8.3.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.0",
-    "lightweight-charts": "^5.1.0",
-    "lucide-react": "^0.562.0",
-    "papaparse": "^5.5.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.12.0",
-    "recharts": "^3.6.0",
     "technicalindicators": "^3.1.0",
     "yahoo-finance2": "^3.11.2",
     "zod": "^4.6.7"
@@ -43,16 +42,68 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
     "concurrently": "^10.0.7",
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.0",
+    "lightweight-charts": "^5.1.0",
+    "lucide-react": "^0.562.0",
+    "papaparse": "^5.5.3",
     "postcss": "^8.5.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.12.0",
+    "recharts": "^3.6.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wait-on": "^9.5.1"
+  },
+  "build": {
+    "appId": "ca.zerosum.household-investment-tracker",
+    "productName": "Household Investment Tracker",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "public/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "mwongr",
+        "repo": "household-investment-tracker",
+        "releaseType": "release"
+      }
+    ]
   }
 }

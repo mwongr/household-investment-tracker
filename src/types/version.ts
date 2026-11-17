@@ -1,3 +1,5 @@
+export type Distribution = 'exe' | 'diy';
+
 export interface VersionInfo {
     currentVersion: string;
     latestVersion: string | null;
@@ -6,5 +8,6 @@ export interface VersionInfo {
     githubUrl: string;
     releaseNotes: string | null;
     checkedAt: string;
+    distribution?: Distribution;
     error?: string;
 }

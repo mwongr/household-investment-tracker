@@ -21,7 +21,17 @@ import KofiButton from '../components/KofiButton';
 import '../styles/shared.css';
 
 const About: React.FC = () => {
-    const { versionInfo, isChecking, checkForUpdates, openModal } = useVersion();
+    const {
+        versionInfo,
+        distribution,
+        dataDir,
+        updateState,
+        downloadPercent,
+        isChecking,
+        checkForUpdates,
+        openModal,
+        installUpdate,
+    } = useVersion();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [copied, setCopied] = useState(false);
@@ -152,14 +162,31 @@ const About: React.FC = () => {
                                 </div>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={openModal}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors self-start sm:self-auto"
-                            >
-                                <Download className="w-3.5 h-3.5" />
-                                <span>Update Instructions</span>
-                            </button>
+                            {distribution === 'exe' && updateState === 'downloaded' ? (
+                                <button
+                                    type="button"
+                                    onClick={() => void installUpdate()}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors self-start sm:self-auto"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    <span>Restart &amp; Install</span>
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={openModal}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors self-start sm:self-auto"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    <span>
+                                        {distribution === 'exe'
+                                            ? updateState === 'downloading'
+                                                ? `Downloading (${downloadPercent ?? 0}%)`
+                                                : 'Update Details'
+                                            : 'Update Instructions'}
+                                    </span>
+                                </button>
+                            )}
                         </div>
 
                         {versionInfo.releaseNotes && (
@@ -200,40 +227,42 @@ const About: React.FC = () => {
                     </div>
                 )}
 
-                {/* Git Pull Instructions Card */}
-                <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                            <Terminal className="w-4 h-4 text-emerald-400" />
-                            Update via Command Line
-                        </span>
-                        <button
-                            type="button"
-                            onClick={handleCopy}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors"
-                        >
-                            {copied ? (
-                                <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                    <span className="text-emerald-400">Copied!</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Copy className="w-3.5 h-3.5" />
-                                    <span>Copy Commands</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
+                {/* Git Pull Instructions Card (DIY only) */}
+                {distribution !== 'exe' && (
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                                <Terminal className="w-4 h-4 text-emerald-400" />
+                                Update via Command Line
+                            </span>
+                            <button
+                                type="button"
+                                onClick={handleCopy}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors"
+                            >
+                                {copied ? (
+                                    <>
+                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                        <span className="text-emerald-400">Copied!</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy className="w-3.5 h-3.5" />
+                                        <span>Copy Commands</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
 
-                    <div className="bg-slate-950 border border-slate-700 rounded-lg p-3 font-mono text-xs text-emerald-400 font-semibold overflow-x-auto">
-                        <code>{commandText}</code>
-                    </div>
+                        <div className="bg-slate-950 border border-slate-700 rounded-lg p-3 font-mono text-xs text-emerald-400 font-semibold overflow-x-auto">
+                            <code>{commandText}</code>
+                        </div>
 
-                    <p className="text-xs text-slate-400">
-                        In your command prompt or terminal in the project folder, stop the app (<kbd className="px-1.5 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">Ctrl + C</kbd>), run the command above, then start the app again with <kbd className="px-1.5 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">Start App.bat</kbd>.
-                    </p>
-                </div>
+                        <p className="text-xs text-slate-400">
+                            In your command prompt or terminal in the project folder, stop the app (<kbd className="px-1.5 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">Ctrl + C</kbd>), run the command above, then start the app again with <kbd className="px-1.5 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">Start App.bat</kbd>.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Core Features & Canadian Optimization Grid */}
@@ -254,7 +283,13 @@ const About: React.FC = () => {
                     </div>
                     <h3 className="font-semibold text-slate-100 text-sm">100% Local & Private</h3>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                        Financial data is stored strictly on your local disk in <code className="text-slate-200 font-medium">server/database.json</code> with atomic writes and rolling backups. No cloud accounts required.
+                        Financial data is stored strictly on your local disk in{' '}
+                        <code className="text-slate-200 font-medium break-all">
+                            {distribution === 'exe' && dataDir
+                                ? `${dataDir}\\database.json`
+                                : 'server/database.json'}
+                        </code>{' '}
+                        with atomic writes and rolling backups. No cloud accounts required.
                     </p>
                 </div>
 

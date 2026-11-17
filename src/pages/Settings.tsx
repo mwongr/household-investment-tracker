@@ -7,6 +7,7 @@ import {
     Check,
     Settings as SettingsIcon,
     Folder,
+    FolderOpen,
     Users,
     Building2,
     Plus,
@@ -403,8 +404,30 @@ const Settings = () => {
     } = useData();
     const { theme, setTheme } = useTheme();
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [isBrowsingBackup, setIsBrowsingBackup] = useState(false);
+    const [backupBrowseError, setBackupBrowseError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const STORAGE_KEY = 'wealth-tracker-storage';
+
+    const handleBrowseBackupFolder = async () => {
+        setIsBrowsingBackup(true);
+        setBackupBrowseError(null);
+        try {
+            const res = await fetch('/api/backup/browse', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) {
+                setBackupBrowseError(data?.error || 'Could not select folder.');
+                return;
+            }
+            if (!data.cancelled && typeof data.path === 'string') {
+                setBackupPath(data.path);
+            }
+        } catch {
+            setBackupBrowseError('Folder browser requires the local server to be running.');
+        } finally {
+            setIsBrowsingBackup(false);
+        }
+    };
 
     const handleExport = () => {
         try {
@@ -700,13 +723,30 @@ const Settings = () => {
                             <p className="text-xs text-slate-300">
                                 Folder path used by <code className="font-mono text-blue-400">Start App.bat</code> when saving automatic backups.
                             </p>
-                            <input
-                                type="text"
-                                value={backupPath}
-                                onChange={e => setBackupPath(e.target.value)}
-                                placeholder="e.g. D:\Backups"
-                                className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2 text-sm font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                            />
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                    type="text"
+                                    value={backupPath}
+                                    onChange={e => {
+                                        setBackupBrowseError(null);
+                                        setBackupPath(e.target.value);
+                                    }}
+                                    placeholder="e.g. D:\Backups"
+                                    className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-xl px-3.5 py-2 text-sm font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleBrowseBackupFolder}
+                                    disabled={isBrowsingBackup}
+                                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 border border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors shrink-0"
+                                >
+                                    <FolderOpen size={15} className="text-blue-400" />
+                                    <span>{isBrowsingBackup ? 'Browsing...' : 'Browse'}</span>
+                                </button>
+                            </div>
+                            {backupBrowseError && (
+                                <p className="text-xs text-red-400 font-medium">{backupBrowseError}</p>
+                            )}
                         </div>
                     </div>
                 </section>

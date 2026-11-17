@@ -23,6 +23,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         root.classList.remove('dark', 'light');
         root.classList.add(theme);
         localStorage.setItem(THEME_KEY, theme);
+        void window.hitDesktop?.setTheme?.(theme);
     }, [theme]);
 
     const setTheme = (t: Theme) => setThemeState(t);

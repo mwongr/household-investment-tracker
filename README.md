@@ -186,8 +186,16 @@ Open **[http://localhost:5847](http://localhost:5847)** in your browser.
 
 ## 🔒 Privacy & Local Security
 
-* **Local-First Storage**: All portfolio, tax, and net worth data stays on your machine in `server/database.json` (gitignored by default) and browser `localStorage`. Nothing is uploaded to a remote database.
+* **Local-First Storage**: All portfolio, tax, and net worth data stays on your machine in `server/database.json` (gitignored by default) for DIY runs, or `%APPDATA%\Household Investment Tracker\database.json` in the packaged Windows `.exe`. Nothing is uploaded to a remote database.
 * **Hardened Local Server**: The Express backend binds strictly to `127.0.0.1`, enforces localhost-only CORS, applies `helmet` security headers and rate limiting, validates all payloads and backup paths with `zod`, and uses serialized atomic file writes to prevent corruption.
+
+---
+
+## Desktop Build & Release (Windows `.exe`)
+
+* **Develop in Electron**: `npm run electron:dev`
+* **Build local Windows installer**: `npm run dist` (outputs to `release/Household Investment Tracker Setup <version>.exe`)
+* **Publish release to GitHub**: set `GH_TOKEN` (with `repo` scope), bump `version` in `package.json`, and run `npm run release`
 
 ---
 

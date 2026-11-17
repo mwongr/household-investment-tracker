@@ -8,6 +8,7 @@
 /* ── Default (Dark Theme) ─────────────────────────────────────────── */
 :root,
 .dark {
+  color-scheme: dark;
   --header-height: 64px;
 
   /* App Core Colors — Deep Obsidian Canvas + Elevated Slate Cards */
@@ -49,6 +50,7 @@
 
 /* ── Light Theme (Warm Cream App Canvas + Crisp White Cards & Slate Surfaces) ── */
 .light {
+  color-scheme: light;
   /* App Core Colors — Cream Canvas, Crisp White Cards, Cool-Slate Headers/Tables */
   --color-bg-primary:    #FAF7F0;
   --color-bg-secondary:  #FFFFFF;
@@ -264,4 +266,33 @@ body {
 /* Table row hover */
 .data-table tbody tr:hover td {
   background-color: var(--table-row-hover);
+}
+
+/* ── Slick Scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.45);
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.28);
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.5);
 }

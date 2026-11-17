@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GITHUB_REPO_URL } from '../config.js';
+import { GITHUB_REPO_URL, type Distribution } from '../config.js';
 
 export function compareSemver(v1: string, v2: string): number {
     const parse = (v: string): number[] => {
@@ -42,14 +42,14 @@ export function cleanGithubUrl(raw: unknown): string {
     return GITHUB_REPO_URL;
 }
 
-export const remoteVersionManifestSchema = z.object({
-    latest_version: z.string().min(1),
-    release_date: z.string().optional().default(''),
-    github_url: z.unknown().transform(cleanGithubUrl),
-    release_notes: z.string().optional().default(''),
+export const githubReleaseSchema = z.object({
+    tag_name: z.string().min(1),
+    published_at: z.string().nullable().optional(),
+    body: z.string().nullable().optional(),
+    html_url: z.unknown().transform(cleanGithubUrl),
 });
 
-export type RemoteVersionManifest = z.infer<typeof remoteVersionManifestSchema>;
+export type GithubRelease = z.infer<typeof githubReleaseSchema>;
 
 export interface VersionStatus {
     currentVersion: string;
@@ -59,5 +59,6 @@ export interface VersionStatus {
     githubUrl: string;
     releaseNotes: string | null;
     checkedAt: string;
+    distribution?: Distribution;
     error?: string;
 }

@@ -4,14 +4,32 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { ALLOWED_ORIGIN } from '../config.js';
 
-export function applySecurityMiddleware(app: Express, allowedOrigin: string = ALLOWED_ORIGIN): void {
+export function applySecurityMiddleware(
+    app: Express,
+    allowedOrigin: string | string[] = ALLOWED_ORIGIN
+): void {
+    const origins = Array.isArray(allowedOrigin) ? allowedOrigin : [allowedOrigin];
     app.disable('x-powered-by');
-    app.use(helmet());
+    app.use(
+        helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    scriptSrc: ["'self'"],
+                    styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+                    fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+                    imgSrc: ["'self'", 'data:', 'blob:'],
+                    connectSrc: ["'self'"],
+                    upgradeInsecureRequests: null,
+                },
+            },
+        })
+    );
     app.use(
         cors({
             origin(origin, callback) {
-                // Allow same-origin / server-to-server / curl (no Origin header) and the configured Vite origin
-                if (!origin || origin === allowedOrigin) {
+                // Allow same-origin / server-to-server / curl (no Origin header) and configured origins
+                if (!origin || origins.includes(origin)) {
                     callback(null, true);
                     return;
                 }
