@@ -24,7 +24,7 @@
 
 ## Overview
 
-**Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Available as a standalone Windows desktop app or via local web server, it lets you track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
+**Household Investment Tracker** brings your entire household's financial picture into one fast, local-first workspace. Available as a standalone Windows desktop app or via local web server—with both **Dark** and **Light** themes—it lets you track holdings across multiple family members and brokerages, monitor live CAD/USD portfolio performance, run technical analysis with TradingView charts, calculate Adjusted Cost Base (ACB) for non-registered accounts, and simulate RRSP tax-bracket optimization — all without sending your financial data to third-party cloud servers.
 
 ---
 
@@ -38,6 +38,8 @@ No Node.js or terminal setup required — download and run the Windows installer
 ---
 
 ## Screenshots
+
+*Available in both **Dark** and **Light** themes.*
 
 <p align="center">
   <img src="docs/screenshots/Dashboard.webp" alt="Dashboard" width="100%" /><br />
