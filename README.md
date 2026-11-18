@@ -39,11 +39,16 @@ No Node.js or terminal setup required — download and run the Windows installer
 
 ## Screenshots
 
+<p align="center">
+  <img src="docs/screenshots/Dashboard.webp" alt="Dashboard" width="100%" /><br />
+  <sub><b>Dashboard</b></sub>
+</p>
+
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/Dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b></sub></td>
     <td align="center"><img src="docs/screenshots/Accounts%20List.webp" alt="Accounts List" /><br /><sub><b>Accounts List</b></sub></td>
     <td align="center"><img src="docs/screenshots/Account%20Holdings.webp" alt="Account Holdings" /><br /><sub><b>Account Holdings</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Charts.png" alt="Charts" /><br /><sub><b>Charts</b></sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/Account%20Balancer.webp" alt="Account Balancer" /><br /><sub><b>Account Balancer</b></sub></td>
