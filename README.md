@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/Household-Investment-Tracker-Logo-black.svg" alt="Household Investment Tracker" width="360" />
+<img src="public/Household%20Investment%20Tracker%20banner.webp" alt="Household Investment Tracker" width="100%" />
 
 <br />
 <br />
