@@ -15,6 +15,7 @@ import {
     Menu,
     X,
     Info,
+    HandCoins,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +38,7 @@ const Navbar = () => {
         { icon: Search, label: 'Research', path: '/research' },
         { icon: Wrench, label: 'Tools', path: '/tools' },
         { icon: FileBarChart, label: 'Reports', path: '/reports' },
+        { icon: HandCoins, label: 'Dividends', path: '/dividends' },
         ...(preferences.enableAcbTracker ? [{ icon: Calculator, label: 'ACB Tracker', path: '/acb' }] : []),
         ...(preferences.enableTaxOptimizer ? [{ icon: Percent, label: 'Tax Optimizer', path: '/tax' }] : []),
         ...(preferences.enableNetWorth ? [{ icon: TrendingUp, label: 'Net Worth', path: '/networth' }] : []),
@@ -149,7 +151,7 @@ const Navbar = () => {
                         </div>
                         <span className="nav-label">About</span>
                         {versionInfo?.updateAvailable && (
-                            <span className="ml-auto text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <span className="ml-auto text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-900/80 text-emerald-400 border border-slate-700">
                                 Update
                             </span>
                         )}

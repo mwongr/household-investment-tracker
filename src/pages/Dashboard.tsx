@@ -136,10 +136,8 @@ const PerformerCard: React.FC<PerformerCardProps> = ({
                     </div>
 
                     <div
-                        className={`px-3 py-1.5 rounded-xl border font-mono tabular-nums font-bold text-base shrink-0 ${
-                            isBadgePos
-                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                : 'bg-red-500/15 border-red-500/35 text-red-400'
+                        className={`px-3 py-1.5 rounded-xl border bg-slate-900/80 border-slate-700 font-mono tabular-nums font-bold text-base shrink-0 ${
+                            isBadgePos ? 'text-green-400' : 'text-red-400'
                         }`}
                     >
                         {badgeMode === 'percent'
@@ -850,7 +848,7 @@ const Dashboard = () => {
                 <div className="rounded-3xl p-6 sm:p-8 bg-slate-800 border border-slate-700 shadow-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div className="space-y-1.5 max-w-2xl">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                                 <Sparkles size={13} /> Account Ready
                             </div>
                             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
@@ -965,7 +963,7 @@ const Dashboard = () => {
                                 ${fmt2(totalCash)}
                             </h2>
                         </div>
-                        <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-400 shrink-0">
+                        <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400 shrink-0">
                             <Wallet size={20} />
                         </div>
                     </div>
@@ -1145,7 +1143,7 @@ const Dashboard = () => {
                         {
                             id: 'institution',
                             label: 'Institution',
-                            icon: <Building2 size={19} className="text-purple-400" />,
+                            icon: <Building2 size={19} className="text-blue-400" />,
                             data: allocationByInstitution,
                         },
                     ]}

@@ -648,11 +648,11 @@ const ProfitLossCalc: React.FC = () => {
                                 1 : {result.rrRatio.toFixed(2)}
                             </span>
                             {result.isFavorable ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-500/15 text-green-400 text-xs font-bold border border-green-500/35">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/80 text-green-400 text-xs font-bold border border-slate-700">
                                     <CheckCircle size={12} /> Favorable
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 text-xs font-bold border border-red-500/35">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/80 text-red-400 text-xs font-bold border border-slate-700">
                                     <AlertTriangle size={12} /> High Risk
                                 </span>
                             )}

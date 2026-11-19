@@ -183,7 +183,7 @@ const EventsTable = ({ assets, isCollapsed: controlledCollapsed, onToggle }: Eve
                                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
                                                 evt.type === 'Earnings'
                                                     ? 'bg-blue-500/15 border-blue-500/35 text-blue-400'
-                                                    : 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                    : 'bg-slate-900/80 border-slate-700 text-green-400'
                                             }`}
                                         >
                                             {evt.type === 'Earnings' ? <Calendar size={13} /> : <DollarSign size={13} />}

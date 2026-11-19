@@ -41,31 +41,31 @@ No Node.js or terminal setup required — download and run the Windows installer
 
 *Available in both **Dark** and **Light** themes.*
 
-<p align="center">
-  <img src="docs/screenshots/Dashboard.webp" alt="Dashboard" width="100%" /><br />
-  <sub><b>Dashboard</b></sub>
-</p>
-
 <table>
   <tr>
+    <td align="center"><img src="docs/screenshots/Dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b></sub></td>
     <td align="center"><img src="docs/screenshots/Accounts%20List.webp" alt="Accounts List" /><br /><sub><b>Accounts List</b></sub></td>
     <td align="center"><img src="docs/screenshots/Account%20Holdings.webp" alt="Account Holdings" /><br /><sub><b>Account Holdings</b></sub></td>
-    <td align="center"><img src="docs/screenshots/Charts.png" alt="Charts" /><br /><sub><b>Charts</b></sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/Charts.webp" alt="Charts" /><br /><sub><b>Charts</b></sub></td>
     <td align="center"><img src="docs/screenshots/Account%20Balancer.webp" alt="Account Balancer" /><br /><sub><b>Account Balancer</b></sub></td>
     <td align="center"><img src="docs/screenshots/Account%20Tools.webp" alt="Account Tools" /><br /><sub><b>Account Tools</b></sub></td>
-    <td align="center"><img src="docs/screenshots/Reports.webp" alt="Reports" /><br /><sub><b>Reports</b></sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/Reports.webp" alt="Reports" /><br /><sub><b>Reports</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Dividends%20Dashboard.webp" alt="Dividends Dashboard" /><br /><sub><b>Dividends Dashboard</b></sub></td>
     <td align="center"><img src="docs/screenshots/Stock%20Research.webp" alt="Stock Research" /><br /><sub><b>Stock Research</b></sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/screenshots/Research%20Chart.webp" alt="Research Chart" /><br /><sub><b>Research Chart</b></sub></td>
     <td align="center"><img src="docs/screenshots/Net%20Worth%20Dashboard.webp" alt="Net Worth Dashboard" /><br /><sub><b>Net Worth Dashboard</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Tax%20Optimizer.webp" alt="Tax Optimizer" /><br /><sub><b>Tax Optimizer</b></sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/Tax%20Optimizer.webp" alt="Tax Optimizer" /><br /><sub><b>Tax Optimizer</b></sub></td>
     <td align="center"><img src="docs/screenshots/ACB%20Tracker.webp" alt="ACB Tracker" /><br /><sub><b>ACB Tracker</b></sub></td>
     <td align="center"><img src="docs/screenshots/Investment%20Tools.webp" alt="Investment Tools" /><br /><sub><b>Investment Tools</b></sub></td>
+    <td align="center"><img src="docs/screenshots/Settings.webp" alt="Settings" /><br /><sub><b>Settings</b></sub></td>
   </tr>
 </table>
 
@@ -79,6 +79,7 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 *   **CAD / USD Dual-Currency Engine**: Live `CAD=X` exchange rate fetching with automatic CAD-normalized market values, book costs, and profit/loss calculations.
 *   **CRA & Revenu Québec Tax Optimizer**: Models combined Federal & Provincial brackets (including the Quebec Abatement) to pinpoint the exact RRSP contribution "sweet spot" for maximum tax refunds.
 *   **Canadian Capital Gains (ACB) Tracker**: Dedicated running Adjusted Cost Base ledger for non-registered accounts, handling Return of Capital (RoC), Capital Gains Dividends, DRIPs, and Stock Splits.
+*   **Canadian Dividend & Withholding Tax Intelligence**: Tracks US-listed dividend payers across **TFSA/FHSA** (15% non-recoverable US withholding tax) vs. **RRSP/Spousal RRSP/LIRA/RRIF** (treaty-exempt), and uses Trailing 12-Month (TTM) and local transaction-history fallbacks for uneven `.TO` ETF distributions.
 
 ---
 
@@ -99,6 +100,13 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 ### Portfolio Balancer & Calculators
 *   **Portfolio Balancer**: Define target allocation percentages per holding, spot drift immediately, and generate a buy/sell rebalancing action plan.
 *   **Average Down Calculator**: Simulate additional share purchases to preview new average cost, capital required, and break-even recovery targets.
+
+### Dividends & Passive Income Analytics
+*   **KPI Strip**: At-a-glance **YTD Dividends Received** (Cash + DRIP split), **Projected Annual Income**, **Average Monthly Income**, and weighted **Portfolio Yield & Yield on Cost (YoC)** normalized to CAD.
+*   **Payouts History Chart**: Interactive Recharts bar chart with **Current Year**, **Year-over-Year (YoY)**, and **Annual (All Years)** toggles, plus Cash vs. Reinvested (DRIP) tooltip breakdowns.
+*   **Income by Holding & Concentration**: Sortable table with **By Ticker** and **By Account** views, inline % share bars, and automatic concentration alerts when a single ticker or top 3 tickers dominate passive income.
+*   **Account & Canadian Tax Breakdown**: Groups projected and YTD income by account type with **US 15% withholding** (TFSA/FHSA) and **US treaty exempt** (RRSP/Spousal RRSP/LIRA/RRIF) indicators.
+*   **Upcoming Payouts Calendar (30d / 60d)**: Tracks upcoming ex-dividend and pay dates with **Confirmed** (Yahoo Finance) vs. **Estimated** (TTM / historical cadence fallback for `.TO` ETFs) badges.
 
 ### RRSP Tax Bracket Optimizer
 *   **Bracket Drop Optimization**: Models combined Federal and Provincial tax brackets with customizable rates and regional abatements.

@@ -259,7 +259,7 @@ const AccountDetails = () => {
     const startEditTx = (tx: Transaction) => {
         setEditingTxId(tx.id);
         setTicker(tx.ticker || '');
-        setDate(tx.date);
+        setDate(tx.date ? tx.date.split('T')[0] : '');
         setType(tx.type);
         setShares(tx.shares?.toString() || '');
 
@@ -427,14 +427,14 @@ const AccountDetails = () => {
         }
         if (asset.signal === 'buy' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30)) {
             return (
-                <span className={`${badgeClasses} bg-green-500/15 text-green-400 border border-green-500/35`}>
+                <span className={`${badgeClasses} bg-slate-900/80 text-green-400 border border-slate-700`}>
                     Buy Signal
                 </span>
             );
         }
         if (asset.signal === 'sell' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70)) {
             return (
-                <span className={`${badgeClasses} bg-red-500/15 text-red-400 border border-red-500/35`}>
+                <span className={`${badgeClasses} bg-slate-900/80 text-red-400 border border-slate-700`}>
                     Sell Signal
                 </span>
             );
@@ -841,9 +841,9 @@ const AccountDetails = () => {
                             ${fmt2(txSummary.buys)}
                         </p>
                     </div>
-                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-purple-500/25">
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-red-500/25">
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Sells</p>
-                        <p className="text-lg font-bold font-mono tabular-nums text-purple-400">
+                        <p className="text-lg font-bold font-mono tabular-nums text-red-400">
                             ${fmt2(txSummary.sells)}
                         </p>
                     </div>
@@ -1332,10 +1332,10 @@ const AccountDetails = () => {
                                                             ${asset.currentPrice.toFixed(2)}
                                                         </span>
                                                         <span
-                                                            className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                                            className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border bg-slate-900/80 border-slate-700 ${
                                                                 asset.todayChangePercent >= 0
-                                                                    ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                                    : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                                    ? 'text-green-400'
+                                                                    : 'text-red-400'
                                                             }`}
                                                         >
                                                             {asset.todayChangePercent > 0 ? '+' : ''}
@@ -1463,10 +1463,10 @@ const AccountDetails = () => {
                                                     ${asset.currentPrice.toFixed(2)}
                                                 </p>
                                                 <span
-                                                    className={`inline-block mt-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md border ${
+                                                    className={`inline-block mt-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md border bg-slate-900/80 border-slate-700 ${
                                                         asset.todayChangePercent >= 0
-                                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                            : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            ? 'text-green-400'
+                                                            : 'text-red-400'
                                                     }`}
                                                 >
                                                     {asset.todayChangePercent > 0 ? '+' : ''}
@@ -1824,7 +1824,7 @@ const AccountDetails = () => {
                                     })
                                     .map(tx => (
                                         <tr key={tx.id} className="hover:bg-slate-750/60 transition-colors">
-                                            <td className="px-6 py-4 text-slate-300 font-mono tabular-nums">{tx.date}</td>
+                                            <td className="px-6 py-4 text-slate-300 font-mono tabular-nums">{tx.date ? tx.date.split('T')[0] : ''}</td>
                                             <td className="px-6 py-4 font-bold font-mono text-white">
                                                 {tx.ticker || '—'}
                                             </td>
@@ -1835,15 +1835,15 @@ const AccountDetails = () => {
                                                         tx.type === 'DRIP' ||
                                                         tx.type === 'Dividend Reinvested' ||
                                                         tx.type === 'Stock Split'
-                                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                            ? 'bg-slate-900/80 border-slate-700 text-green-400'
                                                             : tx.type === 'Sell'
-                                                            ? 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            ? 'bg-slate-900/80 border-slate-700 text-red-400'
                                                             : tx.type === 'Dividend Income' || tx.type === 'Dividend'
                                                             ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
                                                             : tx.type === 'Withdrawal'
                                                             ? 'bg-purple-500/15 border-purple-500/35 text-purple-400'
                                                             : tx.type === 'Interest'
-                                                            ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                                                            ? 'bg-slate-900/80 border-slate-700 text-emerald-400'
                                                             : tx.type === 'Fee'
                                                             ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
                                                             : 'bg-blue-500/15 border-blue-500/35 text-blue-400'

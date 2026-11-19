@@ -67,12 +67,7 @@
 }
 
 .tax-kpi-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--kpi-gradient, transparent);
-  opacity: 0.08;
-  pointer-events: none;
+  display: none;
 }
 
 .tax-kpi-card:hover {
@@ -82,20 +77,19 @@
 
 /* Featured Estimated Refund Hero Card */
 .tax-kpi-card.tax-kpi-hero {
-  background: linear-gradient(135deg, rgb(var(--color-slate-800) / 0.95), rgb(var(--color-slate-900) / 0.9));
-  border: 1px solid rgba(99, 102, 241, 0.45);
+  background: rgb(var(--color-slate-800) / 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.35);
   padding: 1.35rem 1.5rem;
-  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 12px 24px -6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .tax-kpi-card.tax-kpi-hero::before {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(99, 102, 241, 0.26));
-  opacity: 0.45;
+  display: none;
 }
 
 .tax-kpi-card.tax-kpi-hero:hover {
-  border-color: rgba(129, 140, 248, 0.7);
-  box-shadow: 0 14px 34px -10px rgba(99, 102, 241, 0.42);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 8px 20px -6px rgba(59, 130, 246, 0.25);
 }
 
 .tax-kpi-hero-header {
@@ -117,8 +111,8 @@
   width: 30px;
   height: 30px;
   border-radius: 0.55rem;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(99, 102, 241, 0.24));
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
   display: flex;
   align-items: center;
@@ -180,12 +174,12 @@
 }
 
 .tax-refund-bar-cra {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: #3b82f6;
   transition: width 0.25s ease;
 }
 
 .tax-refund-bar-rq {
-  background: linear-gradient(90deg, #8b5cf6, #a855f7);
+  background: #38bdf8;
   transition: width 0.25s ease;
 }
 
@@ -330,8 +324,8 @@
 }
 
 .tax-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* ─── Slider Control Card ──────────────────────────────────── */
@@ -386,7 +380,7 @@
   left: 0.75rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #818cf8;
+  color: #60a5fa;
   pointer-events: none;
 }
 
@@ -400,7 +394,7 @@
   color: var(--color-text-primary);
   text-align: right;
   font-variant-numeric: tabular-nums;
-  border-color: rgba(99, 102, 241, 0.35);
+  border-color: rgba(59, 130, 246, 0.35);
 }
 
 .tax-slider-track-wrap {
@@ -418,8 +412,8 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    #6366f1 0%,
-    #8b5cf6 var(--slider-pct, 50%),
+    #3b82f6 0%,
+    #3b82f6 var(--slider-pct, 50%),
     rgb(var(--color-slate-600) / 0.55) var(--slider-pct, 50%),
     rgb(var(--color-slate-600) / 0.55) 100%
   );
@@ -432,7 +426,7 @@
 }
 
 .tax-slider:focus-visible {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(99, 102, 241, 0.28);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(59, 130, 246, 0.28);
 }
 
 .tax-slider:disabled {
@@ -446,22 +440,22 @@
   height: 24px;
   border-radius: 50%;
   background: #ffffff;
-  border: 4px solid #6366f1;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: 4px solid #3b82f6;
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
   cursor: grab;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .tax-slider::-webkit-slider-thumb:hover {
   transform: scale(1.14);
-  border-color: #818cf8;
-  box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.22), 0 3px 14px rgba(99, 102, 241, 0.65);
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.22), 0 3px 14px rgba(59, 130, 246, 0.65);
 }
 
 .tax-slider:active::-webkit-slider-thumb {
   cursor: grabbing;
   transform: scale(1.18);
-  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.3), 0 4px 16px rgba(99, 102, 241, 0.7);
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.3), 0 4px 16px rgba(59, 130, 246, 0.7);
 }
 
 .tax-slider::-moz-range-track {
@@ -474,7 +468,7 @@
 .tax-slider::-moz-range-progress {
   height: 10px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: #3b82f6;
 }
 
 .tax-slider::-moz-range-thumb {
@@ -482,8 +476,8 @@
   height: 22px;
   border-radius: 50%;
   background: #ffffff;
-  border: 4px solid #6366f1;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: 4px solid #3b82f6;
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
   cursor: grab;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -513,11 +507,11 @@
 
 .tax-slider-pct-badge {
   font-weight: 600;
-  color: #818cf8;
+  color: #60a5fa;
 }
 
 .light .tax-slider-pct-badge {
-  color: #4f46e5;
+  color: #2563eb;
 }
 
 .tax-slider-presets {
@@ -544,20 +538,20 @@
 }
 
 .tax-preset-btn:hover:not(:disabled) {
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(59, 130, 246, 0.5);
   color: var(--color-text-primary);
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(59, 130, 246, 0.12);
 }
 
 .tax-preset-btn.active {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: #6366f1;
-  color: #a5b4fc;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  color: #93c5fd;
 }
 
 .light .tax-preset-btn.active {
-  color: #4338ca;
-  background: rgba(99, 102, 241, 0.14);
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.14);
 }
 
 .tax-preset-btn.sweetspot {
@@ -753,10 +747,10 @@
   inset: 0;
   background: repeating-linear-gradient(
     -45deg,
-    rgba(99, 102, 241, 0.55) 0px,
-    rgba(99, 102, 241, 0.55) 4px,
-    rgba(99, 102, 241, 0.2) 4px,
-    rgba(99, 102, 241, 0.2) 8px
+    rgba(59, 130, 246, 0.55) 0px,
+    rgba(59, 130, 246, 0.55) 4px,
+    rgba(59, 130, 246, 0.2) 4px,
+    rgba(59, 130, 246, 0.2) 8px
   );
   border-radius: inherit;
   pointer-events: none;
@@ -771,10 +765,10 @@
   bottom: 0;
   background: repeating-linear-gradient(
     -45deg,
-    rgba(99, 102, 241, 0.55) 0px,
-    rgba(99, 102, 241, 0.55) 4px,
-    rgba(99, 102, 241, 0.2) 4px,
-    rgba(99, 102, 241, 0.2) 8px
+    rgba(59, 130, 246, 0.55) 0px,
+    rgba(59, 130, 246, 0.55) 4px,
+    rgba(59, 130, 246, 0.2) 4px,
+    rgba(59, 130, 246, 0.2) 8px
   );
   pointer-events: none;
   animation: shieldPulse 2s ease-in-out infinite;
@@ -840,8 +834,8 @@
 }
 
 .layer-cake-table tr.shielded-row td {
-  background: rgba(99, 102, 241, 0.06);
-  color: #a5b4fc;
+  background: rgba(59, 130, 246, 0.08);
+  color: #93c5fd;
 }
 
 .lc-rate-badge {
@@ -858,8 +852,8 @@
 
 /* Next Milestone Card */
 .milestone-card {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.05));
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 1rem;
   padding: 1.25rem 1.5rem;
   position: relative;
@@ -867,13 +861,7 @@
 }
 
 .milestone-card::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 120px; height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.2), transparent 70%);
-  pointer-events: none;
+  display: none;
 }
 
 .milestone-title {
@@ -881,7 +869,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #818cf8;
+  color: #60a5fa;
   margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
@@ -891,7 +879,7 @@
 .milestone-amount {
   font-size: 2rem;
   font-weight: 800;
-  color: #c7d2fe;
+  color: #bfdbfe;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -928,7 +916,7 @@
 
 /* Diminishing Returns Warning */
 .diminishing-warning {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(234, 179, 8, 0.05));
+  background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: 1rem;
   padding: 1rem 1.25rem;
@@ -973,7 +961,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #2563eb;
   color: #fff;
   font-size: 0.85rem;
   font-weight: 600;
@@ -984,13 +972,13 @@
   transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   width: 100%;
   justify-content: center;
-  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.35);
 }
 
 .save-btn:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.5);
 }
 
 .save-btn:disabled {
@@ -999,7 +987,7 @@
 }
 
 .save-btn.saved {
-  background: linear-gradient(135deg, #065f46, #10b981);
+  background: #059669;
   box-shadow: 0 2px 12px rgba(16, 185, 129, 0.35);
 }
 
@@ -1216,23 +1204,23 @@
 }
 
 .light .tax-kpi-card.tax-kpi-hero {
-  background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 58%, #ecfdf5 100%);
-  border: 1px solid rgba(79, 70, 229, 0.35);
-  box-shadow: 0 2px 6px -1px rgba(79, 70, 229, 0.1), 0 1px 2px rgba(15, 23, 42, 0.04);
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 6px -1px rgba(37, 99, 235, 0.1), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .light .tax-kpi-card.tax-kpi-hero::before {
-  opacity: 0.14;
+  display: none;
 }
 
 .light .tax-kpi-card.tax-kpi-hero:hover {
-  border-color: rgba(79, 70, 229, 0.55);
-  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.14);
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.14);
 }
 
 .light .tax-kpi-hero-icon {
-  background: linear-gradient(135deg, rgba(4, 120, 87, 0.12), rgba(79, 70, 229, 0.12));
-  border-color: rgba(79, 70, 229, 0.3);
+  background: rgba(4, 120, 87, 0.1);
+  border-color: rgba(4, 120, 87, 0.25);
   color: #047857;
 }
 
@@ -1262,36 +1250,37 @@
 }
 
 .light .tax-input {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: #ffffff;
+  border-color: #94a3b8;
   color: var(--color-text-primary);
 }
 
 .light .tax-input:focus {
   background: #ffffff;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 .light .tax-slider-card {
-  background: #f8fafc;
+  background: #ffffff;
   border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .light .tax-slider-currency {
-  color: #4338ca;
+  color: #2563eb;
 }
 
 .light .tax-slider-input {
   background: #ffffff;
-  border-color: rgba(79, 70, 229, 0.38);
+  border-color: rgba(37, 99, 235, 0.38);
 }
 
 .light .tax-slider {
   background: linear-gradient(
     to right,
-    #4f46e5 0%,
-    #7c3aed var(--slider-pct, 50%),
+    #2563eb 0%,
+    #2563eb var(--slider-pct, 50%),
     #cbd5e1 var(--slider-pct, 50%),
     #cbd5e1 100%
   );
@@ -1310,15 +1299,15 @@
 }
 
 .light .tax-preset-btn:hover:not(:disabled) {
-  background: #eef2ff;
-  border-color: rgba(79, 70, 229, 0.45);
-  color: #312e81;
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.45);
+  color: #1e3a8a;
 }
 
 .light .tax-preset-btn.active {
-  background: #e0e7ff;
-  border-color: #4f46e5;
-  color: #3730a3;
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1e40af;
 }
 
 .light .tax-preset-btn.sweetspot {
@@ -1335,8 +1324,9 @@
 }
 
 .light .tax-schedule-card {
-  background: #f8fafc;
+  background: #ffffff;
   border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .light .tax-schedule-header {
@@ -1365,35 +1355,35 @@
 }
 
 .light .layer-cake-table tr.shielded-row td {
-  background: rgba(79, 70, 229, 0.08);
-  color: #3730a3;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1e40af;
   font-weight: 500;
 }
 
 .light .milestone-card {
-  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
-  border-color: rgba(79, 70, 229, 0.3);
-  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.08);
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
 }
 
 .light .milestone-title {
-  color: #4338ca;
+  color: #1d4ed8;
 }
 
 .light .milestone-amount {
-  color: #312e81;
+  color: #1e3a8a;
 }
 
 .light .milestone-bracket-drop {
   background: #ffffff;
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .light .milestone-from-rate { color: #b91c1c; }
 .light .milestone-to-rate   { color: #047857; }
 
 .light .diminishing-warning {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  background: #fffbeb;
   border-color: rgba(217, 119, 6, 0.45);
 }
 

@@ -201,10 +201,8 @@ const StockDetails = ({ data, onClose }: StockDetailsProps) => {
                         </div>
                         <div className="mt-1 flex lg:justify-end">
                             <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-sm font-semibold font-mono tabular-nums border ${
-                                    isPositive
-                                        ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                        : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-sm font-semibold font-mono tabular-nums border bg-slate-900/80 border-slate-700 ${
+                                    isPositive ? 'text-green-400' : 'text-red-400'
                                 }`}
                             >
                                 {isPositive ? <ArrowUp size={15} /> : <ArrowDown size={15} />}

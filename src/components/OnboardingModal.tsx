@@ -100,7 +100,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     const cardContent = (
         <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden my-4 sm:my-8 mx-auto">
             {/* Header Banner */}
-            <div className="relative p-6 sm:p-8 bg-gradient-to-br from-blue-600/20 via-indigo-600/15 to-purple-600/10 border-b border-slate-700/80">
+            <div className="relative p-6 sm:p-8 border-b border-slate-700/80">
                 {onClose && (
                     <button
                         onClick={onClose}
@@ -164,17 +164,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                             {/* Option 2: Explore Demo Data */}
                             <div
                                 onClick={handleTryDemo}
-                                className="group relative cursor-pointer rounded-2xl p-5 bg-gradient-to-b from-amber-500/10 to-indigo-500/10 hover:from-amber-500/15 hover:to-indigo-500/15 border border-amber-500/30 hover:border-amber-400/60 shadow-lg hover:shadow-amber-500/10 transition-all flex flex-col justify-between gap-4"
+                                className="group relative cursor-pointer rounded-2xl p-5 bg-slate-800/80 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-400/60 shadow-lg hover:shadow-amber-500/10 transition-all flex flex-col justify-between gap-4"
                             >
                                 <div>
-                                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/35 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-900/80 text-amber-400 border border-slate-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                                         <Sparkles size={20} />
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
                                             Explore Demo Data
                                         </h3>
-                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-900/80 text-amber-300 border border-slate-700">
                                             Recommended
                                         </span>
                                     </div>
@@ -192,7 +192,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         {/* Existing Backup shortcut */}
                         <div className="rounded-2xl p-4 bg-slate-800/40 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                             <div className="flex items-center gap-2.5 text-slate-300 text-center sm:text-left">
-                                <Shield size={16} className="text-green-400 shrink-0" />
+                                <Shield size={16} className="text-blue-400 shrink-0" />
                                 <span>Already have a backup?</span>
                             </div>
                             <button
@@ -203,7 +203,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                                 }}
                                 className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-medium transition-colors flex items-center gap-1.5"
                             >
-                                <Upload size={13} className="text-purple-400" />
+                                <Upload size={13} className="text-blue-400" />
                                 Restore Backup
                             </button>
                         </div>

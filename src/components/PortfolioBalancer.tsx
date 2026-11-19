@@ -283,7 +283,7 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
                                             {row.targetPct === 0 && row.currentPct === 0 ? (
                                                 <span className="text-slate-400 text-xs">—</span>
                                             ) : !isDrifted ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-500/15 border border-green-500/35 text-green-400">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-slate-900/80 border border-slate-700 text-green-400">
                                                     <CheckCircle size={12} /> On target
                                                 </span>
                                             ) : (
@@ -318,11 +318,7 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
                             {rebalanceActions.map(action => (
                                 <div
                                     key={action.ticker}
-                                    className={`p-3 rounded-xl border text-center ${
-                                        action.delta > 0
-                                            ? 'bg-green-500/15 border-green-500/35'
-                                            : 'bg-red-500/15 border-red-500/35'
-                                    }`}
+                                    className="p-3 rounded-xl border bg-slate-800/90 border-slate-700/80 text-center"
                                 >
                                     <p className="text-xs font-mono font-bold text-white mb-0.5">{action.ticker}</p>
                                     <p

@@ -132,7 +132,7 @@ const AverageDownCalc: React.FC<Props> = ({ assets }) => {
                                                     {asset.ticker}
                                                 </span>
                                                 {isDown && (
-                                                    <span className="text-[11px] font-bold text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full">
+                                                    <span className="text-[11px] font-bold text-red-400 bg-slate-900/80 border border-slate-700 px-2 py-0.5 rounded-full">
                                                         Candidate
                                                     </span>
                                                 )}
