@@ -35,6 +35,7 @@ import StockDetails, { type StockData } from '../components/StockDetails';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 import CsvImportModal from '../components/CsvImportModal';
 import AssetSimulators from '../components/AssetSimulators';
+import { QuoteStatusBadge, UnknownSymbolsBanner } from '../components/QuoteStatusBadge';
 
 type AssetViewMode = 'table' | 'cards' | 'compact';
 type AssetSortField = 'ticker' | 'profit' | 'profitPercent' | 'marketValue' | 'bookCost' | 'averageCost' | 'todayChange';
@@ -56,6 +57,7 @@ const AccountDetails = () => {
         refreshPrices,
         refreshAsset,
         updateAssetCustomBookCost,
+        quoteErrors,
     } = useData();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -741,6 +743,8 @@ const AccountDetails = () => {
                 </div>
             </div>
 
+            <UnknownSymbolsBanner quoteErrors={quoteErrors} tickers={assets.map((a) => a.ticker)} />
+
             {/* Account Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl p-5 shadow-xl">
@@ -1292,6 +1296,7 @@ const AccountDetails = () => {
                                                                 USD
                                                             </span>
                                                         )}
+                                                        <QuoteStatusBadge ticker={asset.ticker} status={quoteErrors[asset.ticker]} />
                                                         <button
                                                             type="button"
                                                             onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
@@ -1441,6 +1446,7 @@ const AccountDetails = () => {
                                                             USD
                                                         </span>
                                                     )}
+                                                    <QuoteStatusBadge ticker={asset.ticker} status={quoteErrors[asset.ticker]} />
                                                     <button
                                                         type="button"
                                                         onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}
@@ -1664,6 +1670,7 @@ const AccountDetails = () => {
                                                                         USD
                                                                     </span>
                                                                 )}
+                                                                <QuoteStatusBadge ticker={asset.ticker} status={quoteErrors[asset.ticker]} />
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => openRenameModal(asset.ticker, asset.currency || 'CAD')}

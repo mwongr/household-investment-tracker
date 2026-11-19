@@ -33,3 +33,7 @@ backups/
 # Environment Variables
 .env
 .env.*
+!.env.example
+
+# Docker data volume (compose.yaml mounts ./data)
+data/
