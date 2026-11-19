@@ -337,10 +337,8 @@ const StockResearch = () => {
                                             <td className="px-4 py-3.5 text-right">
                                                 {item.changePercent != null ? (
                                                     <span
-                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono tabular-nums font-bold text-xs border ${
-                                                            isPos
-                                                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                                : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono tabular-nums font-bold text-xs border bg-slate-900/80 border-slate-700 ${
+                                                            isPos ? 'text-green-400' : 'text-red-400'
                                                         }`}
                                                     >
                                                         {isPos ? '+' : ''}{item.changePercent.toFixed(2)}%

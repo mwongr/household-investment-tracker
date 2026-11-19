@@ -151,7 +151,7 @@ const Navbar = () => {
                         </div>
                         <span className="nav-label">About</span>
                         {versionInfo?.updateAvailable && (
-                            <span className="ml-auto text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <span className="ml-auto text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-900/80 text-emerald-400 border border-slate-700">
                                 Update
                             </span>
                         )}

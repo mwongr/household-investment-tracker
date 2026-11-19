@@ -1332,10 +1332,10 @@ const AccountDetails = () => {
                                                             ${asset.currentPrice.toFixed(2)}
                                                         </span>
                                                         <span
-                                                            className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                                            className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border bg-slate-900/80 border-slate-700 ${
                                                                 asset.todayChangePercent >= 0
-                                                                    ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                                    : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                                    ? 'text-green-400'
+                                                                    : 'text-red-400'
                                                             }`}
                                                         >
                                                             {asset.todayChangePercent > 0 ? '+' : ''}
@@ -1463,10 +1463,10 @@ const AccountDetails = () => {
                                                     ${asset.currentPrice.toFixed(2)}
                                                 </p>
                                                 <span
-                                                    className={`inline-block mt-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md border ${
+                                                    className={`inline-block mt-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md border bg-slate-900/80 border-slate-700 ${
                                                         asset.todayChangePercent >= 0
-                                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                            : 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            ? 'text-green-400'
+                                                            : 'text-red-400'
                                                     }`}
                                                 >
                                                     {asset.todayChangePercent > 0 ? '+' : ''}
@@ -1835,15 +1835,15 @@ const AccountDetails = () => {
                                                         tx.type === 'DRIP' ||
                                                         tx.type === 'Dividend Reinvested' ||
                                                         tx.type === 'Stock Split'
-                                                            ? 'bg-green-500/15 border-green-500/35 text-green-400'
+                                                            ? 'bg-slate-900/80 border-slate-700 text-green-400'
                                                             : tx.type === 'Sell'
-                                                            ? 'bg-red-500/15 border-red-500/35 text-red-400'
+                                                            ? 'bg-slate-900/80 border-slate-700 text-red-400'
                                                             : tx.type === 'Dividend Income' || tx.type === 'Dividend'
                                                             ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
                                                             : tx.type === 'Withdrawal'
                                                             ? 'bg-purple-500/15 border-purple-500/35 text-purple-400'
                                                             : tx.type === 'Interest'
-                                                            ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                                                            ? 'bg-slate-900/80 border-slate-700 text-emerald-400'
                                                             : tx.type === 'Fee'
                                                             ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
                                                             : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
