@@ -695,7 +695,7 @@ const Settings = () => {
                                                 setImportStatus({ type: 'success', message: 'Demo data cleared. Clean slate restored.' });
                                             }
                                         }}
-                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 rounded-xl text-xs font-bold transition-colors"
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-red-500/40 text-red-400 rounded-xl text-xs font-bold transition-colors"
                                     >
                                         <Trash2 size={15} /> Clear Demo Data
                                     </button>
@@ -752,9 +752,9 @@ const Settings = () => {
                 </section>
 
                 {/* Danger Zone */}
-                <section className="bg-slate-800/95 border border-red-500/35 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-                    <div className="px-5 py-4 bg-red-500/10 border-b border-red-500/30 flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/35 text-red-400 shrink-0">
+                <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                    <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-red-400 shrink-0">
                             <ShieldAlert size={20} />
                         </div>
                         <div>
@@ -773,7 +773,7 @@ const Settings = () => {
 
                         <button
                             onClick={handleReset}
-                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-400 rounded-xl text-xs font-bold transition-colors"
+                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 hover:border-red-500/40 text-red-400 rounded-xl text-xs font-bold transition-colors"
                         >
                             <Trash2 size={15} /> Reset All Data
                         </button>
@@ -784,7 +784,7 @@ const Settings = () => {
             {/* Row 4: Support the Project */}
             <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/35 text-rose-400 shrink-0">
+                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-700 text-rose-400 shrink-0">
                         <Heart size={18} />
                     </div>
                     <div className="min-w-0">

@@ -193,7 +193,7 @@ const StockComparison: React.FC = () => {
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/35 text-indigo-400">
+          <div className="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
             <BarChart2 size={20} />
           </div>
           <div>

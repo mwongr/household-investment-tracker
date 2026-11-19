@@ -318,11 +318,7 @@ const PortfolioBalancer: React.FC<Props> = ({ account, assets, totalInvested }) 
                             {rebalanceActions.map(action => (
                                 <div
                                     key={action.ticker}
-                                    className={`p-3 rounded-xl border text-center ${
-                                        action.delta > 0
-                                            ? 'bg-green-500/15 border-green-500/35'
-                                            : 'bg-red-500/15 border-red-500/35'
-                                    }`}
+                                    className="p-3 rounded-xl border bg-slate-800/90 border-slate-700/80 text-center"
                                 >
                                     <p className="text-xs font-mono font-bold text-white mb-0.5">{action.ticker}</p>
                                     <p

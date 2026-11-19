@@ -162,7 +162,7 @@ export const PortfolioHistoryChart: React.FC<PortfolioHistoryChartProps> = React
                 {/* Highest & Lowest Summary */}
                 {effectiveView !== 'individual' && extremes && (
                     <div className="flex flex-wrap items-center gap-3 mb-4">
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700/70 text-xs">
                             <ArrowUpRight size={14} className="text-emerald-400 shrink-0" />
                             <span className="text-slate-300 font-medium">Highest:</span>
                             <span className="font-mono font-bold text-emerald-400">
@@ -170,7 +170,7 @@ export const PortfolioHistoryChart: React.FC<PortfolioHistoryChartProps> = React
                             </span>
                             <span className="text-slate-400">({formatDateLabel(extremes.high.name)})</span>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700/70 text-xs">
                             <ArrowDownRight size={14} className="text-rose-400 shrink-0" />
                             <span className="text-slate-300 font-medium">Lowest:</span>
                             <span className="font-mono font-bold text-rose-400">

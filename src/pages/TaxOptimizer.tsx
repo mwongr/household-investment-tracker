@@ -160,7 +160,7 @@ const LayerCakeBar: React.FC<{ layers: LayerCakeSegment[]; income: number }> = (
           return rates.indexOf(rates[i]) === i;
         })}
         <div className="lc-legend-item">
-          <span className="lc-legend-dot" style={{ background: 'repeating-linear-gradient(-45deg,#6366f1 0,#6366f1 3px,#312e81 3px,#312e81 6px)' }} />
+          <span className="lc-legend-dot" style={{ background: 'repeating-linear-gradient(-45deg,#3b82f6 0,#3b82f6 3px,#1e3a8a 3px,#1e3a8a 6px)' }} />
           <span>RRSP Shield</span>
         </div>
       </div>
@@ -192,9 +192,9 @@ const LayerCakeBar: React.FC<{ layers: LayerCakeSegment[]; income: number }> = (
               </td>
               <td>
                 {layer.isShielded
-                  ? <span style={{ color: isDark ? '#818cf8' : '#4338ca', fontWeight: 600 }}>🛡 Shielded</span>
+                  ? <span style={{ color: isDark ? '#60a5fa' : '#2563eb', fontWeight: 600 }}>🛡 Shielded</span>
                   : layer.partialShield > 0
-                  ? <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600 }}>🛡 {(layer.partialShield * 100).toFixed(0)}% covered</span>
+                  ? <span style={{ color: isDark ? '#93c5fd' : '#1d4ed8', fontWeight: 600 }}>🛡 {(layer.partialShield * 100).toFixed(0)}% covered</span>
                   : <span style={{ color: 'var(--color-text-muted)' }}>Taxed</span>}
               </td>
             </tr>
@@ -502,7 +502,7 @@ const TaxOptimizer: React.FC = () => {
       <div className="page-header pb-4 border-b border-slate-700 flex justify-between items-center">
         <div>
           <h1 className="page-title">
-            <ShieldCheck className="text-indigo-400" size={30} />
+            <ShieldCheck className="text-blue-400" size={30} />
             Tax Bracket Optimizer
           </h1>
           <p className="page-subtitle">
@@ -558,15 +558,15 @@ const TaxOptimizer: React.FC = () => {
                     <strong className="text-blue-400">{fmt.format(result.craRefund)}</strong>
                   </span>
                   <span className="tax-refund-pill">
-                    <span className="tax-refund-dot" style={{ background: '#a855f7' }} />
+                    <span className="tax-refund-dot" style={{ background: '#38bdf8' }} />
                     <span>RQ:</span>
-                    <strong className="text-purple-400">{fmt.format(result.rqRefund)}</strong>
+                    <strong className="text-sky-400">{fmt.format(result.rqRefund)}</strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#10b981,#059669)' } as React.CSSProperties}>
+            <div className="tax-kpi-card">
               <div className="tax-kpi-header-row">
                 <span className="tax-kpi-label">Effective Savings Rate</span>
                 <Percent size={14} className="text-green-400" />
@@ -575,18 +575,18 @@ const TaxOptimizer: React.FC = () => {
               <span className="tax-kpi-sub">Refund per dollar contributed</span>
             </div>
 
-            <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#f59e0b,#d97706)' } as React.CSSProperties}>
+            <div className="tax-kpi-card">
               <div className="tax-kpi-header-row">
                 <span className="tax-kpi-label">Top Marginal Rate</span>
-                <Gauge size={14} className="text-amber-400" />
+                <Gauge size={14} className="text-blue-400" />
               </div>
-              <span className={`tax-kpi-value ${rateClass(result.newCombinedRate)}`}>
+              <span className="tax-kpi-value text-blue-400">
                 {(result.newCombinedRate * 100).toFixed(1)}%
               </span>
               <span className="tax-kpi-sub">Combined Fed + QC on top dollar</span>
             </div>
 
-            <div className="tax-kpi-card" style={{ '--kpi-gradient': 'linear-gradient(135deg,#3b82f6,#1d4ed8)' } as React.CSSProperties}>
+            <div className="tax-kpi-card">
               <div className="tax-kpi-header-row">
                 <span className="tax-kpi-label">Taxable Income</span>
                 <Wallet size={14} className="text-blue-400" />
@@ -646,13 +646,13 @@ const TaxOptimizer: React.FC = () => {
               <div style={{ marginTop: '0.75rem' }}>
                 <button
                   onClick={() => setAdvancedMode(m => !m)}
-                  style={{ fontSize: '0.72rem', color: isDark ? '#818cf8' : '#4338ca', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  style={{ fontSize: '0.72rem', color: isDark ? '#60a5fa' : '#2563eb', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                 >
                   <span>{advancedMode ? '▼' : '▶'}</span> Advanced: Federal / Quebec Split
                 </button>
                 {advancedMode && (
-                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: isDark ? 'rgba(99,102,241,0.07)' : 'rgba(79,70,229,0.05)', borderRadius: '0.5rem', border: isDark ? '1px solid rgba(99,102,241,0.2)' : '1px solid rgba(79,70,229,0.22)' }}>
-                    <p style={{ fontSize: '0.71rem', color: isDark ? '#818cf8' : '#4338ca', margin: '0 0 0.5rem' }}>Quebec taxable income is sometimes higher than federal (e.g. employer-paid health premiums).</p>
+                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: isDark ? 'rgba(59,130,246,0.07)' : 'rgba(37,99,235,0.05)', borderRadius: '0.5rem', border: isDark ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(37,99,235,0.22)' }}>
+                    <p style={{ fontSize: '0.71rem', color: isDark ? '#60a5fa' : '#2563eb', margin: '0 0 0.5rem' }}>Quebec taxable income is sometimes higher than federal (e.g. employer-paid health premiums).</p>
                     <div className="tax-input-grid">
                       <div className="tax-input-group">
                         <label className="tax-input-label">Federal Taxable Income</label>
@@ -674,7 +674,7 @@ const TaxOptimizer: React.FC = () => {
                 <div className="tax-slider-header">
                   <div className="tax-slider-title-wrap">
                     <label htmlFor="tax-rrsp-slider" className="tax-slider-title">
-                      <SlidersHorizontal size={14} className="text-indigo-400" />
+                      <SlidersHorizontal size={14} className="text-blue-400" />
                       Proposed RRSP Contribution
                     </label>
                     <span className="tax-slider-subtitle">Drag slider or enter an exact amount</span>
@@ -831,7 +831,7 @@ const TaxOptimizer: React.FC = () => {
                            {extraCash > 0 && (
                              <div className="tax-schedule-summary-bar">
                                <span>Remaining to fund after {fmt.format(extraCash)} cash:</span>
-                               <strong className="text-indigo-400">{fmt.format(remainingToFund)}</strong>
+                               <strong className="text-blue-400">{fmt.format(remainingToFund)}</strong>
                              </div>
                            )}
                            <div style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
@@ -890,7 +890,7 @@ const TaxOptimizer: React.FC = () => {
                             Contributions: <strong className="text-amber-400">{fmt.format(ytdDeposits)}</strong>
                           </span>
                           <span style={{ color: 'var(--color-text-secondary)' }}>
-                            Remaining Target: <strong className="text-indigo-400">{fmt.format(remainingTarget)}</strong>
+                            Remaining Target: <strong className="text-blue-400">{fmt.format(remainingTarget)}</strong>
                             {extraCash > 0 && <span style={{ color: 'var(--color-text-muted)' }}> (after {fmt.format(extraCash)} cash)</span>}
                           </span>
                         </div>
@@ -945,7 +945,7 @@ const TaxOptimizer: React.FC = () => {
             <div className="tax-panel-header">
               <span className="tax-panel-title"><BarChart3 size={15} /> Tax Layer Cake</span>
               <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                Indigo stripes = RRSP Shield
+                Blue stripes = RRSP Shield
               </span>
             </div>
             {result ? (
@@ -974,7 +974,7 @@ const TaxOptimizer: React.FC = () => {
               <div className="tax-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                   <span style={{ color: 'var(--color-text-secondary)' }}>Optimal "bracket drop" contribution</span>
-                  <span className="text-indigo-400" style={{ fontWeight: 700 }}>{fmt.format(result.sweetSpotContribution)}</span>
+                  <span className="text-blue-400" style={{ fontWeight: 700 }}>{fmt.format(result.sweetSpotContribution)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                   <span style={{ color: 'var(--color-text-secondary)' }}>Room left in current bracket</span>
@@ -1040,7 +1040,7 @@ const TaxOptimizer: React.FC = () => {
               {scenarios.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
                   {scenarios.slice(0, 10).map(s => (
-                    <div key={s.id} style={{ background: 'rgb(var(--color-slate-900) / 0.4)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', position: 'relative' }}>
+                    <div key={s.id} style={{ background: isDark ? 'rgb(var(--color-slate-900) / 0.4)' : '#ffffff', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', position: 'relative', boxShadow: isDark ? undefined : '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
                       
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>
                         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
@@ -1049,7 +1049,7 @@ const TaxOptimizer: React.FC = () => {
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
                             onClick={() => handleLoadScenario(s)} 
-                            style={{ background: isDark ? 'rgba(99,102,241,0.1)' : '#eef2ff', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(79,70,229,0.3)', borderRadius: '0.25rem', cursor: 'pointer', color: isDark ? '#a5b4fc' : '#4338ca', fontWeight: 600, padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', transition: 'all 0.2s' }} 
+                            style={{ background: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', border: isDark ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(37,99,235,0.3)', borderRadius: '0.25rem', cursor: 'pointer', color: isDark ? '#93c5fd' : '#1d4ed8', fontWeight: 600, padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', transition: 'all 0.2s' }} 
                             title="Load Scenario into Calculator">
                             <Eye size={12} /> Load
                           </button>
@@ -1077,7 +1077,7 @@ const TaxOptimizer: React.FC = () => {
                           {(s.craRefund != null || s.rqRefund != null) && (
                             <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.65rem', marginTop: '0.15rem' }}>
                               {s.craRefund != null && <span className="text-blue-400">CRA: {fmt.format(s.craRefund)}</span>}
-                              {s.rqRefund != null && <span className="text-purple-400">RQ: {fmt.format(s.rqRefund)}</span>}
+                              {s.rqRefund != null && <span className="text-sky-400">RQ: {fmt.format(s.rqRefund)}</span>}
                             </div>
                           )}
                         </div>
@@ -1249,7 +1249,7 @@ const SettingsModal: React.FC<{ settings: TaxSettings, onSave: (s: TaxSettings) 
                 type="checkbox"
                 checked={draft.applyAbatement ?? true}
                 onChange={(e) => setDraft({ ...draft, applyAbatement: e.target.checked })}
-                style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: 'var(--color-indigo-500)' }}
+                style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#3b82f6' }}
               />
               <label htmlFor="apply-abatement-checkbox" style={{ margin: 0, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
                 Apply Federal Abatement (Quebec only)
@@ -1268,7 +1268,7 @@ const SettingsModal: React.FC<{ settings: TaxSettings, onSave: (s: TaxSettings) 
         </div>
         <div className="tax-modal-footer">
           <button className="btn bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md" onClick={onClose}>Cancel</button>
-          <button className="btn bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md" onClick={() => onSave(draft)}>Save Changes</button>
+          <button className="btn bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md" onClick={() => onSave(draft)}>Save Changes</button>
         </div>
       </div>
     </div>

@@ -965,7 +965,7 @@ const Dashboard = () => {
                                 ${fmt2(totalCash)}
                             </h2>
                         </div>
-                        <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-400 shrink-0">
+                        <div className="p-2.5 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400 shrink-0">
                             <Wallet size={20} />
                         </div>
                     </div>
@@ -1145,7 +1145,7 @@ const Dashboard = () => {
                         {
                             id: 'institution',
                             label: 'Institution',
-                            icon: <Building2 size={19} className="text-purple-400" />,
+                            icon: <Building2 size={19} className="text-blue-400" />,
                             data: allocationByInstitution,
                         },
                     ]}

@@ -202,7 +202,7 @@ const StockResearch = () => {
                 {/* Watchlist Toolbar */}
                 <div className="p-5 bg-slate-900/70 border-b border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-400">
+                        <div className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
                             <Bookmark size={18} />
                         </div>
                         <div>
@@ -357,11 +357,11 @@ const StockResearch = () => {
                                                             Golden Cross
                                                         </span>
                                                     ) : (item.signal === 'buy' || (item.rsi !== undefined && item.rsi !== null && item.rsi < 30)) ? (
-                                                        <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-green-500/15 text-green-400 uppercase border border-green-500/40 whitespace-nowrap">
+                                                        <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-900/80 text-green-400 uppercase border border-slate-700 whitespace-nowrap">
                                                             Buy Signal
                                                         </span>
                                                     ) : (item.signal === 'sell' || (item.rsi !== undefined && item.rsi !== null && item.rsi > 70)) ? (
-                                                        <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/15 text-red-400 uppercase border border-red-500/40 whitespace-nowrap">
+                                                        <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-900/80 text-red-400 uppercase border border-slate-700 whitespace-nowrap">
                                                             Sell Signal
                                                         </span>
                                                     ) : typeof item.signal === 'string' ? (

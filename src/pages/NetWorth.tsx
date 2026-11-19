@@ -422,9 +422,9 @@ const NetWorth = () => {
                 </div>
 
                 {/* Context / Insight Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Visual Breakdown Bar */}
-                    <div className="bg-slate-800/95 border border-slate-700/90 shadow-xl rounded-2xl p-6 flex flex-col justify-center gap-4">
+                    <div className="lg:col-span-5 bg-slate-800/95 border border-slate-700/90 shadow-xl rounded-2xl p-6 flex flex-col justify-center gap-4">
                         <div className="flex flex-wrap justify-between items-center gap-3">
                             <h3 className="text-base font-bold text-white tracking-tight">Portfolio Breakdown</h3>
                             <div className="visual-legend text-slate-300">
@@ -453,7 +453,7 @@ const NetWorth = () => {
                     </div>
 
                     {/* Cashflow Projections */}
-                    <div className="bg-slate-800/95 border border-slate-700/90 shadow-xl rounded-2xl p-6 flex flex-col justify-center gap-4">
+                    <div className="lg:col-span-4 bg-slate-800/95 border border-slate-700/90 shadow-xl rounded-2xl p-6 flex flex-col justify-center gap-4">
                         <h3 className="text-base font-bold text-white tracking-tight">Cashflow Projections</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/65 border border-slate-700/70 rounded-xl p-4">
                             <div>
@@ -479,6 +479,24 @@ const NetWorth = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Debt-to-Asset Ratio */}
+                    <div className="lg:col-span-3 bg-slate-800/95 border border-slate-700/90 shadow-xl rounded-2xl p-6 flex flex-col justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-base font-bold text-white tracking-tight">Debt-to-Asset Ratio</h3>
+                            <div className="p-2 bg-blue-500/15 border border-blue-500/30 rounded-xl text-blue-400">
+                                <Activity size={18} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-bold font-mono tabular-nums text-white">
+                                {debtToAssetRatio.toFixed(1)}%
+                            </p>
+                            <p className="text-xs text-slate-300 mt-1">
+                                Total liabilities vs. gross assets
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="networth-content-grid">
@@ -488,12 +506,12 @@ const NetWorth = () => {
                         <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
                             <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex justify-between items-center gap-4">
                                 <h2 className="text-lg font-bold text-white flex items-center gap-2.5">
-                                    <span className="p-2 rounded-xl bg-green-500/15 border border-green-500/35 text-green-400">
+                                    <span className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
                                         <PiggyBank size={18} />
                                     </span>
                                     <span>Bank Accounts</span>
                                 </h2>
-                                <span className="font-mono tabular-nums font-bold text-lg text-green-400">
+                                <span className="font-mono tabular-nums font-bold text-lg text-white">
                                     {formatter.format(totalCash)}
                                 </span>
                             </div>
@@ -523,7 +541,7 @@ const NetWorth = () => {
                                     <button
                                         type="submit"
                                         style={{ color: '#ffffff' }}
-                                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold transition-colors shrink-0"
+                                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors shrink-0"
                                     >
                                         <Plus size={16} /> Add
                                     </button>
@@ -573,7 +591,7 @@ const NetWorth = () => {
                                                                 <div className="inline-flex gap-1.5">
                                                                     <button
                                                                         onClick={() => saveBankEdit(bank.id)}
-                                                                        className="p-1.5 bg-green-500/15 text-green-400 hover:bg-green-500/25 rounded-lg transition-colors"
+                                                                        className="p-1.5 bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 rounded-lg transition-colors"
                                                                         title="Save"
                                                                     >
                                                                         <Check size={15} />
@@ -605,7 +623,7 @@ const NetWorth = () => {
                                                                     </span>
                                                                 )}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-green-400">
+                                                            <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-white">
                                                                 {formatter.format(bank.balance)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -740,12 +758,12 @@ const NetWorth = () => {
                         <section className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
                             <div className="px-5 py-4 bg-slate-900/80 border-b border-slate-700/80 flex justify-between items-center gap-4">
                                 <h2 className="text-lg font-bold text-white flex items-center gap-2.5">
-                                    <span className="p-2 rounded-xl bg-red-500/15 border border-red-500/35 text-red-400">
+                                    <span className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/35 text-blue-400">
                                         <CreditCard size={18} />
                                     </span>
                                     <span>Liabilities</span>
                                 </h2>
-                                <span className="font-mono tabular-nums font-bold text-lg text-red-400">
+                                <span className="font-mono tabular-nums font-bold text-lg text-white">
                                     {formatter.format(totalLiabilities)}
                                 </span>
                             </div>
@@ -775,7 +793,7 @@ const NetWorth = () => {
                                     <button
                                         type="submit"
                                         style={{ color: '#ffffff' }}
-                                        className="inline-flex items-center justify-center p-2.5 bg-red-600 hover:bg-red-500 rounded-xl transition-colors shrink-0"
+                                        className="inline-flex items-center justify-center p-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors shrink-0"
                                         aria-label="Add Liability"
                                     >
                                         <Plus size={18} />
@@ -825,7 +843,7 @@ const NetWorth = () => {
                                                                 <div className="inline-flex gap-1.5">
                                                                     <button
                                                                         onClick={() => saveLibEdit(liab.id)}
-                                                                        className="p-1.5 bg-green-500/15 text-green-400 hover:bg-green-500/25 rounded-lg transition-colors"
+                                                                        className="p-1.5 bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 rounded-lg transition-colors"
                                                                         title="Save"
                                                                     >
                                                                         <Check size={15} />
@@ -845,7 +863,7 @@ const NetWorth = () => {
                                                             <td className="px-4 py-3 font-semibold text-white">
                                                                 {liab.name}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-red-400">
+                                                            <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-white">
                                                                 {formatter.format(liab.balance)}
                                                             </td>
                                                             <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -1056,16 +1074,6 @@ const NetWorth = () => {
                                 </div>
                             </div>
                         </section>
-                    </div>
-                </div>
-
-                {/* Debt-to-Asset Ratio Footer */}
-                <div className="flex justify-center pb-6">
-                    <div className="bg-slate-800/95 border border-slate-700/90 rounded-xl px-5 py-2.5 text-sm text-slate-300 shadow-lg">
-                        Debt-to-Asset Ratio:{' '}
-                        <strong className="text-white font-mono tabular-nums ml-1">
-                            {debtToAssetRatio.toFixed(1)}%
-                        </strong>
                     </div>
                 </div>
             </div>

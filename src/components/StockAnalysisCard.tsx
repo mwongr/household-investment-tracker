@@ -113,7 +113,7 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
 
     if (isOversold || signal === 'buy') {
         return (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-green-500/15 border border-green-500/45 shadow-sm">
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 shadow-sm">
                 <TrendingUp className="text-green-400 shrink-0" size={20} />
                 <div>
                     <div className="text-green-400 font-bold text-xs uppercase tracking-widest">Buy Signal</div>
@@ -127,7 +127,7 @@ const SignalBadge = ({ signal, goldenCross, rsi }: {
 
     if (isOverbought || signal === 'sell') {
         return (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-red-500/15 border border-red-500/45 shadow-sm">
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 shadow-sm">
                 <TrendingDown className="text-red-400 shrink-0" size={20} />
                 <div>
                     <div className="text-red-400 font-bold text-xs uppercase tracking-widest">Sell Signal</div>

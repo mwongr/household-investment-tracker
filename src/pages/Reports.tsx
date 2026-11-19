@@ -10,6 +10,8 @@ const toIsoDate = (d: Date) => {
     return `${y}-${m}-${day}`;
 };
 
+const formatTxDate = (dateStr: string) => (dateStr ? dateStr.split('T')[0] : '');
+
 const fmt2 = (n: number) =>
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -125,7 +127,7 @@ const Reports = () => {
     const exportCSV = () => {
         const headers = ['Date', 'Type', 'Ticker', 'Shares', 'Price', 'Amount', 'Account', 'Member', 'Institution'];
         const rows = filteredData.map(tx => [
-            tx.date,
+            formatTxDate(tx.date),
             tx.type,
             tx.ticker || '-',
             tx.type === 'Stock Split' && tx.splitFrom && tx.splitTo
@@ -277,13 +279,15 @@ const Reports = () => {
                         </p>
                     </div>
                 </div>
-                <button
-                    style={{ color: '#ffffff' }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
-                    onClick={activeTab === 'transactions' ? exportCSV : exportAssetsCSV}
-                >
-                    <Download size={17} /> Export CSV
-                </button>
+                {activeTab === 'assets' && (
+                    <button
+                        style={{ color: '#ffffff' }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
+                        onClick={exportAssetsCSV}
+                    >
+                        <Download size={17} /> Export CSV
+                    </button>
+                )}
             </div>
 
             {/* Segmented Tabs */}
@@ -456,6 +460,97 @@ const Reports = () => {
 
                     {/* Transactions Table Card */}
                     <div className="bg-slate-800/95 border border-slate-700/90 rounded-2xl shadow-xl overflow-hidden">
+                        {/* Totals Summary Bar (Top) */}
+                        {filteredData.length > 0 &&
+                            (() => {
+                                const totals = filteredData.reduce(
+                                    (acc, tx) => {
+                                        if (tx.type === 'Deposit') acc.deposits += tx.amount;
+                                        else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
+                                        else if (tx.type === 'Buy') acc.buys += tx.amount;
+                                        else if (tx.type === 'Sell') acc.sells += tx.amount;
+                                        else if (tx.type.includes('Dividend') || tx.type === 'DRIP')
+                                            acc.dividends += tx.amount;
+                                        else if (tx.type === 'Interest') acc.interest += tx.amount;
+                                        else if (tx.type === 'Fee') acc.fees += tx.amount;
+                                        return acc;
+                                    },
+                                    { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, fees: 0 }
+                                );
+
+                                return (
+                                    <div className="bg-slate-900/75 px-6 py-3.5 border-b border-slate-700/80 flex flex-wrap items-center gap-x-8 gap-y-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                Deposits
+                                            </span>
+                                            <span className="text-green-400 font-mono tabular-nums font-bold text-base">
+                                                ${fmt2(totals.deposits)}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                Withdrawals
+                                            </span>
+                                            <span className="text-red-400 font-mono tabular-nums font-bold text-base">
+                                                ${fmt2(totals.withdrawals)}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                Buys
+                                            </span>
+                                            <span className="text-blue-400 font-mono tabular-nums font-bold text-base">
+                                                ${fmt2(totals.buys)}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                Sells
+                                            </span>
+                                            <span className="text-red-400 font-mono tabular-nums font-bold text-base">
+                                                ${fmt2(totals.sells)}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                Dividends
+                                            </span>
+                                            <span className="text-amber-400 font-mono tabular-nums font-bold text-base">
+                                                ${fmt2(totals.dividends)}
+                                            </span>
+                                        </div>
+                                        {totals.interest > 0 && (
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                    Interest
+                                                </span>
+                                                <span className="text-emerald-400 font-mono tabular-nums font-bold text-base">
+                                                    ${fmt2(totals.interest)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {totals.fees > 0 && (
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                                                    Fees
+                                                </span>
+                                                <span className="text-amber-400 font-mono tabular-nums font-bold text-base">
+                                                    ${fmt2(totals.fees)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <button
+                                            style={{ color: '#ffffff' }}
+                                            className="ml-auto inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold shadow-sm transition-colors shrink-0"
+                                            onClick={exportCSV}
+                                        >
+                                            <Download size={16} /> Export CSV
+                                        </button>
+                                    </div>
+                                );
+                            })()}
+
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-slate-900/90 border-b border-slate-700/80">
@@ -475,30 +570,10 @@ const Reports = () => {
                                         paginatedData.map(tx => (
                                             <tr key={tx.id} className="hover:bg-slate-750/60 transition-colors">
                                                 <td className="px-5 py-3.5 text-slate-300 font-mono tabular-nums whitespace-nowrap">
-                                                    {tx.date}
+                                                    {formatTxDate(tx.date)}
                                                 </td>
-                                                <td className="px-5 py-3.5">
-                                                    <span
-                                                        className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase border whitespace-nowrap ${
-                                                            ['Buy', 'DRIP', 'Dividend Reinvested', 'Stock Split'].includes(
-                                                                tx.type
-                                                            )
-                                                                ? 'bg-green-500/15 border-green-500/35 text-green-400'
-                                                                : tx.type === 'Sell'
-                                                                ? 'bg-red-500/15 border-red-500/35 text-red-400'
-                                                                : tx.type === 'Dividend Income' || tx.type === 'Dividend'
-                                                                ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
-                                                                : tx.type === 'Withdrawal'
-                                                                ? 'bg-purple-500/15 border-purple-500/35 text-purple-400'
-                                                                : tx.type === 'Interest'
-                                                                ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
-                                                                : tx.type === 'Fee'
-                                                                ? 'bg-amber-500/15 border-amber-500/35 text-amber-400'
-                                                                : 'bg-blue-500/15 border-blue-500/35 text-blue-400'
-                                                        }`}
-                                                    >
-                                                        {tx.type}
-                                                    </span>
+                                                <td className="px-5 py-3.5 text-slate-200 font-medium whitespace-nowrap">
+                                                    {tx.type}
                                                 </td>
                                                 <td className="px-5 py-3.5 font-bold font-mono text-white">
                                                     {tx.ticker || '—'}
@@ -542,90 +617,6 @@ const Reports = () => {
                                 </tbody>
                             </table>
                         </div>
-
-                        {/* Totals Row */}
-                        {filteredData.length > 0 &&
-                            (() => {
-                                const totals = filteredData.reduce(
-                                    (acc, tx) => {
-                                        if (tx.type === 'Deposit') acc.deposits += tx.amount;
-                                        else if (tx.type === 'Withdrawal') acc.withdrawals += tx.amount;
-                                        else if (tx.type === 'Buy') acc.buys += tx.amount;
-                                        else if (tx.type === 'Sell') acc.sells += tx.amount;
-                                        else if (tx.type.includes('Dividend') || tx.type === 'DRIP')
-                                            acc.dividends += tx.amount;
-                                        else if (tx.type === 'Interest') acc.interest += tx.amount;
-                                        else if (tx.type === 'Fee') acc.fees += tx.amount;
-                                        return acc;
-                                    },
-                                    { deposits: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, fees: 0 }
-                                );
-
-                                return (
-                                    <div className="bg-slate-900/75 px-6 py-4 border-t border-slate-700/80 flex flex-wrap gap-x-8 gap-y-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                Total Deposits
-                                            </span>
-                                            <span className="text-green-400 font-mono tabular-nums font-bold text-lg">
-                                                ${fmt2(totals.deposits)}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                Total Withdrawals
-                                            </span>
-                                            <span className="text-red-400 font-mono tabular-nums font-bold text-lg">
-                                                ${fmt2(totals.withdrawals)}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                Total Buys
-                                            </span>
-                                            <span className="text-blue-400 font-mono tabular-nums font-bold text-lg">
-                                                ${fmt2(totals.buys)}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                Total Sells
-                                            </span>
-                                            <span className="text-red-400 font-mono tabular-nums font-bold text-lg">
-                                                ${fmt2(totals.sells)}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                Total Dividends
-                                            </span>
-                                            <span className="text-amber-400 font-mono tabular-nums font-bold text-lg">
-                                                ${fmt2(totals.dividends)}
-                                            </span>
-                                        </div>
-                                        {totals.interest > 0 && (
-                                            <div className="flex flex-col">
-                                                <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                    Total Interest
-                                                </span>
-                                                <span className="text-emerald-400 font-mono tabular-nums font-bold text-lg">
-                                                    ${fmt2(totals.interest)}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {totals.fees > 0 && (
-                                            <div className="flex flex-col">
-                                                <span className="text-slate-300 uppercase text-xs font-bold tracking-wider">
-                                                    Total Fees
-                                                </span>
-                                                <span className="text-amber-400 font-mono tabular-nums font-bold text-lg">
-                                                    ${fmt2(totals.fees)}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })()}
 
                         {/* Pagination Controls */}
                         {filteredData.length > 0 && (

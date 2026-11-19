@@ -55,10 +55,10 @@
   --color-bg-primary:    #FAF7F0;
   --color-bg-secondary:  #FFFFFF;
   --color-bg-tertiary:   #F1F5F9;
-  --color-text-primary:  #0F172A;
-  --color-text-secondary:#334155;
+  --color-text-primary:  #334155;
+  --color-text-secondary:#475569;
   --color-text-muted:    #64748B;
-  --color-text-light:    #1E293B;
+  --color-text-light:    #334155;
 
   --color-accent-blue:       #2563EB;
   --color-accent-blue-hover: #1D4ED8;
@@ -72,10 +72,10 @@
 
   --table-row-hover: rgba(15, 23, 42, 0.035);
 
-  /* Light Mode Tailwind Slate Variables (Crisp Cool-Neutral Surfaces & High-Contrast Ink) */
-  --color-slate-50:  15 23 42;       /* #0F172A primary ink */
-  --color-slate-100: 30 41 59;       /* #1E293B strong ink */
-  --color-slate-200: 51 65 85;       /* #334155 secondary ink */
+  /* Light Mode Tailwind Slate Variables (Crisp Cool-Neutral Surfaces & Soft Slate Ink) */
+  --color-slate-50:  51 65 85;       /* #334155 primary ink */
+  --color-slate-100: 51 65 85;       /* #334155 strong ink */
+  --color-slate-200: 71 85 105;      /* #475569 secondary ink */
   --color-slate-300: 71 85 105;      /* #475569 body/label ink */
   --color-slate-400: 100 116 139;    /* #64748B muted text */
   --color-slate-500: 100 116 139;    /* #64748B subtle text */
@@ -137,7 +137,7 @@ body {
 /* Only invert text-white when it is NOT on a solid saturated background */
 .light .text-white:not([class*="bg-blue-"]):not([class*="bg-indigo-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-purple-"]):not([class*="bg-violet-"]):not([class*="bg-amber-"]):not([class*="bg-orange-"]):not([class*="bg-cyan-"]):not([class*="bg-teal-"]):not(.btn-primary),
 .light .hover\:text-white:hover:not([class*="bg-blue-"]):not([class*="bg-indigo-"]):not([class*="bg-green-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-purple-"]):not([class*="bg-violet-"]):not([class*="bg-amber-"]):not([class*="bg-orange-"]):not([class*="bg-cyan-"]):not([class*="bg-teal-"]):not(.btn-primary) {
-  color: #0F172A !important;
+  color: #334155 !important;
 }
 .light .text-white\/60       { color: rgba(28, 25, 23, 0.65) !important; }
 .light .text-white\/80       { color: rgba(28, 25, 23, 0.85) !important; }
@@ -246,6 +246,33 @@ body {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
+/* Crisp white inputs, selects, and textareas in light mode */
+.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(.bg-transparent),
+.light select:not(.bg-transparent),
+.light textarea:not(.bg-transparent),
+.light .input {
+  background-color: #FFFFFF !important;
+  border-color: #94A3B8 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"])::placeholder,
+.light textarea::placeholder {
+  color: #64748B !important;
+  opacity: 1;
+}
+
+.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(.bg-transparent):focus,
+.light select:not(.bg-transparent):focus,
+.light textarea:not(.bg-transparent):focus,
+.light .input:focus {
+  background-color: #FFFFFF !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  outline: none;
+}
+
 .light .shadow-md,
 .light .shadow-lg,
 .light .shadow-xl {
@@ -261,6 +288,14 @@ body {
 }
 .input-no-spinner {
   -moz-appearance: textfield;
+}
+
+.light table tbody tr {
+  background-color: #FFFFFF;
+}
+
+.light table tbody tr:hover {
+  background-color: #F8FAFC;
 }
 
 /* Table row hover */

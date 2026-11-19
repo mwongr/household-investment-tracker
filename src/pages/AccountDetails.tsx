@@ -259,7 +259,7 @@ const AccountDetails = () => {
     const startEditTx = (tx: Transaction) => {
         setEditingTxId(tx.id);
         setTicker(tx.ticker || '');
-        setDate(tx.date);
+        setDate(tx.date ? tx.date.split('T')[0] : '');
         setType(tx.type);
         setShares(tx.shares?.toString() || '');
 
@@ -427,14 +427,14 @@ const AccountDetails = () => {
         }
         if (asset.signal === 'buy' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi < 30)) {
             return (
-                <span className={`${badgeClasses} bg-green-500/15 text-green-400 border border-green-500/35`}>
+                <span className={`${badgeClasses} bg-slate-900/80 text-green-400 border border-slate-700`}>
                     Buy Signal
                 </span>
             );
         }
         if (asset.signal === 'sell' || (asset.rsi !== undefined && asset.rsi !== null && asset.rsi > 70)) {
             return (
-                <span className={`${badgeClasses} bg-red-500/15 text-red-400 border border-red-500/35`}>
+                <span className={`${badgeClasses} bg-slate-900/80 text-red-400 border border-slate-700`}>
                     Sell Signal
                 </span>
             );
@@ -841,9 +841,9 @@ const AccountDetails = () => {
                             ${fmt2(txSummary.buys)}
                         </p>
                     </div>
-                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-purple-500/25">
+                    <div className="bg-slate-900/75 rounded-xl p-3.5 border border-red-500/25">
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Sells</p>
-                        <p className="text-lg font-bold font-mono tabular-nums text-purple-400">
+                        <p className="text-lg font-bold font-mono tabular-nums text-red-400">
                             ${fmt2(txSummary.sells)}
                         </p>
                     </div>
@@ -1824,7 +1824,7 @@ const AccountDetails = () => {
                                     })
                                     .map(tx => (
                                         <tr key={tx.id} className="hover:bg-slate-750/60 transition-colors">
-                                            <td className="px-6 py-4 text-slate-300 font-mono tabular-nums">{tx.date}</td>
+                                            <td className="px-6 py-4 text-slate-300 font-mono tabular-nums">{tx.date ? tx.date.split('T')[0] : ''}</td>
                                             <td className="px-6 py-4 font-bold font-mono text-white">
                                                 {tx.ticker || '—'}
                                             </td>

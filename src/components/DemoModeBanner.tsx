@@ -20,16 +20,17 @@ export const DemoModeBanner: React.FC = () => {
     return (
         <aside
             aria-label="Demo mode announcement"
-            className="mb-6 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/15 to-purple-500/15 border border-amber-500/30 p-4 shadow-lg backdrop-blur-sm"
+            className="mb-6 rounded-2xl bg-slate-800/95 border border-slate-700/90 p-4 shadow-lg"
         >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start sm:items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/35 shrink-0">
-                        <Sparkles size={18} />
-                    </div>
+                    <Sparkles size={18} className="text-amber-400 shrink-0" />
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30">
+                            <span
+                                style={{ color: '#0f172a' }}
+                                className="text-xs font-bold uppercase tracking-wider bg-amber-400 px-2.5 py-0.5 rounded-md"
+                            >
                                 Demo Mode
                             </span>
                             <span className="text-sm font-semibold text-white">
@@ -45,7 +46,7 @@ export const DemoModeBanner: React.FC = () => {
                 <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                     <button
                         onClick={handleClear}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 hover:text-red-200 text-xs font-bold transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 hover:border-red-500/40 text-red-400 hover:text-red-300 text-xs font-bold transition-colors"
                         title="Delete demo data and start fresh"
                     >
                         <Trash2 size={13} />
