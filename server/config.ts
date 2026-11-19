@@ -54,5 +54,7 @@ export const CACHE_TTL = {
     COMPARE: 60 * 60 * 1000,
     EVENTS: 6 * 60 * 60 * 1000,
     HISTORY: 6 * 60 * 60 * 1000,
+    DIVIDENDS: 12 * 60 * 60 * 1000,
+    DIVIDEND_HISTORY: 24 * 60 * 60 * 1000,
     VERSION_CHECK: 30 * 60 * 1000,
 } as const;

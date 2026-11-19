@@ -9,6 +9,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const AccountDetails = lazy(() => import('./pages/AccountDetails'));
 const Reports = lazy(() => import('./pages/Reports'));
+const Dividends = lazy(() => import('./pages/Dividends'));
 const StockResearch = lazy(() => import('./pages/StockResearch'));
 const Settings = lazy(() => import('./pages/Settings'));
 const AcbTracker = lazy(() => import('./pages/AcbTracker'));
@@ -38,6 +39,7 @@ function App() {
                                     <Route path="accounts" element={<Accounts />} />
                                     <Route path="accounts/:id" element={<AccountDetails />} />
                                     <Route path="reports" element={<Reports />} />
+                                    <Route path="dividends" element={<Dividends />} />
                                     <Route path="research" element={<StockResearch />} />
                                     <Route path="acb" element={<AcbTracker />} />
                                     <Route path="networth" element={<NetWorth />} />

@@ -11,6 +11,7 @@ import {
 } from './config.js';
 import { createDbStore, db } from './lib/db.js';
 import { applyRateLimiters, applySecurityMiddleware, errorHandler } from './middleware/security.js';
+import { createDividendsRouter } from './routes/dividends.js';
 import { createMarketRouter } from './routes/market.js';
 import { createPortfolioRouter } from './routes/portfolio.js';
 import { createStateRouter } from './routes/state.js';
@@ -37,6 +38,7 @@ export function createApp(options?: {
     app.use('/api', createTaxRouter(store));
     app.use('/api', createPortfolioRouter());
     app.use('/api', createMarketRouter());
+    app.use('/api', createDividendsRouter(store));
     app.use(
         '/api',
         createVersionRouter({

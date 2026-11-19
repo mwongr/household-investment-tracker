@@ -15,6 +15,7 @@ import {
     Menu,
     X,
     Info,
+    HandCoins,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +38,7 @@ const Navbar = () => {
         { icon: Search, label: 'Research', path: '/research' },
         { icon: Wrench, label: 'Tools', path: '/tools' },
         { icon: FileBarChart, label: 'Reports', path: '/reports' },
+        { icon: HandCoins, label: 'Dividends', path: '/dividends' },
         ...(preferences.enableAcbTracker ? [{ icon: Calculator, label: 'ACB Tracker', path: '/acb' }] : []),
         ...(preferences.enableTaxOptimizer ? [{ icon: Percent, label: 'Tax Optimizer', path: '/tax' }] : []),
         ...(preferences.enableNetWorth ? [{ icon: TrendingUp, label: 'Net Worth', path: '/networth' }] : []),
