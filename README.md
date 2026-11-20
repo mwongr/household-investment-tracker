@@ -32,7 +32,7 @@
 
 No Node.js or terminal setup required — download and run the Windows installer directly:
 
-* **[Download Household Investment Tracker V1.1.0 (.exe)](https://github.com/mwongr/household-investment-tracker/releases/download/V1.1.0/Household-Investment-Tracker-Setup-1.1.0.exe)**
+* **[Download Household Investment Tracker V1.2.0 (.exe)](https://github.com/mwongr/household-investment-tracker/releases/download/V1.2.0/Household-Investment-Tracker-Setup-1.2.0.exe)**
 * Browse all versions and release notes on the **[GitHub Releases page](https://github.com/mwongr/household-investment-tracker/releases)**.
 
 ---
@@ -160,7 +160,7 @@ While flexible enough for general portfolio tracking, the app is purpose-built a
 ## Installation
 
 ### Option 1: Windows Installer (Recommended)
-1. Download the installer: **[Household-Investment-Tracker-Setup-1.1.0.exe](https://github.com/mwongr/household-investment-tracker/releases/download/V1.1.0/Household-Investment-Tracker-Setup-1.1.0.exe)** (also available on the **[Releases page](https://github.com/mwongr/household-investment-tracker/releases)**).
+1. Download the installer: **[Household-Investment-Tracker-Setup-1.2.0.exe](https://github.com/mwongr/household-investment-tracker/releases/download/V1.2.0/Household-Investment-Tracker-Setup-1.2.0.exe)** (also available on the **[Releases page](https://github.com/mwongr/household-investment-tracker/releases)**).
 2. Run the `.exe` installer and follow the setup wizard.
 3. Launch **Household Investment Tracker** from your Desktop or Start Menu.
 
