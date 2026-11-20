@@ -3,7 +3,7 @@
   "productName": "Household Investment Tracker",
   "description": "Local-first Canadian household investment portfolio, net worth, and Canadian tax tracker",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "CC-BY-NC-4.0",
   "author": "Mike",
   "type": "module",
