@@ -22,6 +22,7 @@ FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3001 \
+    ALLOWED_ORIGIN=http://localhost:3001 \
     HIT_DATA_DIR=/data
 
 WORKDIR /app

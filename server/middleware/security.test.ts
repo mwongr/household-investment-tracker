@@ -24,6 +24,10 @@ describe('isPrivateNetworkOrigin', () => {
         'http://localhost.evil.example',
         'http://[2001:db8::1]',
         'not a url',
+        'file:///',
+        'null',
+        'ftp://myhost',
+        'chrome-extension://abcdef',
     ])('rejects %s', (origin) => {
         expect(isPrivateNetworkOrigin(origin)).toBe(false);
     });

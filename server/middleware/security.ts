@@ -8,10 +8,13 @@ import { ALLOWED_ORIGIN } from '../config.js';
 export function isPrivateNetworkOrigin(origin: string): boolean {
     let host: string;
     try {
-        host = new URL(origin).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+        const url = new URL(origin);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+        host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
     } catch {
         return false;
     }
+    if (!host) return false;
     if (host === 'localhost' || host.endsWith('.localhost')) return true;
     if (host.endsWith('.local') || host.endsWith('.lan') || host.endsWith('.home.arpa')) return true;
     if (!host.includes('.') && !host.includes(':')) return true; // bare LAN hostname, e.g. "myhost"
