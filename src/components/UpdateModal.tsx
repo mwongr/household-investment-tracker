@@ -36,7 +36,7 @@ export const UpdateModal: React.FC = () => {
     const isExe = distribution === 'exe';
     const isDownloaded = isExe && updateState === 'downloaded';
 
-    const commandText = 'git pull origin main && npm install';
+    const commandText = 'git pull origin main && npm ci';
 
     const handleCopy = async () => {
         try {

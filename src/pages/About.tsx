@@ -36,7 +36,7 @@ const About: React.FC = () => {
     const isDark = theme === 'dark';
     const [copied, setCopied] = useState(false);
 
-    const commandText = 'git pull origin main && npm install';
+    const commandText = 'git pull origin main && npm ci';
 
     const handleCopy = async () => {
         try {

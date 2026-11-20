@@ -213,6 +213,14 @@ Open **[http://localhost:5847](http://localhost:5847)** in your browser.
 
 ---
 
+## Updating
+
+When a new release is available, an update notification appears in the app:
+*   **Windows Desktop App (`.exe`)**: Updates download automatically in the background — click **Restart & Install** from the update banner (or the **About** page) to apply the update.
+*   **Running from Source**: Stop the app, run `git pull origin main && npm ci` in the project directory, and restart. (For Docker deployments, see [README-Docker.md](README-Docker.md#updating).)
+
+---
+
 ## Backup & Data Management
 
 ### Automated Backups
