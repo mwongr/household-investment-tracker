@@ -243,6 +243,26 @@ export function estimateNextPayout(
 }
 
 /**
+ * Counts how many valid per-share payouts fall within the trailing 12 months (365 days ending on `today`).
+ */
+export function countTtmPayouts(
+    points: PayoutPoint[],
+    today: Date = new Date()
+): number {
+    if (points.length === 0) return 0;
+    const todayIso = today.toISOString().slice(0, 10);
+    const cutoffIso = new Date(today.getTime() - 365 * MS_PER_DAY).toISOString().slice(0, 10);
+
+    let count = 0;
+    for (const p of points) {
+        if (p.date >= cutoffIso && p.date <= todayIso && p.amountPerShare !== null && p.amountPerShare > 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
+/**
  * Sums per-share payouts over the trailing 12 months (365 days ending on `today`).
  * Returns null if no valid per-share payouts exist in the window.
  */

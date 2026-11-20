@@ -4,6 +4,7 @@ import { db } from '../lib/db.js';
 import {
     buildTransactionHistory,
     computeTtmPerShare,
+    countTtmPayouts,
     estimateNextPayout,
     hasUnevenPayouts,
     inferCadence,
@@ -207,10 +208,22 @@ export function createDividendsRouter(store = db): Router {
                 const yahooTtm = computeTtmPerShare(yahooHistory, today);
                 const txTtm = computeTtmPerShare(txHistory, today);
                 const ttmRate = yahooTtm ?? txTtm;
+                const ttmSource = yahooTtm !== null ? yahooHistory : txHistory;
                 const activeHistory = yahooHistory.length > 0 ? yahooHistory : txHistory;
                 const uneven = hasUnevenPayouts(activeHistory, today);
 
-                if (ttmRate !== null) {
+                const expectedAnnualPayouts =
+                    frequency !== null && frequency !== 'irregular'
+                        ? paymentsPerYear(frequency)
+                        : 0;
+                const minFullYearPayouts =
+                    expectedAnnualPayouts >= 12 ? expectedAnnualPayouts - 1 : expectedAnnualPayouts;
+                const hasFullYearTtm =
+                    ttmRate !== null &&
+                    (expectedAnnualPayouts === 0 ||
+                        countTtmPayouts(ttmSource, today) >= minFullYearPayouts);
+
+                if (hasFullYearTtm && ttmRate !== null) {
                     trailingAnnualRate = ttmRate;
                     // For uneven distributions (e.g. XEQT.TO), Yahoo's forward dividendRate often reflects lastPayout * 4
                     // which understates/overstates the annual total; prefer the true TTM sum instead.
@@ -222,6 +235,8 @@ export function createDividendsRouter(store = db): Router {
                     if (perShare !== null && perShare > 0) {
                         trailingAnnualRate = perShare * paymentsPerYear(frequency);
                     }
+                } else if (ttmRate !== null && trailingAnnualRate === null) {
+                    trailingAnnualRate = ttmRate;
                 }
 
                 const annualRate = forwardAnnualRate ?? trailingAnnualRate;

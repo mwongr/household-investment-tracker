@@ -20,7 +20,9 @@ describe('sanitizeBackupDir', () => {
     });
 
     it('accepts valid absolute paths and app-root backups subfolder', () => {
-        expect(sanitizeBackupDir('D:\\Backups')).toBe(path.resolve('D:\\Backups'));
+        const externalBackupDir =
+            process.platform === 'win32' ? 'D:\\Backups' : '/tmp/hit-backups';
+        expect(sanitizeBackupDir(externalBackupDir)).toBe(path.resolve(externalBackupDir));
         expect(sanitizeBackupDir(path.join(APP_ROOT, 'backups'))).toBe(
             path.resolve(path.join(APP_ROOT, 'backups'))
         );
