@@ -76,6 +76,14 @@ const limiter = createLimiter(4, 150);
 const cache = new TtlLruCache<unknown>(500);
 const inflight = new Map<string, Promise<unknown>>();
 
+/** Yahoo returned 404: the symbol does not exist in Yahoo's format (e.g. TSX needs ".TO"). */
+export class SymbolNotFoundError extends Error {
+    constructor(symbol: string) {
+        super(`Symbol "${symbol}" not found on Yahoo Finance`);
+        this.name = 'SymbolNotFoundError';
+    }
+}
+
 export class UpstreamRateLimitError extends Error {
     constructor(message = 'Yahoo Finance rate limit (429)') {
         super(message);
@@ -169,11 +177,20 @@ export async function fetchYahooChart(symbol: string, range: string): Promise<Ya
     if (response.status === 429) {
         throw new UpstreamRateLimitError();
     }
+    if (response.status === 404) {
+        throw new SymbolNotFoundError(symbol);
+    }
     if (!response.ok) {
         throw new Error(`Yahoo chart HTTP ${response.status}`);
     }
     const json = (await response.json()) as { chart?: { result?: YahooChartResult[] } };
-    return json.chart?.result?.[0] ?? null;
+    const result = json.chart?.result?.[0] ?? null;
+    // Yahoo answers some unlisted symbols (e.g. a TSX ticker without ".TO") with an empty
+    // placeholder: no price and no currency. Treat that the same as a 404.
+    if (result?.meta && result.meta.regularMarketPrice == null && result.meta.currency == null) {
+        throw new SymbolNotFoundError(symbol);
+    }
+    return result;
 }
 
 export async function fetchYahooScreener(scrId: string): Promise<{

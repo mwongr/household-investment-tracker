@@ -1,0 +1,22 @@
+services:
+  household-investment-tracker:
+    container_name: household-investment-tracker
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: household-investment-tracker:local
+    restart: unless-stopped
+    ports:
+      # Loopback by default; set APP_BIND=0.0.0.0 in .env for LAN access (no auth!)
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3001}:3001"
+    environment:
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      HIT_DATA_DIR: /data
+      # Exact origin(s), "private" (any LAN origin) or "*". See .env.example.
+      ALLOWED_ORIGIN: "${ALLOWED_ORIGIN:-http://localhost:3001}"
+    volumes:
+      - ./data:/data
+    init: true
+    security_opt:
+      - no-new-privileges:true

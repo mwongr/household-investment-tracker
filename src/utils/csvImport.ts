@@ -91,7 +91,9 @@ const SYNONYMS: Record<keyof ColumnMapping, string[]> = {
         'price ($)',
     ],
     type: ['type', 'action', 'transaction type', 'activity type', 'trans type', 'description', 'activity', 'trans'],
-    date: ['date', 'trade date', 'settlement date', 'activity date', 'trans date', 'transaction date', 'time', 'effective date'],
+    // No bare 'time': it substring-matches headers like "All time value change (%)" and
+    // mis-detects holdings exports as transactions.
+    date: ['date', 'trade date', 'settlement date', 'activity date', 'trans date', 'transaction date', 'effective date'],
     amount: [
         'amount',
         'net amount',

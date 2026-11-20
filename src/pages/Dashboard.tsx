@@ -37,6 +37,7 @@ import {
 import EventsTable from '../components/EventsTable';
 import CurrencyMigrationModal from '../components/CurrencyMigrationModal';
 import type { Asset } from '../types';
+import { UnknownSymbolsBanner } from '../components/QuoteStatusBadge';
 import '../styles/shared.css';
 
 type AssetWithMeta = Asset & {
@@ -247,7 +248,8 @@ const Dashboard = () => {
         lastUpdated,
         transactions,
         isDemoData,
-        loadDemoData
+        loadDemoData,
+        quoteErrors,
     } = useData();
     const chartTheme = useChartTheme();
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -809,6 +811,8 @@ const Dashboard = () => {
                     </button>
                 </div>
             </div>
+
+            <UnknownSymbolsBanner quoteErrors={quoteErrors} />
 
             {/* Empty State / Welcome Hero Card */}
             {members.length === 0 && accounts.length === 0 && !isDemoData && (

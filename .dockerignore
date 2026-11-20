@@ -1,0 +1,15 @@
+# Keep personal data and local artifacts out of the build context
+data/
+server/database.json
+server/database.json.*
+backups/
+.env
+.env.*
+!.env.example
+node_modules
+dist
+dist-electron
+dist-server
+release
+.git
+*.log

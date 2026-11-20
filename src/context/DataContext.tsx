@@ -7,7 +7,7 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import { apiFetch, apiPostJson } from '../api/client';
+import { ApiError, apiFetch, apiPostJson } from '../api/client';
 import { getDemoData } from '../data/demoData';
 import { applyMarketData, calculateCashImpact, recalculateAssets } from '../domain/portfolio';
 import type {
@@ -41,6 +41,13 @@ import {
     type PersistedState,
 } from './persistence';
 
+/** Why a ticker's live price could not be refreshed (session-only, never persisted). */
+export type QuoteStatus = 'not_found' | 'unavailable';
+
+function quoteFailureStatus(err: unknown): QuoteStatus {
+    return err instanceof ApiError && err.status === 404 ? 'not_found' : 'unavailable';
+}
+
 export interface DataState {
     members: Member[];
     institutions: Institution[];
@@ -54,6 +61,8 @@ export interface DataState {
     isDemoData: boolean;
     watchlist: WatchlistItem[];
     watchlistLastUpdated: Date | null;
+    /** Tickers whose last price refresh failed, keyed by ticker. */
+    quoteErrors: Record<string, QuoteStatus>;
     acbAccounts: AcbAccount[];
     acbTransactions: AcbTransaction[];
     bankAccounts: BankAccount[];
@@ -149,6 +158,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [assets, setAssets] = useState<Asset[]>(initial.assets);
     const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>(initial.netWorthHistory);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(initial.lastUpdated);
+    const [quoteErrors, setQuoteErrors] = useState<Record<string, QuoteStatus>>({});
     const [backupPath, setBackupPath] = useState<string>(initial.backupPath);
     const [watchlist, setWatchlist] = useState<WatchlistItem[]>(initial.watchlist);
     const [watchlistLastUpdated, setWatchlistLastUpdated] = useState<Date | null>(
@@ -266,6 +276,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             string,
             { quote: QuoteResponse; analysis?: StockAnalysisResponse }
         >();
+        const failures: Record<string, QuoteStatus> = {};
 
         await Promise.all(
             uniqueTickers.map(async (ticker) => {
@@ -278,8 +289,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             `/api/stocks/${encodeURIComponent(ticker)}/analysis`
                         ).catch(() => undefined),
                     ]);
-                    marketMap.set(ticker, { quote, analysis });
+                    if (quote.error || quote.isMock) {
+                        failures[ticker] = 'unavailable';
+                    } else {
+                        marketMap.set(ticker, { quote, analysis });
+                    }
                 } catch (err) {
+                    failures[ticker] = quoteFailureStatus(err);
                     console.error('Failed to fetch price for', ticker, err);
                 }
             })
@@ -292,6 +308,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return applyMarketData(asset, entry.quote, entry.analysis, activeRate, range);
             })
         );
+        setQuoteErrors(failures);
 
         setLastUpdated(new Date());
     }, []);
@@ -310,6 +327,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ).catch(() => undefined),
             ]);
 
+            if (quote.error || quote.isMock) {
+                setQuoteErrors((prev) => ({ ...prev, [asset.ticker]: 'unavailable' }));
+                return;
+            }
+
             setAssets((prev) =>
                 prev.map((a) =>
                     a.id === assetId
@@ -317,7 +339,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         : a
                 )
             );
+            setQuoteErrors((prev) => {
+                if (!(asset.ticker in prev)) return prev;
+                const next = { ...prev };
+                delete next[asset.ticker];
+                return next;
+            });
         } catch (err) {
+            setQuoteErrors((prev) => ({ ...prev, [asset.ticker]: quoteFailureStatus(err) }));
             console.error('Failed to fetch price for', asset.ticker, err);
         }
     }, []);
@@ -339,6 +368,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return [...prev, { date: today, value: currentNetWorth }];
         });
     }, [assets, accounts]);
+
+    // Once per app load, check every held ticker still resolves on Yahoo so a bad
+    // symbol is flagged even before the next price refresh. Read-only: no prices change.
+    const symbolsCheckedRef = useRef(false);
+    useEffect(() => {
+        if (symbolsCheckedRef.current || assets.length === 0) return;
+        symbolsCheckedRef.current = true;
+        const tickers = Array.from(new Set(assets.map((a) => a.ticker))).filter(Boolean);
+        void Promise.all(
+            tickers.map(async (ticker): Promise<[string, QuoteStatus | null]> => {
+                try {
+                    const quote = await apiFetch<QuoteResponse>(
+                        `/api/quote?symbol=${encodeURIComponent(ticker)}&range=1d`
+                    );
+                    return [ticker, quote.error || quote.isMock ? 'unavailable' : null];
+                } catch (err) {
+                    return [ticker, quoteFailureStatus(err)];
+                }
+            })
+        ).then((results) => {
+            const failures = Object.fromEntries(
+                results.filter((r): r is [string, QuoteStatus] => r[1] !== null)
+            );
+            if (Object.keys(failures).length > 0) {
+                // Don't overwrite results from a refresh that finished first.
+                setQuoteErrors((prev) => ({ ...failures, ...prev }));
+            }
+        });
+    }, [assets]);
 
     useEffect(() => {
         if (pendingRefreshRef.current && assets.length > 0) {
@@ -977,6 +1035,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isDemoData,
             watchlist,
             watchlistLastUpdated,
+            quoteErrors,
             acbAccounts,
             acbTransactions,
             bankAccounts,
@@ -986,6 +1045,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             exchangeRate,
         }),
         [
+            quoteErrors,
             members,
             institutions,
             accountTypes,

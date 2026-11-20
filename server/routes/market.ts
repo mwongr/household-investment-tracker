@@ -11,6 +11,7 @@ import {
     cachedYahoo,
     fetchYahooChart,
     fetchYahooScreener,
+    SymbolNotFoundError,
     yahooFinance,
 } from '../lib/yahoo.js';
 
@@ -168,6 +169,10 @@ export function createMarketRouter(): Router {
                 return;
             }
         } catch (err) {
+            if (err instanceof SymbolNotFoundError) {
+                res.status(404).json({ symbol, error: err.message, notFound: true });
+                return;
+            }
             console.error(`Chart API failed for ${symbol}:`, err);
         }
 
@@ -191,7 +196,9 @@ export function createMarketRouter(): Router {
             const detailed = await cachedYahoo(`quote-detailed:${symbol}`, CACHE_TTL.PRICE_1D, async () => {
                 try {
                     const quote = await yahooFinance.quote(symbol);
-                    if (quote) {
+                    // A quote with no price is Yahoo's placeholder for an unlisted symbol;
+                    // fall through to the chart API, which reports it as not found.
+                    if (quote && quote.regularMarketPrice != null) {
                         return {
                             symbol: quote.symbol,
                             shortName: quote.shortName || quote.longName,
@@ -247,6 +254,10 @@ export function createMarketRouter(): Router {
 
             res.json(detailed);
         } catch (err) {
+            if (err instanceof SymbolNotFoundError) {
+                res.status(404).json({ symbol, error: err.message, notFound: true });
+                return;
+            }
             console.error(`Detailed quote failed for ${symbol}:`, err);
             res.status(500).json({ error: 'Failed to fetch detailed quote' });
         }
